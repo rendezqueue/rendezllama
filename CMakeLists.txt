@@ -37,6 +37,7 @@ set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE}")
 
 
 include(ExternalProject)
+include(GNUInstallDirs)
 
 
 ExternalProject_Add(fildesh_project
@@ -47,9 +48,10 @@ ExternalProject_Add(fildesh_project
 add_executable(fildesh IMPORTED)
 add_library (fildesh_lib STATIC IMPORTED)
 ExternalProject_Get_Property(fildesh_project INSTALL_DIR)
-set_target_properties(fildesh PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/fildesh")
-set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/fildesh/libfildesh.a")
-include_directories("${INSTALL_DIR}/include")
+ExternalProject_Get_Property(fildesh_project INSTALL_DIR)
+set_target_properties(fildesh PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/${CMAKE_INSTALL_BINDIR}/fildesh")
+set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/fildesh/libfildesh.a")
+include_directories("${INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
 add_dependencies(fildesh fildesh_project)
 add_dependencies(fildesh_lib fildesh_project)
 
@@ -62,13 +64,16 @@ ExternalProject_Add(llama_cpp_project
   INSTALL_COMMAND echo "No install step."
 )
 add_library (llama_cpp_lib STATIC IMPORTED)
-ExternalProject_Get_Property(fildesh_project BINARY_DIR)
+ExternalProject_Get_Property(llama_cpp_project BINARY_DIR)
 set_target_properties(llama_cpp_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/libllama.a")
 add_dependencies (llama_cpp_lib llama_cpp_project)
+ExternalProject_Get_Property(llama_cpp_project SOURCE_DIR)
+set(LlamaCppIncludePath "${SOURCE_DIR}")
 
 
 find_package(Threads REQUIRED)
 
 
 include_directories("${CMAKE_SOURCE_DIR}")
+add_subdirectory(src)
 
