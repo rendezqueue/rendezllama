@@ -4,6 +4,10 @@ cmake_minimum_required(VERSION 3.12) # Don't bump this version for no reason
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 project("rendezllama" C CXX)
 
+
+option(LLAMA_OPENBLAS "llama: use OpenBLAS" OFF)
+
+
 enable_testing()
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -58,9 +62,11 @@ add_dependencies(fildesh_lib fildesh_project)
 
 ExternalProject_Add(llama_cpp_project
   GIT_REPOSITORY "https://github.com/ggerganov/llama.cpp.git"
-  GIT_TAG "53dbba769537e894ead5c6913ab2fd3a4658b738"
+  GIT_TAG "180b693a47b6b825288ef9f2c39d24b6eea4eea6"
+  GIT_SHALLOW TRUE
   BUILD_BYPRODUCTS
   "<BINARY_DIR>/libllama.a"
+  CMAKE_ARGS "-DLLAMA_OPENBLAS=${LLAMA_OPENBLAS}"
   INSTALL_COMMAND echo "No install step."
 )
 add_library (llama_cpp_lib STATIC IMPORTED)
@@ -70,6 +76,10 @@ add_dependencies (llama_cpp_lib llama_cpp_project)
 ExternalProject_Get_Property(llama_cpp_project SOURCE_DIR)
 set(LlamaCppIncludePath "${SOURCE_DIR}")
 
+if(LLAMA_OPENBLAS)
+  set(BLA_VENDOR OpenBLAS)
+  find_package(BLAS REQUIRED)
+endif()
 
 find_package(Threads REQUIRED)
 

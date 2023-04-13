@@ -1,0 +1,25 @@
+#!/usr/bin/env fildesh
+
+# This script isn't guaranteed to be stable.
+# Prefer the local.sh one.
+
+(: scene Str (?? .self.opt.scene "roshambo_0"))
+(: model_file Filename
+ (?? .self.opt.model
+  "/mnt/llama_model_data/llama_cpp_models/13B/ggml-model-q4_0.bin"))
+(: priming_file Filename (++ "test/prompt/" scene "/priming.txt"))
+(: rolling_file Filename (++ "test/prompt/" scene "/rolling.txt"))
+(: thread_count Str (?? .self.opt.thread_count "16"))
+
+|< stdin
+|- ./bld/src/chat/chat \
+  --model $(XOF model_file) \
+  --thread_count "${thread_count}" \
+  --x_priming $(XOF priming_file) --x_rolling $(XOF rolling_file) \
+  --context_token_limit "2048" \
+  --sentence_token_limit 32 \
+  --top_k "1000" --top_p "0.95" --temp "0.7" \
+  --repeat_last_n "2048" --repeat_penalty "1.2"
+|- elastic - "test/prompt/${scene}/tee.txt"
+|> stdout
+

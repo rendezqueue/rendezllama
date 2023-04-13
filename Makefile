@@ -20,6 +20,7 @@ all:
 
 cmake:
 	if [ ! -d $(BldPath) ] ; then $(MKDIR) $(BldPath) ; fi
+	#$(GODO) $(BldPath) $(CMAKE) -D CMAKE_BUILD_TYPE=RelOnHost -D LLAMA_OPENBLAS=ON ..
 	$(GODO) $(BldPath) $(CMAKE) -D CMAKE_BUILD_TYPE=RelOnHost ..
 
 proj:

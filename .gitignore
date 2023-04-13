@@ -1,5 +1,3 @@
-
-/bazel-*
-
 /bld/
-
+/test/prompt/_*/
+/test/prompt/*/tee.txt
