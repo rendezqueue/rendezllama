@@ -62,7 +62,8 @@ add_dependencies(fildesh_lib fildesh_project)
 
 ExternalProject_Add(llama_cpp_project
   GIT_REPOSITORY "https://github.com/ggerganov/llama.cpp.git"
-  GIT_TAG "180b693a47b6b825288ef9f2c39d24b6eea4eea6"
+  # When updating this dependency, prefer commits that match a daily release.
+  GIT_TAG "2f7c8e014e3c0ceaf39688845c2ff6f919fb03b7"
   GIT_SHALLOW TRUE
   BUILD_BYPRODUCTS
   "<BINARY_DIR>/libllama.a"
