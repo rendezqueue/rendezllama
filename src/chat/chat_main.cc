@@ -136,10 +136,17 @@ int main(int argc, char** argv)
         else if (skipstr_FildeshX(&slice, "dropless")) {
           extra_penalized_tokens.clear();
         }
-        else if (skipstr_FildeshX(&slice, "less!")) {
-          std::string line;
-          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-          rendezllama::tokenize_extend(extra_penalized_tokens, ctx, line);
+        else if (skipstr_FildeshX(&slice, "less")) {
+          if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
+              slice.off < slice.size)
+          {
+            std::string line;
+            line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
+            rendezllama::tokenize_extend(extra_penalized_tokens, ctx, line);
+          }
+          else {
+            fildesh_log_warning("Need some content for less=.");
+          }
         }
         else if (skipstr_FildeshX(&slice, "tail")) {
           unsigned n = 10;
