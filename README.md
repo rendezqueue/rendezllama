@@ -19,8 +19,8 @@ make
 The confidant (bot) and protagonist (you) names are determined from last two lines of the rolling prompt (in that order).
 
 In the chat, most things you type will be prefixed with the protagonist's name and suffixed by the confidant's dialogue line.
-
-There are also some special commands, which start with `/` by default.
+There are some special inputs and commands that help keep an infinite chat from going off the rails.
+Remember, the recent chat content is just a rolling prompt concatenated to the end of the priming prompt, so its quality is just as important!
 - Interactivity.
   - An empty input lets token generation keep happening.
   - Antiprompts are `.!?…` and newline. There's no way to change them right now.
