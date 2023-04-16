@@ -29,7 +29,7 @@ fi
   --model "${model_file}" \
   --thread_count "${thread_count}" \
   --context_token_limit "2048" \
-  --sentence_token_limit 32 \
+  --sequent_token_limit 32 \
   "$@" |
 tee "${tee_file}"
 

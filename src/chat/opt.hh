@@ -7,6 +7,7 @@
 
 #include "llama.h"
 
+struct FildeshX;
 
 namespace rendezllama {
 
@@ -18,14 +19,16 @@ struct ChatOptions {
   std::string priming_prompt = " ";
   std::string rolling_prompt;
   std::string model_filename;
+  char command_prefix_char = '/';
+  const char command_delim_chars[5] = ":=! ";
   int thread_count = 1;
-  int sentence_token_limit = 2048;
+  int sequent_token_limit = 50;
   // Can't set these yet.
   int top_k = 1000;
   float top_p = 0.95;
   float temp = 0.7;
   float repeat_penalty = 1.2;
-  int repeat_last_count = 2048;
+  int repeat_last_count = 20;
   int context_token_limit = 2048;
   int batch_count = 8;
   int seed;
@@ -38,6 +41,11 @@ struct ChatOptions {
 
 int
 parse_options(ChatOptions& opt, int argc, char** argv);
+bool
+maybe_parse_option_command(
+    rendezllama::ChatOptions& opt,
+    FildeshX* in,
+    std::ostream& eout);
 struct llama_context*
 make_llama_context(const ChatOptions& opt);
 void

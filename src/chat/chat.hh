@@ -20,6 +20,7 @@ augment_chat_input(std::string& s,
 
 llama_token
 generate_next_token(struct llama_context* ctx,
+                    const std::vector<llama_token>& extra_penalized_tokens,
                     const std::vector<llama_token>& tokens,
                     const ChatOptions& opt);
 unsigned

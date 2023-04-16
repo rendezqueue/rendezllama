@@ -17,9 +17,9 @@
   --thread_count "${thread_count}" \
   --x_priming $(XOF priming_file) --x_rolling $(XOF rolling_file) \
   --context_token_limit "2048" \
-  --sentence_token_limit 32 \
+  --sequent_token_limit 32 \
   --top_k "1000" --top_p "0.95" --temp "0.7" \
-  --repeat_last_n "2048" --repeat_penalty "1.2"
+  --repeat_last_n "20" --repeat_penalty "1.2"
 |- elastic - "test/prompt/${scene}/tee.txt"
 |> stdout
 

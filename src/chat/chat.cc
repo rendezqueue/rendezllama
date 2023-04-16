@@ -31,7 +31,13 @@ rendezllama::augment_chat_input(
     const std::string& matched_antiprompt,
     const rendezllama::ChatOptions& opt)
 {
-  if (s.back() == '[' || s.back() == ':') {
+  if (s == "\\n") {
+    if (matched_antiprompt != "\n") {
+      s += "\n";
+    }
+    s = ' ' + opt.confidant + ':';
+  }
+  else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
   }
   else {
@@ -49,6 +55,7 @@ rendezllama::augment_chat_input(
   llama_token
 rendezllama::generate_next_token(
     struct llama_context* ctx,
+    const std::vector<llama_token>& extra_penalized_tokens,
     const std::vector<llama_token>& tokens,
     const rendezllama::ChatOptions& opt)
 {
@@ -59,9 +66,18 @@ rendezllama::generate_next_token(
   const size_t trailing_token_count = std::min(
       tokens.size(), (size_t)opt.repeat_last_count);
 
+  std::vector<llama_token> penalized_tokens;
+  penalized_tokens.resize(trailing_token_count);
+  for (unsigned i = 0; i < trailing_token_count; ++i) {
+    penalized_tokens[i] = tokens[tokens.size() - trailing_token_count + i];
+  }
+  penalized_tokens.insert(
+      penalized_tokens.end(),
+      extra_penalized_tokens.begin(), extra_penalized_tokens.end());
+
   llama_token token_id = llama_sample_top_p_top_k(
       ctx,
-      &tokens[tokens.size() - trailing_token_count], trailing_token_count,
+      &penalized_tokens[0], penalized_tokens.size(),
       opt.top_k, opt.top_p, opt.temp, opt.repeat_penalty);
 
   // If the improbable happens, just use a newline token.
