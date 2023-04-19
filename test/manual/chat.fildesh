@@ -7,8 +7,8 @@
 (: model_file Filename
  (?? .self.opt.model
   "/mnt/llama_model_data/llama_cpp_models/13B/ggml-model-q4_0.bin"))
-(: priming_file Filename (++ "test/prompt/" scene "/priming.txt"))
-(: rolling_file Filename (++ "test/prompt/" scene "/rolling.txt"))
+(: priming_file Filename (++ "example/prompt/" scene "/priming.txt"))
+(: rolling_file Filename (++ "example/prompt/" scene "/rolling.txt"))
 (: thread_count Str (?? .self.opt.thread_count "16"))
 
 |< stdin
@@ -20,6 +20,6 @@
   --sequent_token_limit 32 \
   --top_k "1000" --top_p "0.95" --temp "0.7" \
   --repeat_last_n "20" --repeat_penalty "1.2"
-|- elastic - "test/prompt/${scene}/tee.txt"
+|- elastic - "example/prompt/${scene}/tee.txt"
 |> stdout
 
