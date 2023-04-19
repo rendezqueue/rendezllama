@@ -25,6 +25,19 @@ rendezllama::antiprompt_suffix(
   return empty_string;
 }
 
+static std::string protagonist_line_prefix(const rendezllama::ChatOptions& opt) {
+  std::string s;
+  if (opt.linespace_on) {s += ' ';}
+  s += opt.protagonist + ": ";
+  return s;
+}
+static std::string confidant_line_prefix(const rendezllama::ChatOptions& opt) {
+  std::string s;
+  if (opt.linespace_on) {s += ' ';}
+  s += opt.confidant + ':';
+  return s;
+}
+
   void
 rendezllama::augment_chat_input(
     std::string& s,
@@ -35,20 +48,18 @@ rendezllama::augment_chat_input(
     if (matched_antiprompt != "\n") {
       s += "\n";
     }
-    s = ' ' + opt.confidant + ':';
+    s = confidant_line_prefix(opt);
   }
   else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
   }
   else {
-    std::string pfx;
-    std::string sfx;
+    std::string maybe_newline;
     if (matched_antiprompt != "\n") {
-      pfx += '\n';
+      maybe_newline += '\n';
     }
-    pfx += " " + opt.protagonist + ": ";
-    sfx = "\n " + opt.confidant + ":";
-    s = pfx + s + sfx;
+    s = (maybe_newline + protagonist_line_prefix(opt) +
+         s + '\n' + confidant_line_prefix(opt));
   }
 }
 
