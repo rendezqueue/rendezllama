@@ -102,8 +102,8 @@ int main(int argc, char** argv)
 
         if (!peek_char_FildeshX(&slice, opt.command_prefix_char)) {
           if (slice.at[slice.size-1] == '\\') {
-            // Remove the continue character.
-            slice.size -= 1;
+            // Overwrite the continue character.
+            slice.at[slice.size-1] = '\n';
             buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
             continue;
           }
@@ -150,6 +150,15 @@ int main(int argc, char** argv)
         }
         else if (skipstr_FildeshX(&slice, "tail")) {
           unsigned n = 10;
+          {
+            int tmp_n = 0;
+            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
+                parse_int_FildeshX(&slice, &tmp_n) &&
+                tmp_n > 0)
+            {
+              n = tmp_n;
+            }
+          }
           size_t i = chat_tokens.size();
           while (i > 0) {
             i -= 1;
@@ -171,6 +180,7 @@ int main(int argc, char** argv)
           if (slice.off != slice.size) {
             fildesh_log_warning("Ignoring extra characters after \"d\".");
           }
+          matched_antiprompt = "\n";
           size_t n = buffer.rfind('\n');
           if (n < buffer.size()) {
             buffer.resize(n);

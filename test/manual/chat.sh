@@ -12,12 +12,12 @@ thread_count="8"
 prompt_name="${1:-}"
 shift
 if [ -z "${prompt_name}" ]; then
-  echo "Give a prompt name (a subdirectory in test/prompt/)." 1>&2
+  echo "Give a prompt name (a subdirectory in example/prompt/)." 1>&2
   exit 64
 fi
-priming_file="test/prompt/${prompt_name}/priming.txt"
-rolling_file="test/prompt/${prompt_name}/rolling.txt"
-tee_file="test/prompt/${prompt_name}/tee.txt"
+priming_file="example/prompt/${prompt_name}/priming.txt"
+rolling_file="example/prompt/${prompt_name}/rolling.txt"
+tee_file="example/prompt/${prompt_name}/tee.txt"
 
 # Second arg can be "--" to indicate that we're forarding the rest.
 if [ "--" = "${1:-}" ]; then

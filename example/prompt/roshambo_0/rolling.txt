@@ -1,0 +1,7 @@
+L: Are you ready to try again?
+Kira: Yes! This time will be different. I have crafted my strategies in such a way that victory is assured.
+L: Ro!
+Kira: Sham!
+L: Bo!
+Kira: [chooses rock]
+L: [chooses paper]

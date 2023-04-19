@@ -42,6 +42,42 @@ parse_rolling_prompt(FildeshX* in, rendezllama::ChatOptions& opt)
 
 static
   void
+ensure_linespace(std::string& s, bool startspace_on, bool linespace_on)
+{
+  if (!startspace_on && !linespace_on) {
+    return;
+  }
+
+  FildeshX* in = open_FildeshXA();
+  memcpy(grow_FildeshX(in, s.size()), &s[0], s.size());
+  s = startspace_on ? " " : "";
+
+  FildeshX slice;
+  for (slice = sliceline_FildeshX(in); slice.at;
+       slice = sliceline_FildeshX(in))
+  {
+    if (slice.size == 0) {
+      s += '\n';
+    }
+    else {
+      if (linespace_on && peek_char_FildeshX(&slice, ' ')) {
+        slice.off += 1;
+      }
+      s.insert(s.end(), &slice.at[slice.off], &slice.at[slice.size]);
+      s += '\n';
+      if (linespace_on) {
+        s += ' ';
+      }
+    }
+  }
+  close_FildeshX(in);
+  if (!s.empty() && linespace_on) {
+    s.pop_back();
+  }
+}
+
+static
+  void
 print_options(std::ostream& out, const rendezllama::ChatOptions& opt)
 {
   out
@@ -60,6 +96,13 @@ print_options(std::ostream& out, const rendezllama::ChatOptions& opt)
     << ", seed=" << opt.seed
     << '\n';
   out.flush();
+}
+
+static bool parse_truthy(const char* arg) {
+  return (
+      0 == strcmp("true", arg) ||
+      0 == strcmp("on", arg) ||
+      0 == strcmp("1", arg));
 }
 
   int
@@ -112,6 +155,10 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       FildeshX* rolling_in = open_FildeshXF(argv[argi]);
       parse_rolling_prompt(rolling_in, opt);
       close_FildeshX(rolling_in);
+    }
+    else if (0 == strcmp("--linespace", argv[argi])) {
+      argi += 1;
+      opt.linespace_on = parse_truthy(argv[argi]);
     }
     else if (0 == strcmp("--command_prefix_char", argv[argi])) {
       argi += 1;
@@ -224,7 +271,10 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     exstatus = 64;
   }
   if (exstatus == 0) {
-    opt.rolling_prompt += ' ' + opt.confidant + ':';
+    ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
+    ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
+    if (opt.linespace_on) {opt.rolling_prompt += ' ';}
+    opt.rolling_prompt += opt.confidant + ':';
   }
   return exstatus;
 }

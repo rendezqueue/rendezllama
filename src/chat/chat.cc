@@ -25,6 +25,19 @@ rendezllama::antiprompt_suffix(
   return empty_string;
 }
 
+static std::string protagonist_line_prefix(const rendezllama::ChatOptions& opt) {
+  std::string s;
+  if (opt.linespace_on) {s += ' ';}
+  s += opt.protagonist + ": ";
+  return s;
+}
+static std::string confidant_line_prefix(const rendezllama::ChatOptions& opt) {
+  std::string s;
+  if (opt.linespace_on) {s += ' ';}
+  s += opt.confidant + ':';
+  return s;
+}
+
   void
 rendezllama::augment_chat_input(
     std::string& s,
@@ -35,20 +48,18 @@ rendezllama::augment_chat_input(
     if (matched_antiprompt != "\n") {
       s += "\n";
     }
-    s = ' ' + opt.confidant + ':';
+    s = confidant_line_prefix(opt);
   }
   else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
   }
   else {
-    std::string pfx;
-    std::string sfx;
+    std::string maybe_newline;
     if (matched_antiprompt != "\n") {
-      pfx += '\n';
+      maybe_newline += '\n';
     }
-    pfx += " " + opt.protagonist + ": ";
-    sfx = "\n " + opt.confidant + ":";
-    s = pfx + s + sfx;
+    s = (maybe_newline + protagonist_line_prefix(opt) +
+         s + '\n' + confidant_line_prefix(opt));
   }
 }
 
@@ -112,11 +123,22 @@ rendezllama::commit_to_context(
     // to avoid exceeding our context token limit.
     const unsigned rolling_token_count =
       (opt.context_token_limit - opt.priming_token_count) / 2;
-    for (unsigned i = 0; i < rolling_token_count; ++i) {
-      chat_tokens[opt.priming_token_count + i] =
-        chat_tokens[chat_tokens.size() - rolling_token_count + i];
+    bool copying = false;
+    unsigned dst_index = opt.priming_token_count;
+    for (unsigned src_index = chat_tokens.size() - rolling_token_count;
+         src_index < chat_tokens.size();
+         ++src_index)
+    {
+      if (copying) {
+        chat_tokens[dst_index] = chat_tokens[src_index];
+        dst_index += 1;
+      }
+      else {
+        const char* s = llama_token_to_str(ctx, chat_tokens[src_index]);
+        copying = (s && s[0] == '\n');
+      }
     }
-    chat_tokens.resize(opt.priming_token_count + rolling_token_count);
+    chat_tokens.resize(dst_index);
     context_token_count = opt.priming_token_count;
   }
 

@@ -6,14 +6,17 @@ For now, there's just a command-line interface, but the plan is to make a progre
 
 ## Chat CLI
 
-Assuming you have quantized weights in `../llama.cpp/models/7B/ggml-model-q4_0.bin`, you can start the chat CLI with:
+Assuming you have the quantized weights already, you can start the chat CLI with:
 ```shell
+# If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
+MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
+# Make just creates a bld/ directory and invokes CMake to build there.
 make
 ./bld/src/chat/chat \
-    --x_priming test/prompt/roshambo_0/priming.txt \
-    --x_rolling test/prompt/roshambo_0/rolling.txt \
-    --thread_count 8 \
-    --model ../llama.cpp/models/7B/ggml-model-q4_0.bin
+  --x_priming example/prompt/roshambo_0/priming.txt \
+  --x_rolling example/prompt/roshambo_0/rolling.txt \
+  --thread_count 8 \
+  --model "${MODEL}"
 ```
 
 The confidant (bot) and protagonist (you) names are determined from last two lines of the rolling prompt (in that order).
@@ -25,7 +28,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - An empty input lets token generation keep happening.
   - Antiprompts are `.!?…` and newline. There's no way to change them right now.
   - `/sequent_limit 32` sets the number of tokens to generate before reading more input.
-  - `/tail` shows the last 10 context lines.
+  - `/tail` or `/tail 10` shows the last 10 context lines.
 - Editing.
   - `/yield` or `\n` inserts a newline and has the confidant say something. Useful for prompts that encourage the confidant to use inner monologue to think about the world.
   - `/r` regenerates the current line of dialogue.
