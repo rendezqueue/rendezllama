@@ -30,6 +30,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/sequent_limit 32` sets the number of tokens to generate before reading more input.
   - `/tail` or `/tail 10` shows the last 10 lines.
   - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
+  - `/forget 10` removes the first 10 lines of the rolling prompt.
 - Editing.
   - `/yield` or `\n` inserts a newline and has the confidant say something. Useful for prompts that encourage the confidant to use inner monologue to think about the world.
   - `/r` regenerates the current line of dialogue.

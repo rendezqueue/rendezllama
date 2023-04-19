@@ -148,6 +148,43 @@ int main(int argc, char** argv)
             fildesh_log_warning("Need some content for less=.");
           }
         }
+        else if (skipstr_FildeshX(&slice, "forget")) {
+          unsigned n = 10;
+          {
+            int tmp_n = 0;
+            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
+                parse_int_FildeshX(&slice, &tmp_n) &&
+                tmp_n > 0)
+            {
+              n = tmp_n;
+            }
+            else {
+              eout << "Ignoring /forget command without line count.\n"; eout.flush();
+              continue;
+            }
+          }
+          bool copying = false;
+          size_t dst_index = opt.priming_token_count;
+          for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
+            if (copying) {
+              chat_tokens[dst_index] = chat_tokens[i];
+              dst_index += 1;
+            }
+            else {
+              const char* s = llama_token_to_str(ctx, chat_tokens[i]);
+              if (s[0] == '\n') {
+                n -= 1;
+                copying = (n == 0);
+              }
+            }
+          }
+          fildesh::ofstream nullout("/dev/null");
+          chat_tokens.resize(dst_index);
+          context_token_count = rendezllama::commit_to_context(
+              ctx, nullout, chat_tokens, opt.priming_token_count, opt);
+          if (context_token_count == 0) {return 1;}
+          assert(context_token_count == (int)chat_tokens.size());
+        }
         else if (skipstr_FildeshX(&slice, "head")) {
           unsigned n = 10;
           {
@@ -159,7 +196,6 @@ int main(int argc, char** argv)
               n = tmp_n;
             }
           }
-          size_t i = chat_tokens.size();
           for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
             const char* s = llama_token_to_str(ctx, chat_tokens[i]);
             eout << s;
