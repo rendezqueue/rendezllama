@@ -25,7 +25,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - An empty input lets token generation keep happening.
   - Antiprompts are `.!?…` and newline. There's no way to change them right now.
   - `/sequent_limit 32` sets the number of tokens to generate before reading more input.
-  - `/tail` shows the last 10 context lines.
+  - `/tail` or `/tail 10` shows the last 10 context lines.
 - Editing.
   - `/yield` or `\n` inserts a newline and has the confidant say something. Useful for prompts that encourage the confidant to use inner monologue to think about the world.
   - `/r` regenerates the current line of dialogue.

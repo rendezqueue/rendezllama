@@ -150,6 +150,15 @@ int main(int argc, char** argv)
         }
         else if (skipstr_FildeshX(&slice, "tail")) {
           unsigned n = 10;
+          {
+            int tmp_n = 0;
+            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
+                parse_int_FildeshX(&slice, &tmp_n) &&
+                tmp_n > 0)
+            {
+              n = tmp_n;
+            }
+          }
           size_t i = chat_tokens.size();
           while (i > 0) {
             i -= 1;
