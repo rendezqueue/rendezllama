@@ -180,7 +180,6 @@ int main(int argc, char** argv)
           if (slice.off != slice.size) {
             fildesh_log_warning("Ignoring extra characters after \"d\".");
           }
-          matched_antiprompt = "\n";
           size_t n = buffer.rfind('\n');
           if (n < buffer.size()) {
             buffer.resize(n);
@@ -188,13 +187,17 @@ int main(int argc, char** argv)
           else {
             buffer.clear();
             while (chat_tokens.size() > opt.priming_token_count) {
+              const char* s = llama_token_to_str(ctx, chat_tokens.back());
               chat_tokens.pop_back();
               context_token_count -= 1;
-              const char* s = llama_token_to_str(ctx, chat_tokens.back());
               if (s[0] == '\n' && s[1] == '\0') {
                 break;
               }
             }
+          }
+          matched_antiprompt.clear();
+          if (chat_tokens.size() == opt.priming_token_count && buffer.empty()) {
+            matched_antiprompt = '\n';
           }
         }
         else if (skipstr_FildeshX(&slice, "yield")) {
