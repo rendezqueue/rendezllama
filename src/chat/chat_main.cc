@@ -148,6 +148,30 @@ int main(int argc, char** argv)
             fildesh_log_warning("Need some content for less=.");
           }
         }
+        else if (skipstr_FildeshX(&slice, "head")) {
+          unsigned n = 10;
+          {
+            int tmp_n = 0;
+            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
+                parse_int_FildeshX(&slice, &tmp_n) &&
+                tmp_n > 0)
+            {
+              n = tmp_n;
+            }
+          }
+          size_t i = chat_tokens.size();
+          for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
+            const char* s = llama_token_to_str(ctx, chat_tokens[i]);
+            eout << s;
+            if (s[0] == '\n') {
+              n -= 1;
+              if (n == 0) {
+                break;
+              }
+            }
+          }
+          eout.flush();
+        }
         else if (skipstr_FildeshX(&slice, "tail")) {
           unsigned n = 10;
           {
