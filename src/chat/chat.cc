@@ -7,6 +7,7 @@
 #include <fildesh/fildesh.h>
 
 #include "src/chat/opt.hh"
+#include "src/tokenize/tokenize.hh"
 
   const std::string&
 rendezllama::antiprompt_suffix(
@@ -134,8 +135,8 @@ rendezllama::commit_to_context(
         dst_index += 1;
       }
       else {
-        const char* s = llama_token_to_str(ctx, chat_tokens[src_index]);
-        copying = (s && s[0] == '\n');
+        copying = rendezllama::token_endswith(
+            ctx, chat_tokens[src_index], '\n');
       }
     }
     chat_tokens.resize(dst_index);

@@ -170,12 +170,9 @@ int main(int argc, char** argv)
               chat_tokens[dst_index] = chat_tokens[i];
               dst_index += 1;
             }
-            else {
-              const char* s = llama_token_to_str(ctx, chat_tokens[i]);
-              if (s[0] == '\n') {
-                n -= 1;
-                copying = (n == 0);
-              }
+            else if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
+              n -= 1;
+              copying = (n == 0);
             }
           }
           fildesh::ofstream nullout("/dev/null");
@@ -197,9 +194,8 @@ int main(int argc, char** argv)
             }
           }
           for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
-            const char* s = llama_token_to_str(ctx, chat_tokens[i]);
-            eout << s;
-            if (s[0] == '\n') {
+            eout << llama_token_to_str(ctx, chat_tokens[i]);
+            if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
               n -= 1;
               if (n == 0) {
                 break;
@@ -222,8 +218,7 @@ int main(int argc, char** argv)
           size_t i = chat_tokens.size();
           while (i > 0) {
             i -= 1;
-            const char* s = llama_token_to_str(ctx, chat_tokens[i]);
-            if (s[0] == '\n' && s[1] == '\0') {
+            if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
               n -= 1;
               if (n == 0) {
                 i += 1;
@@ -240,6 +235,12 @@ int main(int argc, char** argv)
           if (slice.off != slice.size) {
             fildesh_log_warning("Ignoring extra characters after \"d\".");
           }
+          if (chat_tokens.size() > opt.priming_token_count && buffer.empty() &&
+              rendezllama::token_endswith(ctx, chat_tokens.back(), '\n'))
+          {
+              chat_tokens.pop_back();
+              context_token_count -= 1;
+          }
           size_t n = buffer.rfind('\n');
           if (n < buffer.size()) {
             buffer.resize(n);
@@ -247,10 +248,10 @@ int main(int argc, char** argv)
           else {
             buffer.clear();
             while (chat_tokens.size() > opt.priming_token_count) {
-              const char* s = llama_token_to_str(ctx, chat_tokens.back());
+              llama_token token_id = chat_tokens.back();
               chat_tokens.pop_back();
               context_token_count -= 1;
-              if (s[0] == '\n' && s[1] == '\0') {
+              if (rendezllama::token_endswith(ctx, token_id, '\n')) {
                 break;
               }
             }

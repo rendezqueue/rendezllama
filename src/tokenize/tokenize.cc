@@ -1,6 +1,7 @@
 #include "tokenize.hh"
 
 #include <cassert>
+#include <cstring>
 
   void
 rendezllama::tokenize_extend(
@@ -14,4 +15,14 @@ rendezllama::tokenize_extend(
       ctx, text.c_str(), &tokens[offset], text.size(), false);
   assert(n >= 0);
   tokens.resize(offset + (size_t)n);
+}
+
+  bool
+rendezllama::token_endswith(const struct llama_context* ctx, llama_token token_id, char c)
+{
+  const char* s = llama_token_to_str(
+      const_cast<struct llama_context*>(ctx), token_id);
+  if (!s) {return false;}
+  s = strrchr(s, c);
+  return (s && s[1] == '\0');
 }
