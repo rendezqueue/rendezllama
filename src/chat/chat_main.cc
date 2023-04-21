@@ -3,6 +3,7 @@
 #include <fildesh/ofstream.hh>
 
 #include "src/chat/chat.hh"
+#include "src/chat/cmd.hh"
 #include "src/chat/opt.hh"
 #include "src/tokenize/tokenize.hh"
 
@@ -261,8 +262,7 @@ int main(int argc, char** argv)
             matched_antiprompt = '\n';
           }
         }
-        else if (skipstr_FildeshX(&slice, "yield")) {
-          buffer = "\\n";
+        else if (rendezllama::maybe_parse_yield_command(buffer, &slice, opt)) {
           break;
         }
         else {

@@ -33,6 +33,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/forget 10` removes the first 10 lines of the rolling prompt.
 - Editing.
   - `/yield` or `\n` inserts a newline and has the confidant say something. Useful for prompts that encourage the confidant to use inner monologue to think about the world.
+  - `/yield Char` adds a new line of dialogue for a character named `Char`.
   - `/r` regenerates the current line of dialogue.
   - `/d` deletes current line.
 - Repeat penalty.

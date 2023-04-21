@@ -51,6 +51,16 @@ rendezllama::augment_chat_input(
     }
     s = confidant_line_prefix(opt);
   }
+  else if (s.front() == '\n') {
+    // This is from /yield.
+    s.erase(0, 1);
+    std::string pfx;
+    if (matched_antiprompt != "\n") {
+      pfx += '\n';
+    }
+    if (opt.linespace_on) {pfx += ' ';}
+    s = pfx + s;
+  }
   else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
   }
