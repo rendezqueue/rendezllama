@@ -39,17 +39,43 @@ static std::string confidant_line_prefix(const rendezllama::ChatOptions& opt) {
   return s;
 }
 
+static void maybe_force_continuation(std::string& s)
+{
+  // TODO(#12): We should force continuation on the same line.
+  // But we have to remove the space either way for good tokenization.
+  if (s.back() == ' ') {s.pop_back();}
+}
+
   void
 rendezllama::augment_chat_input(
     std::string& s,
     const std::string& matched_antiprompt,
     const rendezllama::ChatOptions& opt)
 {
-  if (s == "\\n") {
+  if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
+    s.erase(0, 2);
+    std::string maybe_newline, maybe_space;
     if (matched_antiprompt != "\n") {
-      s += "\n";
+      maybe_newline = '\n';
     }
-    s = confidant_line_prefix(opt);
+    if (s.empty() || s[0] != ' ') {
+      maybe_space = ' ';
+    }
+    s = maybe_newline + confidant_line_prefix(opt) + maybe_space + s;
+    maybe_force_continuation(s);
+  }
+  else if (s.front() == '\n') {
+    s.erase(0, 1);
+    std::string pfx;
+    // This is from /yield.
+    if (matched_antiprompt != "\n") {
+      pfx += '\n';
+    }
+    if (opt.linespace_on) {pfx += ' ';}
+    s = pfx + s;
+  }
+  else if (s.front() == ' ') {
+    maybe_force_continuation(s);
   }
   else if (s.front() == '\n') {
     // This is from /yield.
@@ -67,7 +93,7 @@ rendezllama::augment_chat_input(
   else {
     std::string maybe_newline;
     if (matched_antiprompt != "\n") {
-      maybe_newline += '\n';
+      maybe_newline = '\n';
     }
     s = (maybe_newline + protagonist_line_prefix(opt) +
          s + '\n' + confidant_line_prefix(opt));

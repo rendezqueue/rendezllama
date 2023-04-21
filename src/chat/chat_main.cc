@@ -108,6 +108,12 @@ int main(int argc, char** argv)
             buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
             continue;
           }
+          if (slice.at[0] == ' ' && buffer.empty() && matched_antiprompt == "\n") {
+            // Remove preceeding newline
+            chat_tokens.pop_back();
+            context_token_count -= 1;
+            matched_antiprompt.clear();
+          }
           buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
           break;
         }
