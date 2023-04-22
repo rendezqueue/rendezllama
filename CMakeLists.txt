@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.12) # Don't bump this version for no reason
 #set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 project("rendezllama" C CXX)
+set(CMAKE_CXX_STANDARD 11)
 
 
 option(LLAMA_OPENBLAS "llama: use OpenBLAS" OFF)
