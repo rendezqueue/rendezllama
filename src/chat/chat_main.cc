@@ -15,45 +15,54 @@ int main(int argc, char** argv)
   int exstatus = 0;
   rendezllama::ChatOptions opt;
   exstatus = parse_options(opt, argc, argv);
-  if (exstatus != 0) {
-    return exstatus;
-  }
 
-  llama_context* ctx = rendezllama::make_llama_context(opt);
-  if (!ctx) {return 1;}
+  llama_context* ctx = NULL;
+  if (exstatus == 0) {
+    ctx = rendezllama::make_llama_context(opt);
+    if (!ctx) {exstatus = 1;}
+  }
 
   // tokenize the prompt
   std::vector<llama_token> chat_tokens;
-  chat_tokens.push_back(llama_token_bos());
-  rendezllama::tokenize_extend(chat_tokens, ctx, opt.priming_prompt);
-  // No need for --keep, we just directly compute the priming prompt number of tokens.
-  opt.priming_token_count = chat_tokens.size();
-  if (opt.priming_token_count < 0) {
-    fildesh_log_error("bad priming tokenization");
-    return 1;
-  }
-  rendezllama::tokenize_extend(chat_tokens, ctx, opt.rolling_prompt);
-  rendezllama::print_initialization(eout, ctx, opt, chat_tokens);
-
-  assert(opt.context_token_limit == llama_n_ctx(ctx));
-  if ((int) chat_tokens.size() > opt.context_token_limit - 4) {
-    fildesh_log_error("Prompt is longer than context_token_limit - 4.");
-    return 1;
+  if (exstatus == 0) {
+    chat_tokens.push_back(llama_token_bos());
+    rendezllama::tokenize_extend(chat_tokens, ctx, opt.priming_prompt);
+    // No need for --keep, we just directly compute the priming prompt number of tokens.
+    opt.priming_token_count = chat_tokens.size();
+    if (opt.priming_token_count < 0) {
+      fildesh_log_error("bad priming tokenization");
+      exstatus = 1;
+    }
+    else {
+      rendezllama::tokenize_extend(chat_tokens, ctx, opt.rolling_prompt);
+      rendezllama::print_initialization(eout, ctx, opt, chat_tokens);
+    }
   }
 
-  eout
-    << "== Running in interactive mode. ==\n"
-    << " - Press Return to return control to LLaMa.\n"
-    << " - If you want to submit another line, end your input in '\\'.\n\n"
-    ;
-  eout.flush();
+  if (exstatus == 0) {
+    assert(opt.context_token_limit == llama_n_ctx(ctx));
+    if ((int) chat_tokens.size() > opt.context_token_limit - 4) {
+      fildesh_log_error("Prompt is longer than context_token_limit - 4.");
+      exstatus = 1;
+    }
+  }
+
+  if (exstatus == 0) {
+    eout
+      << "=== Chat CLI ===\n"
+      << "- Token generation will frequently wait for input.\n"
+      << "  Press enter to let it continue.\n"
+      << "- See README.md for other commands.\n\n"
+      ;
+    eout.flush();
+  }
 
   std::vector<llama_token> extra_penalized_tokens;
   unsigned sequent_token_count = opt.sequent_token_limit;
   unsigned context_token_count = 0;
 
   in = open_FildeshXF("/dev/stdin");
-  while (true) {
+  while (exstatus == 0) {
     context_token_count = rendezllama::commit_to_context(
         ctx, out, chat_tokens, context_token_count, opt);
     if (context_token_count == 0) {return 1;}
@@ -289,6 +298,6 @@ int main(int argc, char** argv)
   }
 
   close_FildeshX(in);
-  llama_free(ctx);
+  if (ctx) {llama_free(ctx);}
   return exstatus;
 }
