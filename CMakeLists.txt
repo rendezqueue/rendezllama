@@ -42,11 +42,16 @@ set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE}")
 
 include(ExternalProject)
 include(GNUInstallDirs)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/pkg/cmake/version.ini" version_info)
 
 
+string(REGEX MATCH "fildesh_tgz_url=([^\n]*)" _ "${version_info}")
+set(fildesh_tgz_url "${CMAKE_MATCH_1}")
+string(REGEX MATCH "fildesh_tgz_hash=([^\n]*)" _ "${version_info}")
+set(fildesh_tgz_hash "${CMAKE_MATCH_1}")
 ExternalProject_Add(fildesh_project
-  URL "https://github.com/fildesh/fildesh/releases/download/v0.1.8/fildesh-0.1.8.tar.gz"
-  URL_HASH "SHA256=09918bc72c57edd2934194c2df344b9afbbde414a87cbf30b73e53890ef4a249"
+  URL "${fildesh_tgz_url}"
+  URL_HASH "${fildesh_tgz_hash}"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
 )
 add_executable(fildesh IMPORTED)
@@ -60,10 +65,14 @@ add_dependencies(fildesh fildesh_project)
 add_dependencies(fildesh_lib fildesh_project)
 
 
+string(REGEX MATCH "llama_cpp_git_url=([^\n]*)" _ "${version_info}")
+set(llama_cpp_git_url "${CMAKE_MATCH_1}")
+string(REGEX MATCH "llama_cpp_git_tag=([^\n]*)" _ "${version_info}")
+set(llama_cpp_git_tag "${CMAKE_MATCH_1}")
 ExternalProject_Add(llama_cpp_project
-  GIT_REPOSITORY "https://github.com/ggerganov/llama.cpp.git"
+  GIT_REPOSITORY "${llama_cpp_git_url}"
   # When updating this dependency, prefer commits that match a daily release.
-  GIT_TAG "2f7c8e014e3c0ceaf39688845c2ff6f919fb03b7"
+  GIT_TAG "${llama_cpp_git_tag}"
   GIT_SHALLOW TRUE
   BUILD_BYPRODUCTS
   "<BINARY_DIR>/libllama.a"
