@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [{
+    "matchPackagePatterns": ["*"],
+    "labels": ["dependencies"],
+    "matchUpdateTypes": ["major", "minor", "patch"],
+    // Group version update PRs into one.
+    "groupName": "all dependencies",
+    "groupSlug": "all-dependencies",
+  }],
+}
