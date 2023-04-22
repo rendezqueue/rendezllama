@@ -15,6 +15,7 @@ make
 ./bld/src/chat/chat \
   --x_priming example/prompt/roshambo_0/priming.txt \
   --x_rolling example/prompt/roshambo_0/rolling.txt \
+  --o_rolling bld/example/prompt/roshambo_0.txt \
   --thread_count 8 \
   --model "${MODEL}"
 ```

@@ -22,6 +22,17 @@ int main(int argc, char** argv)
     if (!ctx) {exstatus = 1;}
   }
 
+  fildesh::ofstream transcript_out;
+  if (exstatus == 0) {
+    if (!opt.transcript_filename.empty()) {
+      transcript_out.open(opt.transcript_filename);
+      if (!transcript_out.good()) {
+        fildesh_log_error("cannot open --o_rolling file for writing");
+        exstatus = 1;
+      }
+    }
+  }
+
   // tokenize the prompt
   std::vector<llama_token> chat_tokens;
   if (exstatus == 0) {
@@ -64,8 +75,9 @@ int main(int argc, char** argv)
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
     context_token_count = rendezllama::commit_to_context(
-        ctx, out, chat_tokens, context_token_count, opt);
-    if (context_token_count == 0) {return 1;}
+        ctx, out, transcript_out,
+        chat_tokens, context_token_count, opt);
+    if (context_token_count == 0) {exstatus = 1; break;}
     assert(context_token_count == (int)chat_tokens.size());
 
     bool inputting = false;
@@ -194,8 +206,9 @@ int main(int argc, char** argv)
           fildesh::ofstream nullout("/dev/null");
           chat_tokens.resize(dst_index);
           context_token_count = rendezllama::commit_to_context(
-              ctx, nullout, chat_tokens, opt.priming_token_count, opt);
-          if (context_token_count == 0) {return 1;}
+              ctx, nullout, transcript_out,
+              chat_tokens, opt.priming_token_count, opt);
+          if (context_token_count == 0) {exstatus = 1; break;}
           assert(context_token_count == (int)chat_tokens.size());
         }
         else if (skipstr_FildeshX(&slice, "head")) {
@@ -288,7 +301,7 @@ int main(int argc, char** argv)
         }
       }
       // Break out of main loop when no more input.
-      if (!slice.at) {break;}
+      if (exstatus != 0 || !slice.at) {break;}
 
       if (buffer.length() > 0) {
         rendezllama::augment_chat_input(buffer, matched_antiprompt, opt);
@@ -298,6 +311,13 @@ int main(int argc, char** argv)
   }
 
   close_FildeshX(in);
+  if (exstatus == 0) {
+    rendezllama::print_tokens(
+        transcript_out,
+        chat_tokens.begin() + opt.priming_token_count,
+        chat_tokens.end(),
+        ctx);
+  }
   if (ctx) {llama_free(ctx);}
   return exstatus;
 }

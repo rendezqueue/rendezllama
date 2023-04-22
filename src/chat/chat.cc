@@ -140,6 +140,7 @@ rendezllama::generate_next_token(
 rendezllama::commit_to_context(
     struct llama_context* ctx,
     std::ostream& out,
+    std::ostream& transcript_out,
     std::vector<llama_token>& chat_tokens,
     unsigned context_token_count,
     const ChatOptions& opt)
@@ -173,6 +174,13 @@ rendezllama::commit_to_context(
       else {
         copying = rendezllama::token_endswith(
             ctx, chat_tokens[src_index], '\n');
+        if (copying) {
+          rendezllama::print_tokens(
+              transcript_out,
+              chat_tokens.begin() + dst_index,
+              chat_tokens.begin() + (src_index + 1),
+              ctx);
+        }
       }
     }
     chat_tokens.resize(dst_index);
