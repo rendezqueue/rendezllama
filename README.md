@@ -14,7 +14,7 @@ MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
 make
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
-  --x_setting example/prompt/roshambo_0/setting.sxproto \
+  --x_setting example/prompt/roshambo_kira/setting.sxproto \
   --thread_count 8 \
   --model "${MODEL}"
 ```
