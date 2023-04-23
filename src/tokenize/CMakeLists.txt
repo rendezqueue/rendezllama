@@ -1,12 +1,14 @@
-include_directories("${LlamaCppIncludePath}")
 add_executable(tokenize
   "tokenize_main.cc"
   "tokenize.cc"
   "tokenize.hh"
 )
+target_include_directories(tokenize PRIVATE
+  ${LlamaCpp_INCLUDE_DIRS}
+)
 target_link_libraries(tokenize
-  fildesh_lib
-  llama_cpp_lib
+  ${Fildesh_LIBRARIES}
+  ${LlamaCpp_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
 )
 if(LLAMA_OPENBLAS)
