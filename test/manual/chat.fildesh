@@ -1,9 +1,6 @@
 #!/usr/bin/env fildesh
 
-# This script isn't guaranteed to be stable.
-# Prefer the local.sh one.
-
-(: scene Str (?? .self.opt.scene "roshambo_0"))
+(: scene Str (?? .self.opt.scene "roshambo_kira"))
 (: model_file Filename
  (?? .self.opt.model
   "/mnt/llama_model_data/llama_cpp_models/13B/ggml-model-q4_0.bin"))
