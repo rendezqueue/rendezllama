@@ -10,6 +10,10 @@ jobs:
         include:
           - platform: ubuntu-latest
             cmake_build_type: RelOnHost
+          - platform: macos-latest
+            cmake_build_type: RelOnHost
+          - platform: windows-latest
+            cmake_build_type: Release
 
     runs-on: ${{ matrix.platform }}
 
