@@ -7,6 +7,29 @@
 #include "src/chat/opt.hh"
 #include "src/tokenize/tokenize.hh"
 
+
+static
+  FildeshO*
+open_transcript_outfile(
+    int& exstatus,
+    const std::string& sibling_filename,
+    const std::string& transcript_filename)
+{
+  FildeshO* transcript_out = NULL;
+  if (exstatus == 0) {
+    if (!transcript_filename.empty()) {
+      transcript_out = open_sibling_FildeshOF(
+              sibling_filename.c_str(), transcript_filename.c_str());
+      if (!transcript_out) {
+        fildesh_log_error("cannot open --o_rolling file for writing");
+        exstatus = 1;
+      }
+    }
+  }
+  return transcript_out;
+}
+
+
 int main(int argc, char** argv)
 {
   fildesh::ofstream eout("/dev/stderr");
@@ -22,16 +45,8 @@ int main(int argc, char** argv)
     if (!ctx) {exstatus = 1;}
   }
 
-  fildesh::ofstream transcript_out;
-  if (exstatus == 0) {
-    if (!opt.transcript_filename.empty()) {
-      transcript_out.open(opt.transcript_filename);
-      if (!transcript_out.good()) {
-        fildesh_log_error("cannot open --o_rolling file for writing");
-        exstatus = 1;
-      }
-    }
-  }
+  fildesh::ofstream transcript_out(open_transcript_outfile(
+          exstatus, opt.transcript_sibling_filename, opt.transcript_filename));
 
   // tokenize the prompt
   std::vector<llama_token> chat_tokens;
