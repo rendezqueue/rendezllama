@@ -12,10 +12,9 @@ Assuming you have the quantized weights already, you can start the chat CLI with
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
 # Make just creates a bld/ directory and invokes CMake to build there.
 make
+# Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
-  --x_priming example/prompt/roshambo_0/priming.txt \
-  --x_rolling example/prompt/roshambo_0/rolling.txt \
-  --o_rolling bld/example/prompt/roshambo_0.txt \
+  --x_setting example/prompt/roshambo_0/setting.sxproto \
   --thread_count 8 \
   --model "${MODEL}"
 ```

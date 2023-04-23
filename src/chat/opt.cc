@@ -5,6 +5,7 @@
 #include <ctime>
 
 #include <fildesh/fildesh.h>
+#include <fildesh/ofstream.hh>
 
 static
   void
@@ -38,6 +39,120 @@ parse_rolling_prompt(FildeshX* in, rendezllama::ChatOptions& opt)
   if (opt.confidant.empty()) {
     opt.confidant = names.front();
   }
+}
+
+static
+  std::string
+parse_quoted_string(FildeshX* in)
+{
+  std::string s;
+  skipchrs_FildeshX(in, " ");
+  if (peek_char_FildeshX(in, '"')) {
+    in->off += 1;
+    FildeshX slice = until_char_FildeshX(in, '"');
+    if (slice.at) {
+      s.insert(s.end(), &slice.at[slice.off], &slice.at[slice.size]);
+    }
+  }
+  return s;
+}
+
+static
+  bool
+parse_options_sxproto(
+    rendezllama::ChatOptions& opt,
+    const std::string& filename)
+{
+  bool all_good = true;
+  unsigned line_count = 0;
+  FildeshX* in = open_FildeshXF(filename.c_str());
+  if (!in) {
+    fildesh_log_errorf("Cannot open %s.", filename.c_str());
+    return false;
+  }
+  fildesh::ofstream nullout("/dev/null");
+  FildeshX slice;
+  for (slice = sliceline_FildeshX(in); slice.at;
+       slice = sliceline_FildeshX(in))
+  {
+    line_count += 1;
+    skipchrs_FildeshX(&slice, " ");
+    if (peek_char_FildeshX(&slice, ';')) {
+      // Line is comment. Do nothing.
+    }
+    else if (slice.off == slice.size) {
+      // Line is empty. Do nothing.
+    }
+    else if (!skipstr_FildeshX(&slice, "(")) {
+      fildesh_log_errorf(
+          "Line %u of %s: Unrecognized char.\n",
+          line_count, filename.c_str());
+      all_good = false;
+    }
+    else if (skipstr_FildeshX(&slice, "context_token_limit ")) {
+      int n = 0;
+      if (parse_int_FildeshX(&slice, &n) && n > 0) {
+        opt.context_token_limit = n;
+      }
+      else {
+        fildesh_log_errorf(
+            "Line %u of %s: Need positive int.\n",
+            line_count, filename.c_str());
+        all_good = false;
+      }
+    }
+    else if (skipstr_FildeshX(&slice, "x_priming ")) {
+      std::string priming_filename = parse_quoted_string(&slice);
+      FildeshX* priming_in = NULL;
+      if (!priming_filename.empty()) {
+        priming_in = open_sibling_FildeshXF(
+            filename.c_str(), priming_filename.c_str());
+      }
+      const char* content = NULL;
+      if (priming_in) {
+        content = slurp_FildeshX(priming_in);
+      }
+      if (!content) {
+        fildesh_log_errorf(
+            "Line %u of %s: Cannot read given file %s.\n",
+            line_count, filename.c_str(), priming_filename.c_str());
+        all_good = false;
+      }
+      else if (content[0] != '\0') {
+        opt.priming_prompt += content;
+        // Ensure newline at end.
+        if (opt.priming_prompt.back() != '\n') {
+          opt.priming_prompt += '\n';
+        }
+      }
+      close_FildeshX(priming_in);
+    }
+    else if (skipstr_FildeshX(&slice, "x_rolling ")) {
+      std::string rolling_filename = parse_quoted_string(&slice);
+      FildeshX* rolling_in = NULL;
+      if (!rolling_filename.empty()) {
+        rolling_in = open_sibling_FildeshXF(
+            filename.c_str(), rolling_filename.c_str());
+      }
+      parse_rolling_prompt(rolling_in, opt);
+      close_FildeshX(rolling_in);
+    }
+    else if (skipstr_FildeshX(&slice, "o_rolling ")) {
+      opt.transcript_sibling_filename = filename;
+      opt.transcript_filename = parse_quoted_string(&slice);
+    }
+    else if (rendezllama::maybe_parse_option_command(opt, &slice, nullout)) {
+      // Success!
+    }
+    else {
+      fildesh_log_errorf(
+          "Line %u of %s: Failed to parse field.\n",
+          line_count, filename.c_str());
+      all_good = false;
+    }
+  }
+  close_FildeshX(in);
+  return all_good;
 }
 
 static
@@ -123,7 +238,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     if (false) {
     }
     else if (argi + 1 == argc) {
-      exstatus == 64;
+      exstatus = 64;
     }
     else if (0 == strcmp("--protagonist", argv[argi])) {
       argi += 1;
@@ -137,9 +252,11 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       argi += 1;
       opt.model_filename = argv[argi];
     }
-    else if (0 == strcmp("--o_rolling", argv[argi])) {
+    else if (0 == strcmp("--x_setting", argv[argi])) {
       argi += 1;
-      opt.transcript_filename = argv[argi];
+      if (!parse_options_sxproto(opt, argv[argi])) {
+        exstatus = 1;
+      }
     }
     else if (0 == strcmp("--x_priming", argv[argi])) {
       argi += 1;
@@ -159,6 +276,11 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       FildeshX* rolling_in = open_FildeshXF(argv[argi]);
       parse_rolling_prompt(rolling_in, opt);
       close_FildeshX(rolling_in);
+    }
+    else if (0 == strcmp("--o_rolling", argv[argi])) {
+      argi += 1;
+      opt.transcript_sibling_filename.clear();
+      opt.transcript_filename = argv[argi];
     }
     else if (0 == strcmp("--linespace", argv[argi])) {
       argi += 1;

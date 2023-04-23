@@ -1,4 +1,3 @@
-include_directories("${LlamaCppIncludePath}")
 add_executable(chat
   "chat_main.cc"
   "chat.cc"
@@ -10,9 +9,12 @@ add_executable(chat
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )
+target_include_directories(chat PRIVATE
+  ${LlamaCpp_INCLUDE_DIRS}
+)
 target_link_libraries(chat
-  fildesh_lib
-  llama_cpp_lib
+  ${Fildesh_LIBRARIES}
+  ${LlamaCpp_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
 )
 if(LLAMA_OPENBLAS)

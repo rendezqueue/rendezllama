@@ -7,19 +7,14 @@
 (: model_file Filename
  (?? .self.opt.model
   "/mnt/llama_model_data/llama_cpp_models/13B/ggml-model-q4_0.bin"))
-(: priming_file Filename (++ "example/prompt/" scene "/priming.txt"))
-(: rolling_file Filename (++ "example/prompt/" scene "/rolling.txt"))
+(: setting_file Filename (++ "example/prompt/" scene "/setting.sxproto"))
 (: thread_count Str (?? .self.opt.thread_count "16"))
 
 |< stdin
 |- ./bld/src/chat/chat \
-  --model $(XOF model_file) \
-  --thread_count "${thread_count}" \
-  --x_priming $(XOF priming_file) --x_rolling $(XOF rolling_file) \
+  --x_setting $(XOF setting_file) \
   --o_rolling "bld/example/prompt/${scene}.txt" \
-  --context_token_limit "2048" \
-  --sequent_token_limit 32 \
-  --top_k "1000" --top_p "0.95" --temp "0.7" \
-  --repeat_last_n "20" --repeat_penalty "1.2"
+  --thread_count "${thread_count}" \
+  --model $(XOF model_file)
 |> stdout
 

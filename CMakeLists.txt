@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.12) # Don't bump this version for no reason
+cmake_minimum_required(VERSION 3.14)
+# CMake 3.14 for FetchContent_MakeAvailable().
 
 #set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -39,23 +40,14 @@ set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE}")
 
 
-include(CPack)
-include(GNUInstallDirs)
-include(ExternalProject)
-include("pkg/cmake/externalproject/fildesh_project.cmake")
-include(FetchContent)
-include("pkg/cmake/fetchcontent/llama_cpp.cmake")
+include(CTest)
 
+add_subdirectory(dep EXCLUDE_FROM_ALL)
+include_directories(
+  "${PROJECT_SOURCE_DIR}"
+  ${Fildesh_INCLUDE_DIRS}
+)
 
-if(LLAMA_OPENBLAS)
-  set(BLA_VENDOR OpenBLAS)
-  find_package(BLAS REQUIRED)
-endif()
-
-find_package(Threads REQUIRED)
-
-
-include_directories("${CMAKE_SOURCE_DIR}")
 add_subdirectory(src)
 add_subdirectory(example)
 

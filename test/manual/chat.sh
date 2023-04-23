@@ -15,8 +15,7 @@ if [ -z "${prompt_name}" ]; then
   echo "Give a prompt name (a subdirectory in example/prompt/)." 1>&2
   exit 64
 fi
-priming_file="example/prompt/${prompt_name}/priming.txt"
-rolling_file="example/prompt/${prompt_name}/rolling.txt"
+setting_file="example/prompt/${prompt_name}/setting.sxproto"
 transcript_file="bld/example/prompt/${prompt_name}.txt"
 
 # Second arg can be "--" to indicate that we're forarding the rest.
@@ -25,12 +24,9 @@ if [ "--" = "${1:-}" ]; then
 fi
 
 exec ./bld/src/chat/chat \
-  --x_priming "${priming_file}" \
-  --x_rolling "${rolling_file}" \
+  --x_setting "${setting_file}" \
   --o_rolling "${transcript_file}" \
-  --model "${model_file}" \
   --thread_count "${thread_count}" \
-  --context_token_limit "2048" \
-  --sequent_token_limit 32 \
+  --model "${model_file}" \
   "$@"
 

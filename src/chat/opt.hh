@@ -16,6 +16,7 @@ struct ChatOptions {
   std::string protagonist;
   std::string confidant;
   std::string model_filename;
+  std::string transcript_sibling_filename;
   std::string transcript_filename;
 
   std::string priming_prompt;
@@ -41,7 +42,7 @@ struct ChatOptions {
   int seed;
   // Can't set these yet.
   std::vector<std::string> antiprompts;
-  bool verbose_prompt = true;
+  bool verbose_prompt = false;
 
   int priming_token_count = 0;
   bool mlock_on = false;
