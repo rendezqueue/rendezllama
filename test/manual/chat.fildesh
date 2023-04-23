@@ -16,10 +16,10 @@
   --model $(XOF model_file) \
   --thread_count "${thread_count}" \
   --x_priming $(XOF priming_file) --x_rolling $(XOF rolling_file) \
+  --o_rolling "bld/example/prompt/${scene}.txt" \
   --context_token_limit "2048" \
   --sequent_token_limit 32 \
   --top_k "1000" --top_p "0.95" --temp "0.7" \
   --repeat_last_n "20" --repeat_penalty "1.2"
-|- elastic - "example/prompt/${scene}/tee.txt"
 |> stdout
 

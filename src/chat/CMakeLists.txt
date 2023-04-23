@@ -3,6 +3,8 @@ add_executable(chat
   "chat_main.cc"
   "chat.cc"
   "chat.hh"
+  "cmd.cc"
+  "cmd.hh"
   "opt.cc"
   "opt.hh"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"

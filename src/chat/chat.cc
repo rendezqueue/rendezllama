@@ -7,6 +7,7 @@
 #include <fildesh/fildesh.h>
 
 #include "src/chat/opt.hh"
+#include "src/tokenize/tokenize.hh"
 
   const std::string&
 rendezllama::antiprompt_suffix(
@@ -38,17 +39,53 @@ static std::string confidant_line_prefix(const rendezllama::ChatOptions& opt) {
   return s;
 }
 
+static void maybe_force_continuation(std::string& s)
+{
+  // TODO(#12): We should force continuation on the same line.
+  // But we have to remove the space either way for good tokenization.
+  if (s.back() == ' ') {s.pop_back();}
+}
+
   void
 rendezllama::augment_chat_input(
     std::string& s,
     const std::string& matched_antiprompt,
     const rendezllama::ChatOptions& opt)
 {
-  if (s == "\\n") {
+  if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
+    s.erase(0, 2);
+    std::string maybe_newline, maybe_space;
     if (matched_antiprompt != "\n") {
-      s += "\n";
+      maybe_newline = '\n';
     }
-    s = confidant_line_prefix(opt);
+    if (s.empty() || s[0] != ' ') {
+      maybe_space = ' ';
+    }
+    s = maybe_newline + confidant_line_prefix(opt) + maybe_space + s;
+    maybe_force_continuation(s);
+  }
+  else if (s.front() == '\n') {
+    s.erase(0, 1);
+    std::string pfx;
+    // This is from /yield.
+    if (matched_antiprompt != "\n") {
+      pfx += '\n';
+    }
+    if (opt.linespace_on) {pfx += ' ';}
+    s = pfx + s;
+  }
+  else if (s.front() == ' ') {
+    maybe_force_continuation(s);
+  }
+  else if (s.front() == '\n') {
+    // This is from /yield.
+    s.erase(0, 1);
+    std::string pfx;
+    if (matched_antiprompt != "\n") {
+      pfx += '\n';
+    }
+    if (opt.linespace_on) {pfx += ' ';}
+    s = pfx + s;
   }
   else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
@@ -56,7 +93,7 @@ rendezllama::augment_chat_input(
   else {
     std::string maybe_newline;
     if (matched_antiprompt != "\n") {
-      maybe_newline += '\n';
+      maybe_newline = '\n';
     }
     s = (maybe_newline + protagonist_line_prefix(opt) +
          s + '\n' + confidant_line_prefix(opt));
@@ -103,6 +140,7 @@ rendezllama::generate_next_token(
 rendezllama::commit_to_context(
     struct llama_context* ctx,
     std::ostream& out,
+    std::ostream& transcript_out,
     std::vector<llama_token>& chat_tokens,
     unsigned context_token_count,
     const ChatOptions& opt)
@@ -134,8 +172,15 @@ rendezllama::commit_to_context(
         dst_index += 1;
       }
       else {
-        const char* s = llama_token_to_str(ctx, chat_tokens[src_index]);
-        copying = (s && s[0] == '\n');
+        copying = rendezllama::token_endswith(
+            ctx, chat_tokens[src_index], '\n');
+        if (copying) {
+          rendezllama::print_tokens(
+              transcript_out,
+              chat_tokens.begin() + dst_index,
+              chat_tokens.begin() + (src_index + 1),
+              ctx);
+        }
       }
     }
     chat_tokens.resize(dst_index);

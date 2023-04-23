@@ -15,6 +15,7 @@ make
 ./bld/src/chat/chat \
   --x_priming example/prompt/roshambo_0/priming.txt \
   --x_rolling example/prompt/roshambo_0/rolling.txt \
+  --o_rolling bld/example/prompt/roshambo_0.txt \
   --thread_count 8 \
   --model "${MODEL}"
 ```
@@ -28,9 +29,13 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - An empty input lets token generation keep happening.
   - Antiprompts are `.!?…` and newline. There's no way to change them right now.
   - `/sequent_limit 32` sets the number of tokens to generate before reading more input.
-  - `/tail` or `/tail 10` shows the last 10 context lines.
+  - `/tail` or `/tail 10` shows the last 10 lines.
+  - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
+  - `/forget 10` removes the first 10 lines of the rolling prompt.
 - Editing.
-  - `/yield` or `\n` inserts a newline and has the confidant say something. Useful for prompts that encourage the confidant to use inner monologue to think about the world.
+  - ` some text` (note blank space in front) adds `some text` to the current line.
+  - `\nsome text` (note the escaped newline in front) adds a new line of dialogue for the confidant that starts with `some text`.
+  - `/yield Char` adds a new line of dialogue for a character named `Char`.
   - `/r` regenerates the current line of dialogue.
   - `/d` deletes current line.
 - Repeat penalty.

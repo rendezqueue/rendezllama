@@ -137,6 +137,10 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       argi += 1;
       opt.model_filename = argv[argi];
     }
+    else if (0 == strcmp("--o_rolling", argv[argi])) {
+      argi += 1;
+      opt.transcript_filename = argv[argi];
+    }
     else if (0 == strcmp("--x_priming", argv[argi])) {
       argi += 1;
       FildeshX* priming_in = open_FildeshXF(argv[argi]);

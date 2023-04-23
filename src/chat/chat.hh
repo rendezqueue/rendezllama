@@ -26,6 +26,7 @@ generate_next_token(struct llama_context* ctx,
 unsigned
 commit_to_context(struct llama_context* ctx,
                   std::ostream& out,
+                  std::ostream& transcript_out,
                   std::vector<llama_token>& chat_tokens,
                   unsigned context_token_count,
                   const ChatOptions& opt);

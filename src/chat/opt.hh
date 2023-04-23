@@ -16,6 +16,7 @@ struct ChatOptions {
   std::string protagonist;
   std::string confidant;
   std::string model_filename;
+  std::string transcript_filename;
 
   std::string priming_prompt;
   std::string rolling_prompt;

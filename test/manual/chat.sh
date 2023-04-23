@@ -17,19 +17,20 @@ if [ -z "${prompt_name}" ]; then
 fi
 priming_file="example/prompt/${prompt_name}/priming.txt"
 rolling_file="example/prompt/${prompt_name}/rolling.txt"
-tee_file="example/prompt/${prompt_name}/tee.txt"
+transcript_file="bld/example/prompt/${prompt_name}.txt"
 
 # Second arg can be "--" to indicate that we're forarding the rest.
 if [ "--" = "${1:-}" ]; then
   shift
 fi
 
-./bld/src/chat/chat \
-  --x_priming "${priming_file}" --x_rolling "${rolling_file}" \
+exec ./bld/src/chat/chat \
+  --x_priming "${priming_file}" \
+  --x_rolling "${rolling_file}" \
+  --o_rolling "${transcript_file}" \
   --model "${model_file}" \
   --thread_count "${thread_count}" \
   --context_token_limit "2048" \
   --sequent_token_limit 32 \
-  "$@" |
-tee "${tee_file}"
+  "$@"
 
