@@ -27,7 +27,8 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
 - Interactivity.
   - An empty input lets token generation keep happening.
   - Antiprompts are `.!?…` and newline. There's no way to change them right now.
-  - `/sequent_limit 32` sets the number of tokens to generate before reading more input.
+  - `/sentence_limit 3` sets the number of sentences to generate before reading more input.
+  - `/sentence_token_limit 40` sets the maximum number of tokens in a sentence before giving control to the user.
   - `/tail` or `/tail 10` shows the last 10 lines.
   - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
   - `/forget 10` removes the first 10 lines of the rolling prompt.

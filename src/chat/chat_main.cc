@@ -84,7 +84,8 @@ int main(int argc, char** argv)
   }
 
   std::vector<llama_token> extra_penalized_tokens;
-  unsigned sequent_token_count = opt.sequent_token_limit;
+  unsigned sentence_count = 0;
+  unsigned sentence_token_count = 0;
   unsigned context_token_count = 0;
 
   in = open_FildeshXF("/dev/stdin");
@@ -95,7 +96,6 @@ int main(int argc, char** argv)
     if (context_token_count == 0) {exstatus = 1; break;}
     assert(context_token_count == (int)chat_tokens.size());
 
-    bool inputting = false;
     std::string matched_antiprompt;
     {
       llama_token id = rendezllama::generate_next_token(
@@ -113,21 +113,35 @@ int main(int argc, char** argv)
       // We use single-character antiprompts, so they aren't split across tokens.
       // (If we used longer antiprompts, they could be split across iterations.)
       matched_antiprompt = rendezllama::antiprompt_suffix(s, opt.antiprompts);
-      if (!matched_antiprompt.empty()) {
-        inputting = true;
-      }
-
-      // decrement remaining sampling budget
-      if (sequent_token_count > 0) {sequent_token_count -= 1;}
     }
 
-    // Max tokens.
-    if (sequent_token_count == 0 && opt.sequent_token_limit > 0) {
-      inputting = true;
+    bool inputting = false;
+    if (!matched_antiprompt.empty()) {
+      if (matched_antiprompt == "\n") {
+        inputting = true;
+      }
+      else if (sentence_count + 1 == opt.sentence_limit) {
+        // Reached the limit on number of sentences.
+        inputting = true;
+      }
+      else {
+        sentence_count += 1;
+        sentence_token_count = 0;
+      }
+    }
+    else {
+      if (sentence_token_count + 1 == opt.sentence_token_limit) {
+        // Reached the limit on number of tokens in a sentence.
+        inputting = true;
+      }
+      else {
+        sentence_token_count += 1;
+      }
     }
 
     if (inputting) {
-      sequent_token_count = opt.sequent_token_limit;
+      sentence_token_count = 0;
+      sentence_count = 0;
 
       std::string buffer;
 
