@@ -31,7 +31,8 @@ struct ChatOptions {
   const char command_delim_chars[5] = ":=! ";
 
   int thread_count = 1;
-  int sequent_token_limit = 50;
+  int sentence_limit = 3;
+  int sentence_token_limit = 50;
   int top_k = 1000;
   float top_p = 0.95;
   float temp = 0.7;

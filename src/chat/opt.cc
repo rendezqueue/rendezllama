@@ -207,7 +207,8 @@ print_options(std::ostream& out, const rendezllama::ChatOptions& opt)
     << '\n'
     << "Generate: batch_count=" << opt.batch_count
     << ", thread_count=" << opt.thread_count
-    << ", sequent_token_limit=" << opt.sequent_token_limit
+    << ", sentence_token_limit=" << opt.sentence_token_limit
+    << ", sentence_limit=" << opt.sentence_limit
     << ", seed=" << opt.seed
     << '\n';
   out.flush();
@@ -314,10 +315,17 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         fildesh_log_warning("--context_token_limit is above 2048. Expect poor results.");
       }
     }
-    else if (0 == strcmp("--sequent_token_limit", argv[argi])) {
+    else if (0 == strcmp("--sentence_limit", argv[argi])) {
       argi += 1;
-      if (!fildesh_parse_int(&opt.sequent_token_limit, argv[argi])) {
-        fildesh_log_error("--sequent_token_limit needs int");
+      if (!fildesh_parse_int(&opt.sentence_limit, argv[argi])) {
+        fildesh_log_error("--sentence_limit needs int");
+        exstatus = 64;
+      }
+    }
+    else if (0 == strcmp("--sentence_token_limit", argv[argi])) {
+      argi += 1;
+      if (!fildesh_parse_int(&opt.sentence_token_limit, argv[argi])) {
+        fildesh_log_error("--sentence_token_limit needs int");
         exstatus = 64;
       }
     }
@@ -510,18 +518,29 @@ rendezllama::maybe_parse_option_command(
       fildesh_log_warning("Need a positive int.");
     }
   }
-  else if (skipstr_FildeshX(in, "sequent_token_limit") ||
-           skipstr_FildeshX(in, "sequent_limit"))
+  else if (skipstr_FildeshX(in, "sentence_limit")) {
+    int n = -1;
+    if (!skipchrs_FildeshX(in, opt.command_delim_chars)) {
+      eout << "sentence_limit=" << opt.sentence_limit << '\n'; eout.flush();
+    }
+    else if (parse_int_FildeshX(in, &n) && n >= 0) {
+      opt.sentence_limit = n;
+    }
+    else {
+      fildesh_log_warning("Need a non-negative int.");
+    }
+  }
+  else if (skipstr_FildeshX(in, "sentence_token_limit"))
   {
     int n = -1;
     if (!skipchrs_FildeshX(in, opt.command_delim_chars)) {
-      eout << "sequent_token_limit=" << opt.sequent_token_limit << '\n'; eout.flush();
+      eout << "sentence_token_limit=" << opt.sentence_token_limit << '\n'; eout.flush();
     }
-    else if (parse_int_FildeshX(in, &n) && n > 0) {
-      opt.sequent_token_limit = n;
+    else if (parse_int_FildeshX(in, &n) && n >= 0) {
+      opt.sentence_token_limit = n;
     }
     else {
-      fildesh_log_warning("Need a positive int.");
+      fildesh_log_warning("Need a non-negative int.");
     }
   }
   else if (skipstr_FildeshX(in, "opt")) {
