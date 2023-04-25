@@ -16,6 +16,8 @@ struct ChatOptions {
   std::string protagonist;
   std::string confidant;
   std::string model_filename;
+  std::string lora_filename;
+  std::string lora_base_model_filename;
   std::string transcript_sibling_filename;
   std::string transcript_filename;
 
@@ -47,6 +49,7 @@ struct ChatOptions {
 
   int priming_token_count = 0;
   bool mlock_on = false;
+  bool mmap_on = true;
 };
 
 int

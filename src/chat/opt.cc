@@ -127,6 +127,17 @@ parse_options_sxproto(
       }
       close_FildeshX(priming_in);
     }
+    else if (skipstr_FildeshX(&slice, "model ")) {
+      opt.model_filename = parse_quoted_string(&slice);
+    }
+    else if (skipstr_FildeshX(&slice, "lora ")) {
+      opt.lora_filename = parse_quoted_string(&slice);
+      opt.mmap_on = false;  // mmap() is incompatible.
+    }
+    else if (skipstr_FildeshX(&slice, "lora_base_model ") ||
+             skipstr_FildeshX(&slice, "lora_base ")) {
+      opt.lora_base_model_filename = parse_quoted_string(&slice);
+    }
     else if (skipstr_FildeshX(&slice, "x_rolling ")) {
       std::string rolling_filename = parse_quoted_string(&slice);
       FildeshX* rolling_in = NULL;
@@ -252,6 +263,17 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     else if (0 == strcmp("--model", argv[argi])) {
       argi += 1;
       opt.model_filename = argv[argi];
+    }
+    else if (0 == strcmp("--lora", argv[argi])) {
+      argi += 1;
+      opt.lora_filename = argv[argi];
+      opt.mmap_on = false;  // mmap() is incompatible.
+    }
+    else if (0 == strcmp("--lora_base_model", argv[argi]) ||
+             0 == strcmp("--lora_base", argv[argi]) ||
+             0 == strcmp("--lora-base", argv[argi])) {
+      argi += 1;
+      opt.lora_base_model_filename = argv[argi];
     }
     else if (0 == strcmp("--x_setting", argv[argi])) {
       argi += 1;
@@ -494,18 +516,6 @@ rendezllama::maybe_parse_option_command(
       fildesh_log_warning("Need a positive int.");
     }
   }
-  else if (skipstr_FildeshX(in, "thread_count")) {
-    int n = -1;
-    if (!skipchrs_FildeshX(in, opt.command_delim_chars)) {
-      eout << "thread_count=" << opt.thread_count << '\n'; eout.flush();
-    }
-    else if (parse_int_FildeshX(in, &n) && n > 0) {
-      opt.thread_count = n;
-    }
-    else {
-      fildesh_log_warning("Need a positive int.");
-    }
-  }
   else if (skipstr_FildeshX(in, "batch_count")) {
     int n = -1;
     if (!skipchrs_FildeshX(in, opt.command_delim_chars)) {
@@ -561,6 +571,7 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
   params.seed = opt.seed;
   params.f16_kv = true;
   params.use_mlock = opt.mlock_on;
+  params.use_mmap = opt.mmap_on;
 
   struct llama_context* ctx = llama_init_from_file(
       opt.model_filename.c_str(), params);

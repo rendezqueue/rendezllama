@@ -9,9 +9,9 @@
 
 |< stdin
 |- ./bld/src/chat/chat \
-  --x_setting $(XOF setting_file) \
-  --o_rolling "bld/example/prompt/${scene}.txt" \
+  --model $(XOF model_file) \
   --thread_count "${thread_count}" \
-  --model $(XOF model_file)
+  --o_rolling "bld/example/prompt/${scene}.txt" \
+  --x_setting $(XOF setting_file)
 |> stdout
 
