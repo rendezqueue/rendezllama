@@ -87,6 +87,7 @@ int main(int argc, char** argv)
   unsigned sentence_count = 0;
   unsigned sentence_token_count = 0;
   unsigned context_token_count = 0;
+  bool preventing_newline = false;
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
@@ -99,7 +100,8 @@ int main(int argc, char** argv)
     std::string matched_antiprompt;
     {
       llama_token id = rendezllama::generate_next_token(
-          ctx, extra_penalized_tokens, chat_tokens, opt);
+          ctx, preventing_newline, extra_penalized_tokens, chat_tokens, opt);
+      preventing_newline = false;
 
       // add it to the context
       chat_tokens.push_back(id);
@@ -262,32 +264,19 @@ int main(int argc, char** argv)
           }
           eout.flush();
         }
-        else if (skipstr_FildeshX(&slice, "tail")) {
-          unsigned n = 10;
-          {
-            int tmp_n = 0;
-            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
-                parse_int_FildeshX(&slice, &tmp_n) &&
-                tmp_n > 0)
-            {
-              n = tmp_n;
-            }
+        else if (maybe_do_tail_command(&slice, eout, ctx, chat_tokens, opt)) {
+          // Nothing else.
+        }
+        else if (rendezllama::maybe_do_back_command(
+                chat_tokens, context_token_count,
+                &slice, eout, ctx, opt))
+        {
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
           }
-          size_t i = chat_tokens.size();
-          while (i > 0) {
-            i -= 1;
-            if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
-              n -= 1;
-              if (n == 0) {
-                i += 1;
-                break;
-              }
-            }
-          }
-          for (; i < chat_tokens.size(); ++i) {
-            eout << llama_token_to_str(ctx, chat_tokens[i]);
-          }
-          eout.flush();
+          matched_antiprompt = rendezllama::antiprompt_suffix(
+              llama_token_to_str(ctx, chat_tokens.back()),
+              opt.antiprompts);
         }
         else if (skipstr_FildeshX(&slice, "d")) {
           if (slice.off != slice.size) {
@@ -333,7 +322,8 @@ int main(int argc, char** argv)
       if (exstatus != 0 || !slice.at) {break;}
 
       if (buffer.length() > 0) {
-        rendezllama::augment_chat_input(buffer, matched_antiprompt, opt);
+        rendezllama::augment_chat_input(
+            buffer, preventing_newline, matched_antiprompt, opt);
         rendezllama::tokenize_extend(chat_tokens, ctx, buffer);
       }
     }

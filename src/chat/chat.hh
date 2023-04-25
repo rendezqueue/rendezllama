@@ -15,11 +15,13 @@ antiprompt_suffix(const std::string& text,
                   const std::vector<std::string>& antiprompts);
 void
 augment_chat_input(std::string& s,
+                   bool& prevent_subsequent_newline,
                    const std::string& matched_antiprompt,
                    const ChatOptions& opt);
 
 llama_token
 generate_next_token(struct llama_context* ctx,
+                    bool preventing_newline,
                     const std::vector<llama_token>& extra_penalized_tokens,
                     const std::vector<llama_token>& tokens,
                     const ChatOptions& opt);

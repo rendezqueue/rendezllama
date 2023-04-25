@@ -3,6 +3,15 @@
 #include <cassert>
 #include <cstring>
 
+  llama_token
+rendezllama::newline_token(struct llama_context* ctx)
+{
+  llama_token token_id = 0;
+  int n = llama_tokenize(ctx, "\n", &token_id, 1, false);
+  assert(n >= 0);
+  return token_id;
+}
+
   void
 rendezllama::print_tokens(
     std::ostream& out,

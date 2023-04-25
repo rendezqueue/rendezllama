@@ -39,19 +39,24 @@ static std::string confidant_line_prefix(const rendezllama::ChatOptions& opt) {
   return s;
 }
 
-static void maybe_force_continuation(std::string& s)
+static bool maybe_trim_endspace(std::string& s)
 {
-  // TODO(#12): We should force continuation on the same line.
-  // But we have to remove the space either way for good tokenization.
-  if (s.back() == ' ') {s.pop_back();}
+  bool result = false;
+  while (!s.empty() && s.back() == ' ') {
+    s.pop_back();
+    result = true;
+  }
+  return result;
 }
 
   void
 rendezllama::augment_chat_input(
     std::string& s,
+    bool& prevent_subsequent_newline,
     const std::string& matched_antiprompt,
     const rendezllama::ChatOptions& opt)
 {
+  prevent_subsequent_newline = false;
   if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
     s.erase(0, 2);
     std::string maybe_newline, maybe_space;
@@ -62,7 +67,7 @@ rendezllama::augment_chat_input(
       maybe_space = ' ';
     }
     s = maybe_newline + confidant_line_prefix(opt) + maybe_space + s;
-    maybe_force_continuation(s);
+    prevent_subsequent_newline = maybe_trim_endspace(s);
   }
   else if (s.front() == '\n') {
     s.erase(0, 1);
@@ -75,7 +80,7 @@ rendezllama::augment_chat_input(
     s = pfx + s;
   }
   else if (s.front() == ' ') {
-    maybe_force_continuation(s);
+    prevent_subsequent_newline = maybe_trim_endspace(s);
   }
   else if (s.front() == '\n') {
     // This is from /yield.
@@ -103,6 +108,7 @@ rendezllama::augment_chat_input(
   llama_token
 rendezllama::generate_next_token(
     struct llama_context* ctx,
+    bool preventing_newline,
     const std::vector<llama_token>& extra_penalized_tokens,
     const std::vector<llama_token>& tokens,
     const rendezllama::ChatOptions& opt)
@@ -110,6 +116,10 @@ rendezllama::generate_next_token(
   // Zero probability for end-of-stream token.
   // (Technically called "end-of-sentence", but it's treated as end-of-stream.)
   llama_get_logits(ctx)[llama_token_eos()] = 0;
+
+  if (preventing_newline) {
+    llama_get_logits(ctx)[rendezllama::newline_token(ctx)] = 0;
+  }
 
   const size_t trailing_token_count = std::min(
       tokens.size(), (size_t)opt.repeat_last_count);

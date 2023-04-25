@@ -1,7 +1,122 @@
 #include "cmd.hh"
 
-#include "src/chat/opt.hh"
+#include <cstring>
 
+#include "src/chat/opt.hh"
+#include "src/tokenize/tokenize.hh"
+
+static
+  bool
+skip_cmd_prefix(FildeshX* in, const char* pfx,
+                const rendezllama::ChatOptions& opt)
+{
+  const unsigned n = strlen(pfx);
+  if (peek_bytestring_FildeshX(in, NULL, n+1)) {
+    if (memchr(opt.command_delim_chars, in->at[in->off+n],
+               sizeof(opt.command_delim_chars)-1))
+    {
+      in->off += n+1;
+      return true;
+    }
+    return false;
+  }
+  return skip_bytestring_FildeshX(in, (const unsigned char*)pfx, n);
+}
+
+static
+  void
+print_tail_lines(std::ostream& out, struct llama_context* ctx,
+                 const std::vector<llama_token> chat_tokens,
+                 unsigned n)
+{
+  size_t i = chat_tokens.size();
+  while (i > 0) {
+    i -= 1;
+    if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
+      n -= 1;
+      if (n == 0) {
+        i += 1;
+        break;
+      }
+    }
+  }
+  for (; i < chat_tokens.size(); ++i) {
+    out << llama_token_to_str(ctx, chat_tokens[i]);
+  }
+  out.flush();
+}
+
+  bool
+rendezllama::maybe_do_back_command(
+    std::vector<llama_token>& chat_tokens,
+    unsigned& context_token_count,
+    FildeshX* in,
+    std::ostream& out,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt)
+{
+  bool space_delim_on = skip_cmd_prefix(in, "B", opt);
+  if (!space_delim_on) {
+    if (!skip_cmd_prefix(in, "b", opt)) {
+      return false;
+    }
+  }
+  unsigned n = 1;
+  {
+    int tmp_n = -1;
+    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
+      n = tmp_n;
+    }
+  }
+  bool skipping_contiguous_space = space_delim_on;
+  while (n > 0) {
+    if (chat_tokens.size() <= opt.priming_token_count) {
+      break;
+    }
+    const llama_token token_id = chat_tokens.back();
+    chat_tokens.pop_back();
+    context_token_count -= 1;
+    if (space_delim_on) {
+      const char* s = llama_token_to_str(ctx, token_id);
+      if (s && (s[0] == ' ' || s[0] == '\n')) {
+        if (!skipping_contiguous_space || s[1] != '\0') {
+          n -= 1;
+        }
+        skipping_contiguous_space = true;
+      }
+      else {
+        skipping_contiguous_space = false;
+      }
+    }
+    else {
+      n -= 1;
+    }
+  }
+  print_tail_lines(out, ctx, chat_tokens, 1);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_tail_command(
+    FildeshX* in,
+    std::ostream& out,
+    struct llama_context* ctx,
+    const std::vector<llama_token>& chat_tokens,
+    const rendezllama::ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "tail", opt)) {
+    return false;
+  }
+  unsigned n = 10;
+  {
+    int tmp_n = 0;
+    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
+      n = tmp_n;
+    }
+  }
+  print_tail_lines(out, ctx, chat_tokens, n);
+  return true;
+}
 
   bool
 rendezllama::maybe_parse_yield_command(
@@ -9,9 +124,11 @@ rendezllama::maybe_parse_yield_command(
     FildeshX* in,
     const rendezllama::ChatOptions& opt)
 {
-  if (!skipstr_FildeshX(in, "yield")) {return false;}
+  if (!skip_cmd_prefix(in, "yield", opt)) {
+    return false;
+  }
   s = '\n';
-  if (skipchrs_FildeshX(in, opt.command_delim_chars)) {
+  if (in->off < in->size) {
     s.insert(s.end(), &in->at[in->off], &in->at[in->size]);
     if (!until_char_FildeshX(in, ':').at) {
       s += ':';
