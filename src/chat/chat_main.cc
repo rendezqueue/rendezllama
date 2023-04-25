@@ -45,6 +45,16 @@ int main(int argc, char** argv)
     if (!ctx) {exstatus = 1;}
   }
 
+  if (exstatus == 0 && !opt.lora_filename.empty()) {
+    const char* base_model_filename = NULL;
+    if (!opt.lora_base_model_filename.empty()) {
+      base_model_filename = opt.lora_base_model_filename.c_str();
+    }
+    int istat = llama_apply_lora_from_file(
+        ctx, opt.lora_filename.c_str(), base_model_filename, opt.thread_count);
+    if (istat != 0) {exstatus = 1;}
+  }
+
   fildesh::ofstream transcript_out(open_transcript_outfile(
           exstatus, opt.transcript_sibling_filename, opt.transcript_filename));
 
