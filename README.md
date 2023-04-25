@@ -38,6 +38,8 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/yield Char` adds a new line of dialogue for a character named `Char`.
   - `/r` regenerates the current line of dialogue.
   - `/d` deletes current line.
+  - `/b` or `/b 1` deletes the last token.
+  - `/B` or `/B 1` deletes the last word.
 - Repeat penalty.
   - `/repeat_penalty 1.2` sets the repeated token penalty.
   - `/repeat_window 20` penalizes the most recent 20 tokens from being generated.
