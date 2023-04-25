@@ -33,7 +33,9 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
   - `/forget 10` removes the first 10 lines of the rolling prompt.
 - Editing.
+  - A blank space forces token generation to continue on the same line.
   - ` some text` (note blank space in front) adds `some text` to the current line.
+  - ` some text ` (note blank spaces in front and back) adds `some text` and forces another token on the same line. Useful when inserting a sentence.
   - `\nsome text` (note the escaped newline in front) adds a new line of dialogue for the confidant that starts with `some text`.
   - `/yield Char` adds a new line of dialogue for a character named `Char`.
   - `/r` regenerates the current line of dialogue.

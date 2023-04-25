@@ -87,6 +87,7 @@ int main(int argc, char** argv)
   unsigned sentence_count = 0;
   unsigned sentence_token_count = 0;
   unsigned context_token_count = 0;
+  bool preventing_newline = false;
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
@@ -99,7 +100,8 @@ int main(int argc, char** argv)
     std::string matched_antiprompt;
     {
       llama_token id = rendezllama::generate_next_token(
-          ctx, extra_penalized_tokens, chat_tokens, opt);
+          ctx, preventing_newline, extra_penalized_tokens, chat_tokens, opt);
+      preventing_newline = false;
 
       // add it to the context
       chat_tokens.push_back(id);
@@ -320,7 +322,8 @@ int main(int argc, char** argv)
       if (exstatus != 0 || !slice.at) {break;}
 
       if (buffer.length() > 0) {
-        rendezllama::augment_chat_input(buffer, matched_antiprompt, opt);
+        rendezllama::augment_chat_input(
+            buffer, preventing_newline, matched_antiprompt, opt);
         rendezllama::tokenize_extend(chat_tokens, ctx, buffer);
       }
     }

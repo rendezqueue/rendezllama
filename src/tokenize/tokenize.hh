@@ -8,6 +8,8 @@
 
 namespace rendezllama {
 
+llama_token
+newline_token(struct llama_context* ctx);
 void
 print_tokens(
     std::ostream& out,
