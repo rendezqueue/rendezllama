@@ -327,6 +327,28 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
+    else if (0 == strcmp("--mlock_on", argv[argi])) {
+      int n = 0;
+      argi += 1;
+      if (fildesh_parse_int(&n, argv[argi])) {
+        opt.mlock_on = (n != 0);
+      }
+      else {
+        fildesh_log_error("--mlock_on needs 1 or 0");
+        exstatus = 64;
+      }
+    }
+    else if (0 == strcmp("--mmap_on", argv[argi])) {
+      int n = 0;
+      argi += 1;
+      if (fildesh_parse_int(&n, argv[argi])) {
+        opt.mmap_on = (n != 0);
+      }
+      else {
+        fildesh_log_error("--mmap_on needs 1 or 0");
+        exstatus = 64;
+      }
+    }
     else if (0 == strcmp("--context_token_limit", argv[argi])) {
       argi += 1;
       if (!fildesh_parse_int(&opt.context_token_limit, argv[argi])) {
@@ -526,6 +548,30 @@ rendezllama::maybe_parse_option_command(
     }
     else {
       fildesh_log_warning("Need a positive int.");
+    }
+  }
+  else if (skipstr_FildeshX(in, "mlock_on")) {
+    int n = 0;
+    if (!skipchrs_FildeshX(in, opt.command_delim_chars)) {
+      eout << "mlock_on=" << (opt.mlock_on ? 1 : 0) << '\n'; eout.flush();
+    }
+    else if (parse_int_FildeshX(in, &n)) {
+      opt.mlock_on = (n != 0);
+    }
+    else {
+      fildesh_log_warning("Need a 1 or 0.");
+    }
+  }
+  else if (skipstr_FildeshX(in, "mmap_on")) {
+    int n = 0;
+    if (!skipchrs_FildeshX(in, opt.command_delim_chars)) {
+      eout << "mmap_on=" << (opt.mmap_on ? 1 : 0) << '\n'; eout.flush();
+    }
+    else if (parse_int_FildeshX(in, &n)) {
+      opt.mmap_on = (n != 0);
+    }
+    else {
+      fildesh_log_warning("Need a 1 or 0.");
     }
   }
   else if (skipstr_FildeshX(in, "sentence_limit")) {

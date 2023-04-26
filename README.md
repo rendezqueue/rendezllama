@@ -74,5 +74,9 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--x_rolling rolling.txt` specifies rolling prompt. This is the initial chat dialogue. As the chat continues, older dialogue expires and "rolls" out of context.
     - Required.
   - `--o_rolling transcript.txt` specifies a place to save the chat transcript as it rolls out of context and can no longer be edited.
+- Memory.
+  - `--mlock_on 1` tries to lock the model in memory (default off).
+  - `--mmap_on 0` turns off mmap (default on).
+    - This can remove a bottleneck when low-priority stuff (like ZFS disk cache) is preventing the mmapped model from staying in RAM.
 - All chat commands that tweak numbers are also available as CLI options. Just use `--` to specify them as flags instead of `/`. Or preferably use a `setting.sxproto` file.
 

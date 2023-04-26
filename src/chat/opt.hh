@@ -43,13 +43,13 @@ struct ChatOptions {
   int context_token_limit = 2048;
   int batch_count = 8;
   int seed;
+  bool mlock_on = false;
+  bool mmap_on = true;
   // Can't set these yet.
   std::vector<std::string> antiprompts;
   bool verbose_prompt = false;
 
   int priming_token_count = 0;
-  bool mlock_on = false;
-  bool mmap_on = true;
 };
 
 int
