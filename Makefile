@@ -1,17 +1,25 @@
 
-BldPath=bld
+# Use OpenBLAS by default.
+# Can overridden like: make LLAMA_OPENBLAS=0
+LLAMA_OPENBLAS = 1
 
-CMakeExe=cmake
-CMAKE=$(CMakeExe)
-GODO=$(CMakeExe) -E chdir
-MKDIR=$(CMakeExe) -E make_directory
+BUILD_DIR = bld
+SOURCE_DIR = .
+
+CMAKE = cmake
+GODO = $(CMAKE) -E chdir
+
+CMAKE_BUILD_TYPE = RelOnHost
+CMAKE_BUILD_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
+CMAKE_BUILD_OPTIONS += -DLLAMA_OPENBLAS:BOOL=$(LLAMA_OPENBLAS)
+
 
 .PHONY: default all cmake proj \
 	test clean distclean \
 	update pull
 
 default:
-	if [ ! -d $(BldPath) ] ; then $(MAKE) cmake ; fi
+	if [ ! -d $(BUILD_DIR) ] ; then $(MAKE) cmake ; fi
 	$(MAKE) proj
 
 all:
@@ -19,21 +27,19 @@ all:
 	$(MAKE) proj
 
 cmake:
-	if [ ! -d $(BldPath) ] ; then $(MKDIR) $(BldPath) ; fi
-	#$(GODO) $(BldPath) $(CMAKE) -D CMAKE_BUILD_TYPE=RelOnHost -D LLAMA_OPENBLAS=ON ..
-	$(GODO) $(BldPath) $(CMAKE) -D CMAKE_BUILD_TYPE=RelOnHost ..
+	$(CMAKE) $(CMAKE_BUILD_OPTIONS) -S $(SOURCE_DIR) -B $(BUILD_DIR)
 
 proj:
-	$(GODO) $(BldPath) $(MAKE)
+	$(GODO) $(BUILD_DIR) $(MAKE)
 
 test:
-	$(GODO) $(BldPath) $(MAKE) test
+	$(GODO) $(BUILD_DIR) $(MAKE) test
 
 clean:
-	$(GODO) $(BldPath) $(MAKE) clean
+	$(GODO) $(BUILD_DIR) $(MAKE) clean
 
 distclean:
-	rm -fr $(BldPath)
+	rm -fr $(BUILD_DIR)
 
 update:
 	git pull origin trunk

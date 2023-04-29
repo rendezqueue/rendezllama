@@ -11,7 +11,7 @@ Assuming you have the quantized weights already, you can start the chat CLI with
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
 # Make just creates a bld/ directory and invokes CMake to build there.
-make
+make LLAMA_OPENBLAS=0
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
   --x_setting example/prompt/roshambo_kira/setting.sxproto \
