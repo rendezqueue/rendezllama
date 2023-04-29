@@ -2,12 +2,12 @@
 #include <cstdlib>
 #include <iostream>
 
-#include <arpa/inet.h>
 extern "C" {
 #include <fildesh/fildesh_compat_errno.h>
 }
 
 #ifndef _MSC_VER
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
