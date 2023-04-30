@@ -1,5 +1,6 @@
 #include "cmd.hh"
 
+#include <cassert>
 #include <cstring>
 
 #include "src/chat/opt.hh"
@@ -30,20 +31,31 @@ print_tail_lines(std::ostream& out, struct llama_context* ctx,
                  unsigned n)
 {
   size_t i = chat_tokens.size();
-  while (i > 0) {
-    i -= 1;
-    if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
-      n -= 1;
-      if (n == 0) {
-        i += 1;
-        break;
-      }
-    }
+  while (n > 0) {
+    i = rendezllama::prev_newline_start_index(
+        ctx, chat_tokens, i);
+    n -= 1;
   }
   for (; i < chat_tokens.size(); ++i) {
     out << llama_token_to_str(ctx, chat_tokens[i]);
   }
   out.flush();
+}
+
+  void
+rendezllama::trim_recent_chat_history(
+    std::vector<llama_token>& tokens,
+    unsigned& context_token_count,
+    unsigned trimmed_token_count)
+{
+  unsigned old_token_count = tokens.size();
+  assert(trimmed_token_count <= old_token_count);
+  assert(trimmed_token_count > 0);
+  tokens.resize(trimmed_token_count);
+  if (context_token_count >= trimmed_token_count) {
+    // The -1 is added to force an eval.
+    context_token_count = trimmed_token_count-1;
+  }
 }
 
   bool
@@ -93,6 +105,37 @@ rendezllama::maybe_do_back_command(
     }
   }
   print_tail_lines(out, ctx, chat_tokens, 1);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_head_command(
+    FildeshX* in,
+    std::ostream& out,
+    struct llama_context* ctx,
+    const std::vector<llama_token>& chat_tokens,
+    const rendezllama::ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "head", opt)) {
+    return false;
+  }
+  unsigned n = 10;
+  {
+    int tmp_n = 0;
+    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
+      n = tmp_n;
+    }
+  }
+  for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
+    out << llama_token_to_str(ctx, chat_tokens[i]);
+    if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
+      n -= 1;
+      if (n == 0) {
+        break;
+      }
+    }
+  }
+  out.flush();
   return true;
 }
 

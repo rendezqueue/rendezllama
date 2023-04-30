@@ -172,8 +172,9 @@ int main(int argc, char** argv)
           }
           if (slice.at[0] == ' ' && buffer.empty() && matched_antiprompt == "\n") {
             // Remove preceeding newline
-            chat_tokens.pop_back();
-            context_token_count -= 1;
+            rendezllama::trim_recent_chat_history(
+                chat_tokens, context_token_count,
+                chat_tokens.size()-1);
             matched_antiprompt.clear();
           }
           buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
@@ -185,20 +186,22 @@ int main(int argc, char** argv)
           // Nothing.
         }
         else if (slice.off + 1 == slice.size && skipstr_FildeshX(&slice, "r")) {
-          size_t n = buffer.rfind(':');
-          if (n < buffer.size()) {
-            buffer.resize(n+1);
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
           }
-          else {
-            buffer.clear();
-            while (chat_tokens.size() > opt.priming_token_count) {
-              const char* s = llama_token_to_str(ctx, chat_tokens.back());
-              if (s[0] == ':' && s[1] == '\0') {
-                break;
-              }
-              chat_tokens.pop_back();
-              context_token_count -= 1;
+          buffer.clear();
+          matched_antiprompt.clear();  // For clarity.
+          size_t offset = rendezllama::prev_newline_start_index(
+              ctx, chat_tokens, chat_tokens.size());
+          for (size_t i = offset; i < chat_tokens.size(); ++i) {
+            if (rendezllama::token_endswith(ctx, chat_tokens[i], ':')) {
+              offset = i+1;
+              break;
             }
+          }
+          if (offset >= opt.priming_token_count) {
+            rendezllama::trim_recent_chat_history(
+                chat_tokens, context_token_count, offset);
           }
           break;
         }
@@ -252,27 +255,8 @@ int main(int argc, char** argv)
           if (context_token_count == 0) {exstatus = 1; break;}
           assert(context_token_count == (int)chat_tokens.size());
         }
-        else if (skipstr_FildeshX(&slice, "head")) {
-          unsigned n = 10;
-          {
-            int tmp_n = 0;
-            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
-                parse_int_FildeshX(&slice, &tmp_n) &&
-                tmp_n > 0)
-            {
-              n = tmp_n;
-            }
-          }
-          for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
-            eout << llama_token_to_str(ctx, chat_tokens[i]);
-            if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
-              n -= 1;
-              if (n == 0) {
-                break;
-              }
-            }
-          }
-          eout.flush();
+        else if (maybe_do_head_command(&slice, eout, ctx, chat_tokens, opt)) {
+          // Nothing else.
         }
         else if (maybe_do_tail_command(&slice, eout, ctx, chat_tokens, opt)) {
           // Nothing else.
@@ -292,27 +276,20 @@ int main(int argc, char** argv)
           if (slice.off != slice.size) {
             fildesh_log_warning("Ignoring extra characters after \"d\".");
           }
-          if (chat_tokens.size() > opt.priming_token_count && buffer.empty() &&
-              rendezllama::token_endswith(ctx, chat_tokens.back(), '\n'))
-          {
-              chat_tokens.pop_back();
-              context_token_count -= 1;
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
           }
-          size_t n = buffer.rfind('\n');
-          if (n < buffer.size()) {
-            buffer.resize(n);
+          buffer.clear();
+          size_t offset = rendezllama::prev_newline_start_index(
+              ctx, chat_tokens, chat_tokens.size());
+          if (offset <= opt.priming_token_count) {
+            offset = opt.priming_token_count;
           }
           else {
-            buffer.clear();
-            while (chat_tokens.size() > opt.priming_token_count) {
-              llama_token token_id = chat_tokens.back();
-              chat_tokens.pop_back();
-              context_token_count -= 1;
-              if (rendezllama::token_endswith(ctx, token_id, '\n')) {
-                break;
-              }
-            }
+            offset -= 1;
           }
+          rendezllama::trim_recent_chat_history(
+              chat_tokens, context_token_count, offset);
           matched_antiprompt.clear();
           if (chat_tokens.size() == opt.priming_token_count && buffer.empty()) {
             matched_antiprompt = '\n';
