@@ -12,16 +12,24 @@ skip_cmd_prefix(FildeshX* in, const char* pfx,
                 const rendezllama::ChatOptions& opt)
 {
   const unsigned n = strlen(pfx);
-  if (peek_bytestring_FildeshX(in, NULL, n+1)) {
-    if (memchr(opt.command_delim_chars, in->at[in->off+n],
-               sizeof(opt.command_delim_chars)-1))
-    {
-      in->off += n+1;
-      return true;
-    }
+  if (!peek_bytestring_FildeshX(in, (const unsigned char*)pfx, n)) {
     return false;
   }
-  return skip_bytestring_FildeshX(in, (const unsigned char*)pfx, n);
+
+  if (!peek_bytestring_FildeshX(in, NULL, n+1)) {
+    // No more to read.
+    in->off += n;
+    return true;
+  }
+
+  if (memchr(opt.command_delim_chars, in->at[in->off+n],
+             sizeof(opt.command_delim_chars)-1))
+  {
+    // Caught a delimiter.
+    in->off += n+1;
+    return true;
+  }
+  return false;
 }
 
 static
