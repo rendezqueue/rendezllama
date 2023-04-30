@@ -127,6 +127,32 @@ parse_options_sxproto(
       }
       close_FildeshX(priming_in);
     }
+    else if (skipstr_FildeshX(&slice, "x_answer ")) {
+      std::string answer_filename = parse_quoted_string(&slice);
+      FildeshX* answer_in = NULL;
+      if (!answer_filename.empty()) {
+        answer_in = open_sibling_FildeshXF(
+            filename.c_str(), answer_filename.c_str());
+      }
+      const char* content = NULL;
+      if (answer_in) {
+        content = slurp_FildeshX(answer_in);
+      }
+      if (!content) {
+        fildesh_log_errorf(
+            "Line %u of %s: Cannot read given file %s.\n",
+            line_count, filename.c_str(), answer_filename.c_str());
+        all_good = false;
+      }
+      else if (content[0] != '\0') {
+        opt.answer_prompt = content;
+        // Ensure newline at end.
+        if (opt.answer_prompt.back() != '\n') {
+          opt.answer_prompt += '\n';
+        }
+      }
+      close_FildeshX(answer_in);
+    }
     else if (skipstr_FildeshX(&slice, "model ")) {
       opt.model_filename = parse_quoted_string(&slice);
     }
@@ -304,6 +330,19 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       argi += 1;
       opt.transcript_sibling_filename.clear();
       opt.transcript_filename = argv[argi];
+    }
+    else if (0 == strcmp("--x_answer", argv[argi])) {
+      argi += 1;
+      FildeshX* answer_in = open_FildeshXF(argv[argi]);
+      const char* content = slurp_FildeshX(answer_in);
+      if (content && content[0] != '\0') {
+        opt.answer_prompt += content;
+        // Ensure newline at end.
+        if (opt.answer_prompt.back() != '\n') {
+          opt.answer_prompt += '\n';
+        }
+      }
+      close_FildeshX(answer_in);
     }
     else if (0 == strcmp("--linespace", argv[argi])) {
       argi += 1;

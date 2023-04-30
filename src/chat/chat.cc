@@ -227,3 +227,46 @@ rendezllama::commit_to_context(
   }
   return chat_tokens.size();
 }
+
+  unsigned
+rendezllama::maybe_insert_answer_prompt(
+    std::vector<llama_token>& chat_tokens,
+    struct llama_context* ctx,
+    unsigned answer_prompt_offset,
+    const std::vector<llama_token>& answer_prompt_tokens)
+{
+  if (answer_prompt_tokens.size() == 0) {return 0;}
+  if (answer_prompt_offset != 0) {return answer_prompt_offset;}
+  answer_prompt_offset = chat_tokens.size();
+  while (answer_prompt_offset > 0) {
+    if (rendezllama::token_endswith(ctx, chat_tokens[answer_prompt_offset-1], '\n')) {
+      break;
+    }
+    answer_prompt_offset -= 1;
+  }
+  if (answer_prompt_offset > 0) {
+    chat_tokens.insert(
+        chat_tokens.begin()+answer_prompt_offset, 
+        answer_prompt_tokens.begin(),
+        answer_prompt_tokens.end());
+  }
+  return answer_prompt_offset;
+}
+
+  void
+rendezllama::maybe_remove_answer_prompt(
+    std::vector<llama_token>& chat_tokens,
+    unsigned& context_token_count,
+    unsigned& answer_prompt_offset,
+    const std::vector<llama_token>& answer_prompt_tokens,
+    bool inputting)
+{
+  if (!inputting) {return;}
+  if (answer_prompt_tokens.size() == 0) {return;}
+  if (answer_prompt_offset == 0) {return;}
+  chat_tokens.erase(
+      chat_tokens.begin()+answer_prompt_offset,
+      chat_tokens.begin()+answer_prompt_offset+answer_prompt_tokens.size());
+  context_token_count = answer_prompt_offset;
+  answer_prompt_offset = 0;
+}

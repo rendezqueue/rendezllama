@@ -23,7 +23,8 @@ struct ChatOptions {
 
   std::string priming_prompt;
   std::string rolling_prompt;
-  // Match original LLaMA tokenizer behavior by starting ith a space.
+  std::string answer_prompt;
+  // Match original LLaMA tokenizer behavior by starting with a space.
   bool bos_token_on = true;
   bool startspace_on = true;
   // Add space before all lines.

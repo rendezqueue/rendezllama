@@ -32,6 +32,19 @@ commit_to_context(struct llama_context* ctx,
                   std::vector<llama_token>& chat_tokens,
                   unsigned context_token_count,
                   const ChatOptions& opt);
+unsigned
+maybe_insert_answer_prompt(
+    std::vector<llama_token>& chat_tokens,
+    struct llama_context* ctx,
+    unsigned answer_prompt_offset,
+    const std::vector<llama_token>& answer_prompt_tokens);
+void
+maybe_remove_answer_prompt(
+    std::vector<llama_token>& chat_tokens,
+    unsigned& context_token_count,
+    unsigned& answer_prompt_offset,
+    const std::vector<llama_token>& answer_prompt_tokens,
+    bool inputting);
 
 }  // namespace rendezllama
 #endif

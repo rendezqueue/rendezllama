@@ -93,6 +93,12 @@ int main(int argc, char** argv)
     eout.flush();
   }
 
+  unsigned answer_prompt_offset = 0;
+  std::vector<llama_token> answer_prompt_tokens;
+  if (!opt.answer_prompt.empty()) {
+    rendezllama::tokenize_extend(answer_prompt_tokens, ctx, opt.answer_prompt);
+  }
+
   std::vector<llama_token> extra_penalized_tokens;
   unsigned sentence_count = 0;
   unsigned sentence_token_count = 0;
@@ -101,6 +107,8 @@ int main(int argc, char** argv)
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
+    answer_prompt_offset = rendezllama::maybe_insert_answer_prompt(
+        chat_tokens, ctx, answer_prompt_offset, answer_prompt_tokens);
     context_token_count = rendezllama::commit_to_context(
         ctx, out, transcript_out,
         chat_tokens, context_token_count, opt);
@@ -150,6 +158,11 @@ int main(int argc, char** argv)
         sentence_token_count += 1;
       }
     }
+
+    rendezllama::maybe_remove_answer_prompt(
+        chat_tokens, context_token_count,
+        answer_prompt_offset, answer_prompt_tokens,
+        inputting);
 
     if (inputting) {
       sentence_token_count = 0;

@@ -74,6 +74,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--x_rolling rolling.txt` specifies rolling prompt. This is the initial chat dialogue. As the chat continues, older dialogue expires and "rolls" out of context.
     - Required.
   - `--o_rolling transcript.txt` specifies a place to save the chat transcript as it rolls out of context and can no longer be edited.
+  - `--x_answer answer.txt` specifies a multi-line prefix to place before every generated line of chat. Try this for models like Alpaca that are fine-tuned to follow instructions.
 - Memory.
   - `--mlock_on 1` tries to lock the model in memory (default off).
   - `--mmap_on 0` turns off mmap (default on).
