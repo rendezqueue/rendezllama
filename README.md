@@ -11,7 +11,7 @@ Assuming you have the quantized weights already, you can start the chat CLI with
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
 # Make just creates a bld/ directory and invokes CMake to build there.
-make
+make LLAMA_OPENBLAS=0
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
   --x_setting example/prompt/roshambo_kira/setting.sxproto \
@@ -47,12 +47,16 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
 - Repeat penalty.
   - `/repeat_penalty 1.2` sets the repeated token penalty.
   - `/repeat_window 20` penalizes the most recent 20 tokens from being generated.
+  - `/frequency_penalty 0.1` sets the frequency penalty. (0.0 is default, off)
+  - `/presence_penalty 0.1` sets presence penalty. (0.0 is default, off)
   - `/less= some unwanted words` adds extra tokens to be penalized.
   - `/dropless` clears the extra penalized tokens list.
 - Generation parameters.
   - `/temp 0.7` sets the temperature.
   - `/top_k 40` sets the `top_k` parameter.
   - `/top_p 0.9` sets the `top_p` parameter.
+  - `/tfs_z 0.9` sets Tail Free Sampling cutoff. (1.0 is default, off)
+  - `/typical_p 0.9` sets the Locally Typical Sampling cutoff. (1.0 is default, off)
 - Execution parameters.
   - `/thread_count 8` sets the number of threads.
   - `/batch_count 8` sets the batch size.
@@ -74,6 +78,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--x_rolling rolling.txt` specifies rolling prompt. This is the initial chat dialogue. As the chat continues, older dialogue expires and "rolls" out of context.
     - Required.
   - `--o_rolling transcript.txt` specifies a place to save the chat transcript as it rolls out of context and can no longer be edited.
+  - `--x_answer answer.txt` specifies a multi-line prefix to place before every generated line of chat. Try this for models like Alpaca that are fine-tuned to follow instructions.
 - Memory.
   - `--mlock_on 1` tries to lock the model in memory (default off).
   - `--mmap_on 0` turns off mmap (default on).

@@ -20,20 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/bld
-
     - name: Configure CMake
-      # Use a bash shell so we can use the same syntax for environment variable
-      # access regardless of the host operating system
-      shell: bash
-      working-directory: ${{runner.workspace}}/bld
-      # Note the current convention is to use the -S and -B options here to specify source
-      # and build directories, but this is only available with CMake 3.13 and higher.
-      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.cmake_build_type}}
+      run: >
+        cmake
+        -DCMAKE_BUILD_TYPE=${{matrix.cmake_build_type}}
+        -S "${{github.workspace}}" -B "${{runner.workspace}}/bld"
 
     - name: Build
-      working-directory: ${{runner.workspace}}/bld
-      shell: bash
-      run: cmake --build . --config ${{matrix.cmake_build_type}}
+      run: cmake --build "${{runner.workspace}}/bld" --config ${{matrix.cmake_build_type}}

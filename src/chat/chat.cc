@@ -105,6 +105,22 @@ rendezllama::augment_chat_input(
   }
 }
 
+static
+  llama_token
+temperature_based_sample(
+    llama_token_data_array* candidates_data,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt)
+{
+  const unsigned keep_one = 1;
+  llama_sample_top_k(ctx, candidates_data, opt.top_k, keep_one);
+  llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
+  llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
+  llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
+  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  return llama_sample_token(ctx, candidates_data);
+}
+
   llama_token
 rendezllama::generate_next_token(
     struct llama_context* ctx,
@@ -115,10 +131,11 @@ rendezllama::generate_next_token(
 {
   // Zero probability for end-of-stream token.
   // (Technically called "end-of-sentence", but it's treated as end-of-stream.)
-  llama_get_logits(ctx)[llama_token_eos()] = 0;
+  float* logits = llama_get_logits(ctx);
+  logits[llama_token_eos()] = 0;
 
   if (preventing_newline) {
-    llama_get_logits(ctx)[rendezllama::newline_token(ctx)] = 0;
+    logits[rendezllama::newline_token(ctx)] = 0;
   }
 
   const size_t trailing_token_count = std::min(
@@ -133,10 +150,27 @@ rendezllama::generate_next_token(
       penalized_tokens.end(),
       extra_penalized_tokens.begin(), extra_penalized_tokens.end());
 
-  llama_token token_id = llama_sample_top_p_top_k(
-      ctx,
-      &penalized_tokens[0], penalized_tokens.size(),
-      opt.top_k, opt.top_p, opt.temp, opt.repeat_penalty);
+  std::vector<llama_token_data> candidates;
+  candidates.resize(llama_n_vocab(ctx));
+  for (llama_token i = 0; i < candidates.size(); i++) {
+    candidates[i] = llama_token_data{
+      i, logits[i], 0.0f,
+    };
+  }
+  llama_token_data_array candidates_data[1] = {{
+    candidates.data(), candidates.size(), false,
+  }};
+
+  llama_sample_repetition_penalty(
+      ctx, candidates_data,
+      penalized_tokens.data(), penalized_tokens.size(),
+      opt.repeat_penalty);
+  llama_sample_frequency_and_presence_penalties(
+      ctx, candidates_data,
+      penalized_tokens.data(), penalized_tokens.size(),
+      opt.frequency_penalty, opt.presence_penalty);
+
+  llama_token token_id = temperature_based_sample(candidates_data, ctx, opt);
 
   // If the improbable happens, just use a newline token.
   if (token_id == llama_token_eos()) {
@@ -226,4 +260,47 @@ rendezllama::commit_to_context(
     context_token_count += n;
   }
   return chat_tokens.size();
+}
+
+  unsigned
+rendezllama::maybe_insert_answer_prompt(
+    std::vector<llama_token>& chat_tokens,
+    struct llama_context* ctx,
+    unsigned answer_prompt_offset,
+    const std::vector<llama_token>& answer_prompt_tokens)
+{
+  if (answer_prompt_tokens.size() == 0) {return 0;}
+  if (answer_prompt_offset != 0) {return answer_prompt_offset;}
+  answer_prompt_offset = chat_tokens.size();
+  while (answer_prompt_offset > 0) {
+    if (rendezllama::token_endswith(ctx, chat_tokens[answer_prompt_offset-1], '\n')) {
+      break;
+    }
+    answer_prompt_offset -= 1;
+  }
+  if (answer_prompt_offset > 0) {
+    chat_tokens.insert(
+        chat_tokens.begin()+answer_prompt_offset,
+        answer_prompt_tokens.begin(),
+        answer_prompt_tokens.end());
+  }
+  return answer_prompt_offset;
+}
+
+  void
+rendezllama::maybe_remove_answer_prompt(
+    std::vector<llama_token>& chat_tokens,
+    unsigned& context_token_count,
+    unsigned& answer_prompt_offset,
+    const std::vector<llama_token>& answer_prompt_tokens,
+    bool inputting)
+{
+  if (!inputting) {return;}
+  if (answer_prompt_tokens.size() == 0) {return;}
+  if (answer_prompt_offset == 0) {return;}
+  chat_tokens.erase(
+      chat_tokens.begin()+answer_prompt_offset,
+      chat_tokens.begin()+answer_prompt_offset+answer_prompt_tokens.size());
+  context_token_count = answer_prompt_offset;
+  answer_prompt_offset = 0;
 }

@@ -9,7 +9,7 @@
 namespace rendezllama {
 
 llama_token
-newline_token(struct llama_context* ctx);
+newline_token(const struct llama_context* ctx);
 void
 print_tokens(
     std::ostream& out,
@@ -23,6 +23,10 @@ tokenize_extend(
     const std::string& text);
 bool
 token_endswith(const struct llama_context* ctx, llama_token token_id, char c);
+size_t
+prev_newline_start_index(const struct llama_context* ctx,
+                         const std::vector<llama_token>& tokens,
+                         size_t offset);
 
 }  // namespace rendezllama
 #endif

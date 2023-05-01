@@ -1,0 +1,3 @@
+User: Hello!
+Alpaca: Greetings, I'm Alpaca, your new AI assistant.
+User: What can you do?

@@ -13,6 +13,11 @@ namespace rendezllama {
 
 struct ChatOptions;
 
+void
+trim_recent_chat_history(
+    std::vector<llama_token>& tokens,
+    unsigned& context_token_count,
+    unsigned trimmed_token_count);
 bool
 maybe_do_back_command(
     std::vector<llama_token>& chat_tokens,
@@ -21,6 +26,13 @@ maybe_do_back_command(
     std::ostream& out,
     struct llama_context* ctx,
     const ChatOptions& opt);
+bool
+maybe_do_head_command(
+    FildeshX* in,
+    std::ostream& out,
+    struct llama_context* ctx,
+    const std::vector<llama_token>& chat_tokens,
+    const rendezllama::ChatOptions& opt);
 bool
 maybe_do_tail_command(
     FildeshX* in,
