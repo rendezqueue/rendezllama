@@ -23,7 +23,7 @@ rendezllama::print_tokens(
 {
   if (!out.good()) {return;}
   while (first != last) {
-    const char* s = llama_token_to_str(const_cast<struct llama_context*>(ctx), *first);
+    const char* s = llama_token_to_str(ctx, *first);
     out << s;
     ++ first;
   }
@@ -47,8 +47,7 @@ rendezllama::tokenize_extend(
   bool
 rendezllama::token_endswith(const struct llama_context* ctx, llama_token token_id, char c)
 {
-  const char* s = llama_token_to_str(
-      const_cast<struct llama_context*>(ctx), token_id);
+  const char* s = llama_token_to_str(ctx, token_id);
   if (!s) {return false;}
   s = strrchr(s, c);
   return (s && s[1] == '\0');
