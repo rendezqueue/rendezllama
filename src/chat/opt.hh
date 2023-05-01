@@ -33,16 +33,20 @@ struct ChatOptions {
   char command_prefix_char = '/';
   const char command_delim_chars[5] = ":=! ";
 
-  int thread_count = 1;
-  int sentence_limit = 3;
-  int sentence_token_limit = 50;
-  int top_k = 1000;
+  unsigned thread_count = 1;
+  unsigned sentence_limit = 3;
+  unsigned sentence_token_limit = 50;
+  unsigned top_k = 1000;
   float top_p = 0.95;
   float temp = 0.7;
+  float tfs_z = 1.0;
+  float typical_p = 1.0;
+  float frequency_penalty = 0.0;
+  float presence_penalty = 0.0;
   float repeat_penalty = 1.2;
-  int repeat_last_count = 20;
-  int context_token_limit = 2048;
-  int batch_count = 8;
+  unsigned repeat_last_count = 20;
+  unsigned context_token_limit = 2048;
+  unsigned batch_count = 8;
   int seed;
   bool mlock_on = false;
   bool mmap_on = true;

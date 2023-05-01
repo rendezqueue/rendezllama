@@ -47,12 +47,16 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
 - Repeat penalty.
   - `/repeat_penalty 1.2` sets the repeated token penalty.
   - `/repeat_window 20` penalizes the most recent 20 tokens from being generated.
+  - `/frequency_penalty 0.1` sets the frequency penalty. (0.0 is default, off)
+  - `/presence_penalty 0.1` sets presence penalty. (0.0 is default, off)
   - `/less= some unwanted words` adds extra tokens to be penalized.
   - `/dropless` clears the extra penalized tokens list.
 - Generation parameters.
   - `/temp 0.7` sets the temperature.
   - `/top_k 40` sets the `top_k` parameter.
   - `/top_p 0.9` sets the `top_p` parameter.
+  - `/tfs_z 0.9` sets Tail Free Sampling cutoff. (1.0 is default, off)
+  - `/typical_p 0.9` sets the Locally Typical Sampling cutoff. (1.0 is default, off)
 - Execution parameters.
   - `/thread_count 8` sets the number of threads.
   - `/batch_count 8` sets the batch size.

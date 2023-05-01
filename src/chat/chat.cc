@@ -105,6 +105,22 @@ rendezllama::augment_chat_input(
   }
 }
 
+static
+  llama_token
+temperature_based_sample(
+    llama_token_data_array* candidates_data,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt)
+{
+  const unsigned keep_one = 1;
+  llama_sample_top_k(ctx, candidates_data, opt.top_k, keep_one);
+  llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
+  llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
+  llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
+  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  return llama_sample_token(ctx, candidates_data);
+}
+
   llama_token
 rendezllama::generate_next_token(
     struct llama_context* ctx,
@@ -141,18 +157,20 @@ rendezllama::generate_next_token(
       i, logits[i], 0.0f,
     };
   }
-  llama_token_data_array candidates_data = {
+  llama_token_data_array candidates_data[1] = {{
     candidates.data(), candidates.size(), false,
-  };
+  }};
 
   llama_sample_repetition_penalty(
-      ctx, &candidates_data,
+      ctx, candidates_data,
       penalized_tokens.data(), penalized_tokens.size(),
       opt.repeat_penalty);
-  llama_sample_top_k(ctx, &candidates_data, opt.top_k);
-  llama_sample_top_p(ctx, &candidates_data, opt.top_p);
-  llama_sample_temperature(ctx, &candidates_data, opt.temp);
-  llama_token token_id= llama_sample_token(ctx, &candidates_data);
+  llama_sample_frequency_and_presence_penalties(
+      ctx, candidates_data,
+      penalized_tokens.data(), penalized_tokens.size(),
+      opt.frequency_penalty, opt.presence_penalty);
+
+  llama_token token_id = temperature_based_sample(candidates_data, ctx, opt);
 
   // If the improbable happens, just use a newline token.
   if (token_id == llama_token_eos()) {
