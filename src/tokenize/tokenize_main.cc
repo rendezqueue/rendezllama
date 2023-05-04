@@ -30,7 +30,6 @@ int main(int argc, char** argv)
     else {
       exstatus = 64;
     }
-    const char* arg = argv[argi];
   }
 
   if (exstatus == 0 && !model_filename) {

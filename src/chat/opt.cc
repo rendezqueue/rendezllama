@@ -252,9 +252,8 @@ ensure_linespace(std::string& s, bool startspace_on, bool linespace_on)
   }
 }
 
-static
   void
-print_options(std::ostream& out, const rendezllama::ChatOptions& opt)
+rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& opt)
 {
   out
     << "Characters: protagonist=" << opt.protagonist
@@ -599,28 +598,3 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
   return ctx;
 }
 
-  void
-rendezllama::print_initialization(
-    std::ostream& out,
-    struct llama_context* ctx,
-    const rendezllama::ChatOptions& opt,
-    const std::vector<llama_token>& tokens)
-{
-  if (opt.verbose_prompt && ctx && tokens.size() > 0) {
-    out
-      << "Number of tokens in priming prompt: " << opt.priming_token_count << "\n"
-      << "Number of tokens in full prompt: " << tokens.size() << "\n";
-    for (size_t i = 0; i < tokens.size(); i++) {
-      out << tokens[i] << " -> '" << llama_token_to_str(ctx, tokens[i]) << "'\n";
-    }
-    out << "\n\n";
-  }
-
-  for (auto antiprompt : opt.antiprompts) {
-    out << "Reverse prompt: " << antiprompt << "\n";
-  }
-
-  print_options(out, opt);
-  out << "\n\n";
-  out.flush();
-}

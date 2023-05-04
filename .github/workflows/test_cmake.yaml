@@ -27,4 +27,14 @@ jobs:
         -S "${{github.workspace}}" -B "${{runner.workspace}}/bld"
 
     - name: Build
-      run: cmake --build "${{runner.workspace}}/bld" --config ${{matrix.cmake_build_type}}
+      run: >
+        cmake
+        --build "${{runner.workspace}}/bld"
+        --config ${{matrix.cmake_build_type}}
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/bld
+      run: >
+        ctest
+        --timeout 10
+        -C ${{matrix.cmake_build_type}}

@@ -15,22 +15,6 @@ rendezllama::newline_token(const struct llama_context* ctx)
 }
 
   void
-rendezllama::print_tokens(
-    std::ostream& out,
-    std::vector<llama_token>::iterator first,
-    std::vector<llama_token>::iterator last,
-    const struct llama_context* ctx)
-{
-  if (!out.good()) {return;}
-  while (first != last) {
-    const char* s = llama_token_to_str(ctx, *first);
-    out << s;
-    ++ first;
-  }
-  out.flush();
-}
-
-  void
 rendezllama::tokenize_extend(
     std::vector<llama_token>& tokens,
     struct llama_context* ctx,
