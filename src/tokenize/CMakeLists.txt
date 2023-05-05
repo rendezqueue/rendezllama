@@ -3,9 +3,6 @@ add_executable(tokenize
   "tokenize.cc"
   "tokenize.hh"
 )
-target_include_directories(tokenize PRIVATE
-  ${LlamaCpp_INCLUDE_DIRS}
-)
 target_link_libraries(tokenize
   ${Fildesh_LIBRARIES}
   ${LlamaCpp_LIBRARIES}

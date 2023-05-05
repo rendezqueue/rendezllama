@@ -45,6 +45,9 @@ struct ChatOptions {
   float presence_penalty = 0.0;
   float repeat_penalty = 1.2;
   unsigned repeat_last_count = 20;
+  unsigned mirostat_sampling = 0;
+  float mirostat_tau = 5.0;
+  float mirostat_eta = 0.1;
   unsigned context_token_limit = 2048;
   unsigned batch_count = 8;
   int seed;
@@ -53,10 +56,10 @@ struct ChatOptions {
   // Can't set these yet.
   std::vector<std::string> antiprompts;
   bool verbose_prompt = false;
-
-  int priming_token_count = 0;
 };
 
+void
+print_options(std::ostream& out, const ChatOptions& opt);
 int
 parse_options(ChatOptions& opt, int argc, char** argv);
 bool
@@ -66,12 +69,6 @@ maybe_parse_option_command(
     std::ostream& eout);
 struct llama_context*
 make_llama_context(const ChatOptions& opt);
-void
-print_initialization(
-    std::ostream& out,
-    struct llama_context* ctx,
-    const ChatOptions& opt,
-    const std::vector<llama_token>& tokens);
 
 }  // namespace rendezllama
 #endif

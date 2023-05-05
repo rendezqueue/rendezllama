@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "src/chat/opt.hh"
+#include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
 
 static
@@ -35,41 +36,24 @@ skip_cmd_prefix(FildeshX* in, const char* pfx,
 static
   void
 print_tail_lines(std::ostream& out, struct llama_context* ctx,
-                 const std::vector<llama_token> chat_tokens,
+                 const rendezllama::ChatTrajectory& chat_traj,
                  unsigned n)
 {
-  size_t i = chat_tokens.size();
+  unsigned i = chat_traj.token_count();
   while (n > 0) {
     i = rendezllama::prev_newline_start_index(
-        ctx, chat_tokens, i);
+        ctx, chat_traj.tokens(), i);
     n -= 1;
   }
-  for (; i < chat_tokens.size(); ++i) {
-    out << llama_token_to_str(ctx, chat_tokens[i]);
+  for (; i < chat_traj.token_count(); ++i) {
+    out << llama_token_to_str(ctx, chat_traj.token_at(i));
   }
   out.flush();
 }
 
-  void
-rendezllama::trim_recent_chat_history(
-    std::vector<llama_token>& tokens,
-    unsigned& context_token_count,
-    unsigned trimmed_token_count)
-{
-  unsigned old_token_count = tokens.size();
-  assert(trimmed_token_count <= old_token_count);
-  assert(trimmed_token_count > 0);
-  tokens.resize(trimmed_token_count);
-  if (context_token_count >= trimmed_token_count) {
-    // The -1 is added to force an eval.
-    context_token_count = trimmed_token_count-1;
-  }
-}
-
   bool
 rendezllama::maybe_do_back_command(
-    std::vector<llama_token>& chat_tokens,
-    unsigned& context_token_count,
+    rendezllama::ChatTrajectory& chat_traj,
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
@@ -90,12 +74,11 @@ rendezllama::maybe_do_back_command(
   }
   bool skipping_contiguous_space = space_delim_on;
   while (n > 0) {
-    if (chat_tokens.size() <= opt.priming_token_count) {
+    if (chat_traj.token_count() <= chat_traj.priming_token_count_) {
       break;
     }
-    const llama_token token_id = chat_tokens.back();
-    chat_tokens.pop_back();
-    context_token_count -= 1;
+    const llama_token token_id = chat_traj.token();
+    chat_traj.erase_all_at(chat_traj.token_count()-1);
     if (space_delim_on) {
       const char* s = llama_token_to_str(ctx, token_id);
       if (s && (s[0] == ' ' || s[0] == '\n')) {
@@ -112,7 +95,7 @@ rendezllama::maybe_do_back_command(
       n -= 1;
     }
   }
-  print_tail_lines(out, ctx, chat_tokens, 1);
+  print_tail_lines(out, ctx, chat_traj, 1);
   return true;
 }
 
@@ -121,7 +104,7 @@ rendezllama::maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
-    const std::vector<llama_token>& chat_tokens,
+    const rendezllama::ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt)
 {
   if (!skip_cmd_prefix(in, "head", opt)) {
@@ -134,9 +117,9 @@ rendezllama::maybe_do_head_command(
       n = tmp_n;
     }
   }
-  for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
-    out << llama_token_to_str(ctx, chat_tokens[i]);
-    if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
+  for (size_t i = chat_traj.priming_token_count_; i < chat_traj.token_count(); ++i) {
+    out << llama_token_to_str(ctx, chat_traj.token_at(i));
+    if (rendezllama::token_endswith(ctx, chat_traj.token_at(i), '\n')) {
       n -= 1;
       if (n == 0) {
         break;
@@ -152,7 +135,7 @@ rendezllama::maybe_do_tail_command(
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
-    const std::vector<llama_token>& chat_tokens,
+    const rendezllama::ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt)
 {
   if (!skip_cmd_prefix(in, "tail", opt)) {
@@ -165,7 +148,7 @@ rendezllama::maybe_do_tail_command(
       n = tmp_n;
     }
   }
-  print_tail_lines(out, ctx, chat_tokens, n);
+  print_tail_lines(out, ctx, chat_traj, n);
   return true;
 }
 

@@ -6,11 +6,10 @@ add_executable(chat
   "cmd.hh"
   "opt.cc"
   "opt.hh"
+  "trajectory.cc"
+  "trajectory.hh"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
-)
-target_include_directories(chat PRIVATE
-  ${LlamaCpp_INCLUDE_DIRS}
 )
 target_link_libraries(chat
   ${Fildesh_LIBRARIES}

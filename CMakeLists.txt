@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 
 #set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-project("rendezllama" C CXX)
+project(Rendezllama LANGUAGES "C" "CXX")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -20,10 +20,8 @@ string(REPLACE "/DNDEBUG" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
-set(CMAKE_C_FLAGS_RELONHOST "${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_C_FLAGS_RELONHOST "${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE}")
+set(CMAKE_C_FLAGS_RELONHOST "${CMAKE_C_FLAGS_RELEASE} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE} -Wall -Wextra")
 
 
 include(CTest)
@@ -36,4 +34,14 @@ include_directories(
 
 add_subdirectory(src)
 add_subdirectory(example)
+
+if (NOT PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  # Try to keep dependent project namespace clean.
+  # No need for tests or anything else.
+  return()
+endif()
+
+if (BUILD_TESTING)
+  add_subdirectory(test)
+endif()
 
