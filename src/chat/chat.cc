@@ -185,10 +185,16 @@ rendezllama::generate_next_token(
       chat_traj.token_count(), opt.repeat_last_count);
 
   std::vector<llama_token> penalized_tokens;
-  penalized_tokens.resize(trailing_token_count);
+  penalized_tokens.reserve(trailing_token_count);
   for (unsigned i = 0; i < trailing_token_count; ++i) {
-    penalized_tokens[i] = chat_traj.token_at(
+    llama_token token_id = chat_traj.token_at(
         chat_traj.token_count() - trailing_token_count + i);
+    const std::string text = llama_token_to_str(ctx, token_id);
+    const std::string& matched = rendezllama::antiprompt_suffix(
+        text, opt.antiprompts);
+    if (matched.empty()) {
+      penalized_tokens.push_back(token_id);
+    }
   }
   penalized_tokens.insert(
       penalized_tokens.end(),
