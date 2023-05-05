@@ -51,12 +51,17 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/presence_penalty 0.1` sets presence penalty. (0.0 is default, off)
   - `/less= some unwanted words` adds extra tokens to be penalized.
   - `/dropless` clears the extra penalized tokens list.
-- Generation parameters.
+- Temperature-based sampling.
   - `/temp 0.7` sets the temperature.
   - `/top_k 40` sets the `top_k` parameter.
   - `/top_p 0.9` sets the `top_p` parameter.
   - `/tfs_z 0.9` sets Tail Free Sampling cutoff. (1.0 is default, off)
   - `/typical_p 0.9` sets the Locally Typical Sampling cutoff. (1.0 is default, off)
+- Mirostat sampling.
+  - Temperature still has meaning, but the other temperature-based sampling parameters have no effect.
+  - `/mirostat 2` says to use mirostat version 2. (0 is default, off)
+  - `/mirostat_tau 5.0` sets the target entropy.
+  - `/mirostat_eta 0.1` sets the learning rate.
 - Execution parameters.
   - `/thread_count 8` sets the number of threads.
   - `/batch_count 8` sets the batch size.

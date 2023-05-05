@@ -45,6 +45,9 @@ struct ChatOptions {
   float presence_penalty = 0.0;
   float repeat_penalty = 1.2;
   unsigned repeat_last_count = 20;
+  unsigned mirostat_sampling = 0;
+  float mirostat_tau = 5.0;
+  float mirostat_eta = 0.1;
   unsigned context_token_limit = 2048;
   unsigned batch_count = 8;
   int seed;

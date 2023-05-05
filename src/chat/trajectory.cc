@@ -9,7 +9,8 @@
 using rendezllama::ChatTrajectory;
 
 ChatTrajectory::ChatTrajectory() {
-  this->push_back(llama_token_bos());
+  token_values_.push_back(llama_token_bos());
+  mirostat_mu_values_.push_back(0);
 }
 
 ChatTrajectory::~ChatTrajectory()
@@ -21,13 +22,18 @@ ChatTrajectory::~ChatTrajectory()
 ChatTrajectory::push_back(Token_id token_id)
 {
   token_values_.push_back(token_id);
+  mirostat_mu_values_.push_back(this->mirostat_mu());
 }
 
   void
 ChatTrajectory::insert_all_at(
     size_type i, const std::vector<Token_id>& a)
 {
+  assert(i > 0);
   token_values_.insert(token_values_.begin() + i, a.begin(), a.end());
+  mirostat_mu_values_.insert(
+      mirostat_mu_values_.begin() + i,
+      a.size(), this->mirostat_mu_at(i-1));
 }
 
   void
@@ -43,6 +49,9 @@ ChatTrajectory::erase_range(size_type beg, size_type end)
     // The -1 is added to force an eval.
     context_token_count_ = token_count()-1;
   }
+  mirostat_mu_values_.erase(
+      mirostat_mu_values_.begin() + beg,
+      mirostat_mu_values_.begin() + end);
 }
 
   void

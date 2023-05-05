@@ -42,7 +42,7 @@ print_tail_lines(std::ostream& out, struct llama_context* ctx,
   unsigned i = chat_traj.token_count();
   while (n > 0) {
     i = rendezllama::prev_newline_start_index(
-        ctx, chat_traj.token_values_, i);
+        ctx, chat_traj.tokens(), i);
     n -= 1;
   }
   for (; i < chat_traj.token_count(); ++i) {

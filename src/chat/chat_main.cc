@@ -84,17 +84,19 @@ int main(int argc, char** argv)
   }
 
   rendezllama::ChatTrajectory chat_traj;
-
-  chat_traj.transcript_out_ = open_transcript_outfile(
-      exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
-
-  // tokenize the prompt
-  std::vector<llama_token>& chat_tokens = chat_traj.token_values_;
   if (exstatus == 0) {
-    rendezllama::tokenize_extend(chat_tokens, ctx, opt.priming_prompt);
+    chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
+    chat_traj.transcript_out_ = open_transcript_outfile(
+        exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
+  }
+
+  // Tokenize the prompt.
+  const std::vector<llama_token>& chat_tokens = chat_traj.tokens();
+  if (exstatus == 0) {
+    rendezllama::tokenize_extend(chat_traj, ctx, opt.priming_prompt);
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
-    rendezllama::tokenize_extend(chat_tokens, ctx, opt.rolling_prompt);
+    rendezllama::tokenize_extend(chat_traj, ctx, opt.rolling_prompt);
     print_initialization(eout, ctx, opt, chat_traj);
   }
 
@@ -336,7 +338,7 @@ int main(int argc, char** argv)
       if (buffer.length() > 0) {
         rendezllama::augment_chat_input(
             buffer, preventing_newline, matched_antiprompt, opt);
-        rendezllama::tokenize_extend(chat_tokens, ctx, buffer);
+        rendezllama::tokenize_extend(chat_traj, ctx, buffer);
       }
     }
   }

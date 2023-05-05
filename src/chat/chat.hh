@@ -20,6 +20,11 @@ augment_chat_input(std::string& s,
                    const std::string& matched_antiprompt,
                    const ChatOptions& opt);
 
+
+void
+tokenize_extend(
+    rendezllama::ChatTrajectory& chat_traj,
+    llama_context* ctx, const std::string& s);
 void
 generate_next_token(
     ChatTrajectory& chat_traj,

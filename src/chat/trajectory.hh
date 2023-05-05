@@ -26,9 +26,18 @@ class ChatTrajectory {
   Token_id token() const {return token_values_.back();}
   const Token_id& token_at(size_type i) const {return token_values_[i];}
 
+  float mirostat_mu() const {return mirostat_mu_values_.back();}
+  float& mirostat_mu() {return mirostat_mu_values_.back();}
+  const float& mirostat_mu_at(unsigned i) const {return mirostat_mu_values_[i];}
+  float& mirostat_mu_at(unsigned i) {return mirostat_mu_values_[i];}
+
+  const std::vector<Token_id>& tokens() const {return token_values_;}
+
+ private:
+  std::vector<Token_id> token_values_;
+  std::vector<float> mirostat_mu_values_;
  public:
   FildeshO* transcript_out_ = nullptr;
-  std::vector<Token_id> token_values_;
   size_type context_token_count_ = 0;
   size_type priming_token_count_ = 0;
 };

@@ -106,10 +106,21 @@ rendezllama::augment_chat_input(
   }
 }
 
+  void
+rendezllama::tokenize_extend(
+    rendezllama::ChatTrajectory& chat_traj,
+    llama_context* ctx, const std::string& s)
+{
+  std::vector<llama_token> tokens;
+  rendezllama::tokenize_extend(tokens, ctx, s);
+  chat_traj.insert_all_at(chat_traj.token_count(), tokens);
+}
+
 static
-  llama_token
+  void
 temperature_based_sample(
     llama_token_data_array* candidates_data,
+    rendezllama::ChatTrajectory& chat_traj,
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
@@ -119,7 +130,38 @@ temperature_based_sample(
   llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
   llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
   llama_sample_temperature(ctx, candidates_data, opt.temp);
-  return llama_sample_token(ctx, candidates_data);
+  chat_traj.push_back(llama_sample_token(ctx, candidates_data));
+}
+
+static
+  void
+mirostat1_sample(
+    llama_token_data_array* candidates_data,
+    rendezllama::ChatTrajectory& chat_traj,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt)
+{
+  float mirostat_mu = chat_traj.mirostat_mu();
+  const int mirostat_m = 100;
+  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  chat_traj.push_back(llama_sample_token_mirostat(
+      ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
+  chat_traj.mirostat_mu() = mirostat_mu;
+}
+
+static
+  void
+mirostat2_sample(
+    llama_token_data_array* candidates_data,
+    rendezllama::ChatTrajectory& chat_traj,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt)
+{
+  float mirostat_mu = chat_traj.mirostat_mu();
+  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  chat_traj.push_back(llama_sample_token_mirostat_v2(
+      ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
+  chat_traj.mirostat_mu() = mirostat_mu;
 }
 
   void
@@ -172,14 +214,24 @@ rendezllama::generate_next_token(
       penalized_tokens.data(), penalized_tokens.size(),
       opt.frequency_penalty, opt.presence_penalty);
 
-  llama_token token_id = temperature_based_sample(candidates_data, ctx, opt);
+  if (opt.mirostat_sampling == 1) {
+    mirostat1_sample(candidates_data, chat_traj, ctx, opt);
+  }
+  else if (opt.mirostat_sampling == 2) {
+    mirostat2_sample(candidates_data, chat_traj, ctx, opt);
+  }
+  else {
+    temperature_based_sample(candidates_data, chat_traj, ctx, opt);
+  }
 
   // If the improbable happens, just use a newline token.
-  if (token_id == llama_token_eos()) {
+  if (chat_traj.token() == llama_token_eos()) {
+    llama_token token_id = llama_token_eos();
     int n = llama_tokenize(ctx, "\n", &token_id, 1, /*add_bos=*/false);
     assert(n == 1);
+    chat_traj.push_back(token_id);
+    chat_traj.erase_range(chat_traj.token_count()-2, chat_traj.token_count()-1);
   }
-  chat_traj.push_back(token_id);
 }
 
   bool

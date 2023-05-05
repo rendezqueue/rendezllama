@@ -560,6 +560,17 @@ rendezllama::maybe_parse_option_command(
       maybe_parse_float(&opt.temp, in, out, "temp", delims)) {
     // Success!
   }
+  else if (maybe_parse_nat(&opt.mirostat_sampling, in, out, "mirostat", delims)) {
+    if (opt.mirostat_sampling > 2) {
+      fildesh_log_error("Mirostat must be <= 2. Resetting to 0 (off).");
+      opt.mirostat_sampling = 0;
+    }
+  }
+  else if (
+      maybe_parse_float(&opt.mirostat_tau, in, out, "mirostat_tau", delims) ||
+      maybe_parse_float(&opt.mirostat_eta, in, out, "mirostat_eta", delims)) {
+    // Success!
+  }
   else if (
       maybe_parse_positive(&opt.thread_count, in, out, "thread_count", delims) ||
       maybe_parse_positive(&opt.batch_count, in, out, "batch_count", delims)) {
