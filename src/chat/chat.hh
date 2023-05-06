@@ -9,7 +9,8 @@
 namespace rendezllama {
 
 struct ChatOptions;
-struct ChatTrajectory;
+class ChatDisplay;
+class ChatTrajectory;
 
 const std::string&
 antiprompt_suffix(const std::string& text,
@@ -34,21 +35,9 @@ generate_next_token(
     const ChatOptions& opt);
 bool
 commit_to_context(struct llama_context* ctx,
-                  std::ostream& out,
-                  rendezllama::ChatTrajectory& chat_traj,
+                  ChatDisplay& chat_disp,
+                  ChatTrajectory& chat_traj,
                   const ChatOptions& opt);
-unsigned
-maybe_insert_answer_prompt(
-    ChatTrajectory& chat_traj,
-    struct llama_context* ctx,
-    unsigned answer_prompt_offset,
-    const std::vector<llama_token>& answer_prompt_tokens);
-void
-maybe_remove_answer_prompt(
-    rendezllama::ChatTrajectory& chat_traj,
-    unsigned& answer_prompt_offset,
-    const std::vector<llama_token>& answer_prompt_tokens,
-    bool inputting);
 
 }  // namespace rendezllama
 #endif

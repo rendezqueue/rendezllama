@@ -6,9 +6,14 @@
 
 #include <fildesh/fildesh.h>
 
+#include "src/chat/display.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
+
+using rendezllama::ChatDisplay;
+using rendezllama::ChatTrajectory;
+
 
   const std::string&
 rendezllama::antiprompt_suffix(
@@ -108,7 +113,7 @@ rendezllama::augment_chat_input(
 
   void
 rendezllama::tokenize_extend(
-    rendezllama::ChatTrajectory& chat_traj,
+    ChatTrajectory& chat_traj,
     llama_context* ctx, const std::string& s)
 {
   std::vector<llama_token> tokens;
@@ -120,7 +125,7 @@ static
   void
 temperature_based_sample(
     llama_token_data_array* candidates_data,
-    rendezllama::ChatTrajectory& chat_traj,
+    ChatTrajectory& chat_traj,
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
@@ -137,7 +142,7 @@ static
   void
 mirostat1_sample(
     llama_token_data_array* candidates_data,
-    rendezllama::ChatTrajectory& chat_traj,
+    ChatTrajectory& chat_traj,
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
@@ -153,7 +158,7 @@ static
   void
 mirostat2_sample(
     llama_token_data_array* candidates_data,
-    rendezllama::ChatTrajectory& chat_traj,
+    ChatTrajectory& chat_traj,
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
@@ -166,18 +171,16 @@ mirostat2_sample(
 
   void
 rendezllama::generate_next_token(
-    rendezllama::ChatTrajectory& chat_traj,
+    ChatTrajectory& chat_traj,
     struct llama_context* ctx,
     bool preventing_newline,
     const std::vector<llama_token>& extra_penalized_tokens,
     const rendezllama::ChatOptions& opt)
 {
-  // Zero probability for end-of-stream token.
-  // (Technically called "end-of-sentence", but it's treated as end-of-stream.)
   float* logits = llama_get_logits(ctx);
-  logits[llama_token_eos()] = 0;
-
   if (preventing_newline) {
+    // Zero probability for message-ending tokens when requested.
+    logits[llama_token_eos()] = 0;
     logits[rendezllama::newline_token(ctx)] = 0;
   }
 
@@ -224,7 +227,7 @@ rendezllama::generate_next_token(
     temperature_based_sample(candidates_data, chat_traj, ctx, opt);
   }
 
-  // If the improbable happens, just use a newline token.
+  // Interpret end-of-stream (technically "end-of-sentence" as a newline token.
   if (chat_traj.token() == llama_token_eos()) {
     llama_token token_id = llama_token_eos();
     int n = llama_tokenize(ctx, "\n", &token_id, 1, /*add_bos=*/false);
@@ -237,18 +240,11 @@ rendezllama::generate_next_token(
   bool
 rendezllama::commit_to_context(
     struct llama_context* ctx,
-    std::ostream& out,
-    rendezllama::ChatTrajectory& chat_traj,
+    ChatDisplay& chat_disp,
+    ChatTrajectory& chat_traj,
     const ChatOptions& opt)
 {
   assert(chat_traj.context_token_count_ < chat_traj.token_count());
-
-  unsigned display_token_count =
-    chat_traj.token_count() - chat_traj.context_token_count_;
-  if (chat_traj.context_token_count_ > 0) {
-    // Includes a generated token, which was printed already.
-    display_token_count -= 1;
-  }
 
   if (chat_traj.token_count() > opt.context_token_limit) {
     // Drop some of the rolling prompt while keeping the priming prompt
@@ -274,16 +270,7 @@ rendezllama::commit_to_context(
         opt.batch_count,
         chat_traj.token_count() - chat_traj.context_token_count_);
 
-    // Display.
-    for (unsigned i = 0; i < n; ++i) {
-      if (chat_traj.context_token_count_ + i < chat_traj.token_count() - display_token_count) {
-        continue;
-      }
-      const llama_token token_id = chat_traj.token_at(chat_traj.context_token_count_ + i);
-      const std::string s = llama_token_to_str(ctx, token_id);
-      out << s;
-    }
-    out.flush();
+    chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, ctx);
 
     const int istat = llama_eval(
         ctx,
@@ -304,40 +291,3 @@ rendezllama::commit_to_context(
   return true;
 }
 
-  unsigned
-rendezllama::maybe_insert_answer_prompt(
-    rendezllama::ChatTrajectory& chat_traj,
-    struct llama_context* ctx,
-    unsigned answer_prompt_offset,
-    const std::vector<llama_token>& answer_prompt_tokens)
-{
-  if (answer_prompt_tokens.size() == 0) {return 0;}
-  if (answer_prompt_offset != 0) {return answer_prompt_offset;}
-  answer_prompt_offset = chat_traj.token_count();
-  while (answer_prompt_offset > 0) {
-    if (rendezllama::token_endswith(ctx, chat_traj.token_at(answer_prompt_offset-1), '\n')) {
-      break;
-    }
-    answer_prompt_offset -= 1;
-  }
-  if (answer_prompt_offset > 0) {
-    chat_traj.insert_all_at(answer_prompt_offset, answer_prompt_tokens);
-  }
-  return answer_prompt_offset;
-}
-
-  void
-rendezllama::maybe_remove_answer_prompt(
-    rendezllama::ChatTrajectory& chat_traj,
-    unsigned& answer_prompt_offset,
-    const std::vector<llama_token>& answer_prompt_tokens,
-    bool inputting)
-{
-  if (!inputting) {return;}
-  if (answer_prompt_tokens.size() == 0) {return;}
-  if (answer_prompt_offset == 0) {return;}
-  chat_traj.erase_range(
-      answer_prompt_offset,
-      answer_prompt_offset + answer_prompt_tokens.size());
-  answer_prompt_offset = 0;
-}

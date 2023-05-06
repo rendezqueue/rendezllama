@@ -34,11 +34,15 @@ ChatTrajectory::insert_all_at(
   mirostat_mu_values_.insert(
       mirostat_mu_values_.begin() + i,
       a.size(), this->mirostat_mu_at(i-1));
+  if (i < display_token_count_) {
+    display_token_count_ += a.size();
+  }
 }
 
   void
 ChatTrajectory::erase_range(size_type beg, size_type end)
 {
+  assert(beg <= end);
   token_values_.erase(
       token_values_.begin() + beg,
       token_values_.begin() + end);
@@ -52,6 +56,14 @@ ChatTrajectory::erase_range(size_type beg, size_type end)
   mirostat_mu_values_.erase(
       mirostat_mu_values_.begin() + beg,
       mirostat_mu_values_.begin() + end);
+  if (beg < display_token_count_) {
+    if (end < display_token_count_) {
+      display_token_count_ -= (end - beg);
+    }
+    else {
+      display_token_count_ = beg;
+    }
+  }
 }
 
   void

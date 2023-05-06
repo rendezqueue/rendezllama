@@ -4,6 +4,8 @@ add_executable(chat
   "chat.hh"
   "cmd.cc"
   "cmd.hh"
+  "display.cc"
+  "display.hh"
   "opt.cc"
   "opt.hh"
   "trajectory.cc"

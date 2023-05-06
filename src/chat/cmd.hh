@@ -12,7 +12,7 @@
 namespace rendezllama {
 
 struct ChatOptions;
-struct ChatTrajectory;
+class ChatTrajectory;
 
 bool
 maybe_do_back_command(

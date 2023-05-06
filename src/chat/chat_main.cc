@@ -3,6 +3,7 @@
 #include <fildesh/ofstream.hh>
 
 #include "src/chat/chat.hh"
+#include "src/chat/display.hh"
 #include "src/chat/cmd.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
@@ -61,7 +62,6 @@ open_transcript_outfile(
 int main(int argc, char** argv)
 {
   fildesh::ofstream eout("/dev/stderr");
-  fildesh::ofstream out("/dev/stdout");
   FildeshX* in = NULL;
   int exstatus = 0;
   rendezllama::ChatOptions opt;
@@ -81,6 +81,16 @@ int main(int argc, char** argv)
     int istat = llama_apply_lora_from_file(
         ctx, opt.lora_filename.c_str(), base_model_filename, opt.thread_count);
     if (istat != 0) {exstatus = 1;}
+  }
+
+  rendezllama::ChatDisplay chat_disp;
+  if (exstatus == 0) {
+    chat_disp.out_ = open_FildeshOF("/dev/stdout");
+    if (!opt.answer_prompt.empty()) {
+      rendezllama::tokenize_extend(
+          chat_disp.answer_prompt_tokens_,
+          ctx, opt.answer_prompt);
+    }
   }
 
   rendezllama::ChatTrajectory chat_traj;
@@ -118,12 +128,6 @@ int main(int argc, char** argv)
     eout.flush();
   }
 
-  unsigned answer_prompt_offset = 0;
-  std::vector<llama_token> answer_prompt_tokens;
-  if (!opt.answer_prompt.empty()) {
-    rendezllama::tokenize_extend(answer_prompt_tokens, ctx, opt.answer_prompt);
-  }
-
   std::vector<llama_token> extra_penalized_tokens;
   unsigned sentence_count = 0;
   unsigned sentence_token_count = 0;
@@ -131,9 +135,8 @@ int main(int argc, char** argv)
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
-    answer_prompt_offset = rendezllama::maybe_insert_answer_prompt(
-        chat_traj, ctx, answer_prompt_offset, answer_prompt_tokens);
-    if (!rendezllama::commit_to_context(ctx, out, chat_traj, opt)) {
+    chat_disp.maybe_insert_answer_prompt(chat_traj, ctx);
+    if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
       exstatus = 1;
       break;
     }
@@ -145,15 +148,14 @@ int main(int argc, char** argv)
           preventing_newline, extra_penalized_tokens, opt);
       preventing_newline = false;
 
-      // Display.
-      const std::string s = llama_token_to_str(ctx, chat_traj.token());
-      out << s;
-      out.flush();
+      chat_disp.show_new(chat_traj, ctx);
 
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
       // (If we used longer antiprompts, they could be split across iterations.)
-      matched_antiprompt = rendezllama::antiprompt_suffix(s, opt.antiprompts);
+      matched_antiprompt = rendezllama::antiprompt_suffix(
+          llama_token_to_str(ctx, chat_traj.token()),
+          opt.antiprompts);
     }
 
     bool inputting = false;
@@ -180,10 +182,7 @@ int main(int argc, char** argv)
       }
     }
 
-    rendezllama::maybe_remove_answer_prompt(
-        chat_traj,
-        answer_prompt_offset, answer_prompt_tokens,
-        inputting);
+    chat_disp.maybe_remove_answer_prompt(chat_traj, inputting);
 
     if (inputting) {
       sentence_token_count = 0;
@@ -278,8 +277,7 @@ int main(int argc, char** argv)
               }
             }
           }
-          fildesh::ofstream nullout("/dev/null");
-          if (!rendezllama::commit_to_context(ctx, nullout, chat_traj, opt)) {
+          if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
             exstatus = 1;
             break;
           }

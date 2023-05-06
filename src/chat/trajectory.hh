@@ -38,6 +38,7 @@ class ChatTrajectory {
   std::vector<float> mirostat_mu_values_;
  public:
   FildeshO* transcript_out_ = nullptr;
+  size_type display_token_count_ = 0;
   size_type context_token_count_ = 0;
   size_type priming_token_count_ = 0;
 };
