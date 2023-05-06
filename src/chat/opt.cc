@@ -197,6 +197,12 @@ parse_options_sxproto(
       opt.transcript_sibling_filename = filename;
       opt.transcript_filename = parse_quoted_string(&slice);
     }
+    else if (skipstr_FildeshX(&slice, "protagonist ")) {
+      opt.protagonist = parse_quoted_string(&slice);
+    }
+    else if (skipstr_FildeshX(&slice, "confidant ")) {
+      opt.confidant = parse_quoted_string(&slice);
+    }
     else if (
         maybe_parse_bool_option(&opt.mlock_on, &slice, "mlock_on") ||
         maybe_parse_bool_option(&opt.mmap_on, &slice, "mmap_on")) {

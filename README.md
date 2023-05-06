@@ -71,6 +71,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
 - Setting file.
   - `--x_setting setting.sxproto` loads settings from `setting.sxproto`.
     - All other options can be set within this file.
+    - All numbers that chat commands can change can also be set within this file.
 - Model files.
   - `--model ggml-model-q4_0.bin` are the model weights. Usually quantized.
     - Required.
@@ -88,5 +89,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--mlock_on 1` tries to lock the model in memory (default off).
   - `--mmap_on 0` turns off mmap (default on).
     - This can remove a bottleneck when low-priority stuff (like ZFS disk cache) is preventing the mmapped model from staying in RAM.
-- All chat commands that tweak numbers are also available as CLI options. Just use `--` to specify them as flags instead of `/`. Or preferably use a `setting.sxproto` file.
+- Characters.
+  - `--protagonist User` sets the protagonist's name.
+  - `--confidant Bot` sets the confidant's name.
 
