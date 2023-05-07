@@ -1,7 +1,7 @@
 FetchContent_Declare(
   LlamaCpp
   GIT_REPOSITORY "https://github.com/ggerganov/llama.cpp.git"
-  GIT_TAG "90b19bd6eee943832584f9cac0b6f9ea29cc42a4"
+  GIT_TAG "1b0fd454650ef4d68a980e3225488b79e6e9af25"
 )
 FetchContent_MakeAvailable(LlamaCpp)
 set(LlamaCpp_INCLUDE_DIRS "${llamacpp_SOURCE_DIR}" PARENT_SCOPE)
