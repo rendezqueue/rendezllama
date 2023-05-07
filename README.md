@@ -6,7 +6,7 @@ For now, there's just a command-line interface, but the plan is to make a progre
 
 ## Chat CLI
 
-Assuming you have the quantized weights already, you can start the chat CLI with:
+Assuming you have the quantized weights already and can compile C++, you can try the [roshambo example](example/prompt/roshambo_kira/) with a few commands:
 ```shell
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
@@ -85,11 +85,13 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
     - Required.
   - `--o_rolling transcript.txt` specifies a place to save the chat transcript as it rolls out of context and can no longer be edited.
   - `--x_answer answer.txt` specifies a multi-line prefix to place before every generated line of chat. Try this for models like Alpaca that are fine-tuned to follow instructions.
+- Characters.
+  - `--protagonist User` sets the protagonist's name.
+  - `--confidant Bot` sets the confidant's name.
+  - `--template_protagonist "{{user}}"` replaces "{{user}}" with the protagonist name.
+  - `--template_confidant "{{char}}"` replaces "{{char}}" with the confidant name.
+  - `--linespace_on 1` puts a space at the start of every line in the prompts (default off). This changes how the first word of a line (usually a character name) is tokenized.
 - Memory.
   - `--mlock_on 1` tries to lock the model in memory (default off).
   - `--mmap_on 0` turns off mmap (default on).
     - This can remove a bottleneck when low-priority stuff (like ZFS disk cache) is preventing the mmapped model from staying in RAM.
-- Characters.
-  - `--protagonist User` sets the protagonist's name.
-  - `--confidant Bot` sets the confidant's name.
-

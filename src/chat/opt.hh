@@ -15,6 +15,8 @@ struct ChatOptions {
 
   std::string protagonist;
   std::string confidant;
+  std::string template_protagonist;
+  std::string template_confidant;
   std::string model_filename;
   std::string lora_filename;
   std::string lora_base_model_filename;

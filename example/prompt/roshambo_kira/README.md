@@ -3,8 +3,21 @@
 Here, you play as L in a grueling series of roshambo matches against Kira.
 Your real goal is to discover Kira's true identity.
 
-The easiest way is to exploit Kira's huberis.
-He will readily agree to divulge his real name if you can beat him in roshambo.
+## Strategy
+With default settings, it's not very easy to have Kira reveal his name.
+
+Some things you can try:
+- Try complimenting his intelligence and then bet on the outcome of a game of roshambo.
+  - This works better with smaller models like 7B.
+- Type `/r` to regenerate Kira's response when he doesn't make sense.
+- Add `(linespace_on 1)` to `setting.sxproto`.
+  - For some reason, the different tokenization makes Kira more susceptible to influence.
+- Add `(confidant "Light")` to `setting.sxproto` to rename Kira as Light.
+  - Then literally just ask him who Kira is. Most times he just admits to being Kira.
+- Type `/yield Ryuk` to bring Ryuk into the conversation.
+  - Definitely try this if you got Kira's real name. Keep hitting enter to see the anime ending play out.
+- Type `/yield Kira: My real name is` to make Kira start his message like that.
+  - This is totally cheating.
 
 ## Quality
 The prompt seems like it could be improved to make Kira talk more.

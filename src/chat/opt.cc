@@ -42,6 +42,36 @@ parse_rolling_prompt(FildeshX* in, rendezllama::ChatOptions& opt)
 }
 
 static
+  void
+string_replace(
+    std::string& text,
+    const std::string& s,
+    const std::string& r)
+{
+  std::string dst;
+  size_t b = 0;
+  for (size_t i = text.find(s, 0); i != std::string::npos; i = text.find(s, b)) {
+    dst.append(text, b, i-b);
+    dst.append(r);
+    b = i + s.size();
+  }
+  dst.append(text, b, text.size()-b);
+  text = dst;
+}
+
+static
+  void
+replace_in_prompts(
+    rendezllama::ChatOptions& opt,
+    const std::string& s,
+    const std::string& r)
+{
+  string_replace(opt.priming_prompt, s, r);
+  string_replace(opt.rolling_prompt, s, r);
+  string_replace(opt.answer_prompt, s, r);
+}
+
+static
   std::string
 parse_quoted_string(FildeshX* in)
 {
@@ -203,7 +233,14 @@ parse_options_sxproto(
     else if (skipstr_FildeshX(&slice, "confidant ")) {
       opt.confidant = parse_quoted_string(&slice);
     }
+    else if (skipstr_FildeshX(&slice, "template_protagonist ")) {
+      opt.template_protagonist = parse_quoted_string(&slice);
+    }
+    else if (skipstr_FildeshX(&slice, "template_confidant ")) {
+      opt.template_confidant = parse_quoted_string(&slice);
+    }
     else if (
+        maybe_parse_bool_option(&opt.linespace_on, &slice, "linespace_on") ||
         maybe_parse_bool_option(&opt.mlock_on, &slice, "mlock_on") ||
         maybe_parse_bool_option(&opt.mmap_on, &slice, "mmap_on")) {
       // Success!
@@ -315,6 +352,14 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       argi += 1;
       opt.confidant = argv[argi];
     }
+    else if (0 == strcmp("--template_protagonist", argv[argi])) {
+      argi += 1;
+      opt.template_protagonist = argv[argi];
+    }
+    else if (0 == strcmp("--template_confidant", argv[argi])) {
+      argi += 1;
+      opt.template_confidant = argv[argi];
+    }
     else if (0 == strcmp("--model", argv[argi])) {
       argi += 1;
       opt.model_filename = argv[argi];
@@ -373,7 +418,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       }
       close_FildeshX(answer_in);
     }
-    else if (0 == strcmp("--linespace", argv[argi])) {
+    else if (0 == strcmp("--linespace_on", argv[argi])) {
       argi += 1;
       opt.linespace_on = parse_truthy(argv[argi]);
     }
@@ -465,8 +510,15 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     exstatus = 64;
   }
   if (exstatus == 0) {
+    if (!opt.template_protagonist.empty()) {
+      replace_in_prompts(opt, opt.template_protagonist, opt.protagonist);
+    }
+    if (!opt.template_confidant.empty()) {
+      replace_in_prompts(opt, opt.template_confidant, opt.confidant);
+    }
     ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
     ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
+    ensure_linespace(opt.answer_prompt, opt.linespace_on, opt.linespace_on);
     if (opt.linespace_on) {opt.rolling_prompt += ' ';}
     opt.rolling_prompt += opt.confidant + ':';
   }
