@@ -240,6 +240,7 @@ parse_options_sxproto(
       opt.template_confidant = parse_quoted_string(&slice);
     }
     else if (
+        maybe_parse_bool_option(&opt.coprocess_mode_on, &slice, "coprocess_mode_on") ||
         maybe_parse_bool_option(&opt.linespace_on, &slice, "linespace_on") ||
         maybe_parse_bool_option(&opt.mlock_on, &slice, "mlock_on") ||
         maybe_parse_bool_option(&opt.mmap_on, &slice, "mmap_on")) {
@@ -448,6 +449,17 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
+    else if (0 == strcmp("--coprocess_mode_on", argv[argi])) {
+      int n = 0;
+      argi += 1;
+      if (fildesh_parse_int(&n, argv[argi])) {
+        opt.coprocess_mode_on = (n != 0);
+      }
+      else {
+        fildesh_log_error("--coprocess_mode_on needs 1 or 0");
+        exstatus = 64;
+      }
+    }
     else if (0 == strcmp("--mlock_on", argv[argi])) {
       int n = 0;
       argi += 1;
@@ -503,10 +515,6 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
   }
   if (exstatus == 0 && opt.priming_prompt.empty()) {
     fildesh_log_error("Please provide a priming prompt with --x_priming.");
-    exstatus = 64;
-  }
-  if (exstatus == 0 && opt.rolling_prompt.empty()) {
-    fildesh_log_error("Please provide a rolling prompt with --x_rolling.");
     exstatus = 64;
   }
   if (exstatus == 0) {

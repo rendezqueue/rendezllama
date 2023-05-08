@@ -36,8 +36,8 @@ struct ChatOptions {
   const char command_delim_chars[5] = ":=! ";
 
   unsigned thread_count = 1;
-  unsigned sentence_limit = 3;
-  unsigned sentence_token_limit = 50;
+  unsigned sentence_limit = 0;
+  unsigned sentence_token_limit = 0;
   unsigned top_k = 1000;
   float top_p = 0.95;
   float temp = 0.7;
@@ -55,6 +55,7 @@ struct ChatOptions {
   int seed;
   bool mlock_on = false;
   bool mmap_on = true;
+  bool coprocess_mode_on = false;
   // Can't set these yet.
   std::vector<std::string> antiprompts;
   bool verbose_prompt = false;

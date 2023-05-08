@@ -44,6 +44,9 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/d` deletes current line.
   - `/b` or `/b 1` deletes the last token.
   - `/B` or `/B 1` deletes the last word.
+- Coprocess interaction.
+  - `/puts A line of text.` adds a new line of text. Does not echo anything.
+  - `/gets 64 Char:` is like `/yield` but generates slightly over a max of 64 bytes. Only prints the newly-generated text. Always includes a newline at the end.
 - Repeat penalty.
   - `/repeat_penalty 1.2` sets the repeated token penalty.
   - `/repeat_window 20` penalizes the most recent 20 tokens from being generated.

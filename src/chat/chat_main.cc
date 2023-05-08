@@ -129,20 +129,34 @@ int main(int argc, char** argv)
   }
 
   std::vector<llama_token> extra_penalized_tokens;
+  unsigned line_byte_limit = 0;
+  unsigned line_byte_count = 0;
   unsigned sentence_count = 0;
   unsigned sentence_token_count = 0;
   bool preventing_newline = false;
+  // Skip straight to user input when in coprocess mode.
+  bool token_generation_on = !opt.coprocess_mode_on;
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
+    if (opt.coprocess_mode_on) {
+      // Print nothing except for prompted.
+      chat_traj.display_token_count_ = chat_traj.token_count();
+    }
     chat_disp.maybe_insert_answer_prompt(chat_traj, ctx);
     if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
       exstatus = 1;
       break;
     }
 
+    bool inputting = false;
     std::string matched_antiprompt;
-    {
+    if (!token_generation_on) {
+      // Just skip the first token.
+      token_generation_on = true;
+      inputting = true;
+    }
+    else {
       rendezllama::generate_next_token(
           chat_traj, ctx,
           preventing_newline, extra_penalized_tokens, opt);
@@ -150,16 +164,22 @@ int main(int argc, char** argv)
 
       chat_disp.show_new(chat_traj, ctx);
 
+      const std::string s = llama_token_to_str(ctx, chat_traj.token());
+      line_byte_count += s.size();
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
       // (If we used longer antiprompts, they could be split across iterations.)
-      matched_antiprompt = rendezllama::antiprompt_suffix(
-          llama_token_to_str(ctx, chat_traj.token()),
-          opt.antiprompts);
+      matched_antiprompt = rendezllama::antiprompt_suffix(s, opt.antiprompts);
     }
 
-    bool inputting = false;
-    if (!matched_antiprompt.empty()) {
+    if (line_byte_limit > 0 && line_byte_count >= line_byte_limit) {
+      inputting = true;
+      if (matched_antiprompt != "\n") {
+        rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+        chat_disp.show_new(chat_traj, ctx);
+      }
+    }
+    else if (!matched_antiprompt.empty()) {
       if (matched_antiprompt == "\n") {
         inputting = true;
       }
@@ -185,6 +205,7 @@ int main(int argc, char** argv)
     chat_disp.maybe_remove_answer_prompt(chat_traj, inputting);
 
     if (inputting) {
+      line_byte_count = 0;
       sentence_token_count = 0;
       sentence_count = 0;
 
@@ -298,6 +319,44 @@ int main(int argc, char** argv)
           matched_antiprompt = rendezllama::antiprompt_suffix(
               llama_token_to_str(ctx, chat_tokens.back()),
               opt.antiprompts);
+        }
+        else if (skipstr_FildeshX(&slice, "puts ")) {
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
+          }
+          buffer.clear();
+          std::string line;
+          if (matched_antiprompt != "\n") {line += '\n';}
+          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
+          line += '\n';
+          rendezllama::tokenize_extend(chat_traj, ctx, line);
+          matched_antiprompt = '\n';
+          // Might as well process now.
+          chat_traj.display_token_count_ = chat_traj.token_count();
+          if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+            exstatus = 1;
+            break;
+          }
+        }
+        else if (skipstr_FildeshX(&slice, "gets ")) {
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
+          }
+          buffer.clear();
+          preventing_newline = true;
+          matched_antiprompt.clear();  // For clarity.
+          int tmp_n = 0;
+          if (parse_int_FildeshX(&slice, &tmp_n) && tmp_n > 0) {
+            line_byte_limit = (unsigned)tmp_n;
+          }
+          skipchrs_FildeshX(&slice, " ");
+          // Prefix with user text.
+          std::string line;
+          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
+          rendezllama::tokenize_extend(chat_traj, ctx, line);
+          // Not printing any inserted text.
+          chat_traj.display_token_count_ = chat_traj.token_count();
+          break;
         }
         else if (skipstr_FildeshX(&slice, "d")) {
           if (slice.off != slice.size) {
