@@ -6,7 +6,7 @@ For now, there's just a command-line interface, but the plan is to make a progre
 
 ## Chat CLI
 
-Assuming you have the quantized weights already and can compile C++, you can try the [roshambo example](example/prompt/roshambo_kira/) with a few commands:
+Assuming you have the quantized weights already and can compile C++, you can try the [assistant_vicuna example](example/prompt/assistant_vicuna/) with a few commands:
 ```shell
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
@@ -14,12 +14,12 @@ MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
 make LLAMA_OPENBLAS=0
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
-  --x_setting example/prompt/roshambo_kira/setting.sxproto \
+  --x_setting example/prompt/assistant_vicuna/setting.sxproto \
   --thread_count 8 \
   --model "${MODEL}"
 ```
 
-The confidant (bot) and protagonist (you) names are determined from last two lines of the rolling prompt (in that order).
+See the [example/prompt/](example/prompt/) directory for more interesting/whimsical examples.
 
 ### Chat CLI Commands
 

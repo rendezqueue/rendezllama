@@ -221,6 +221,7 @@ int main(int argc, char** argv)
             fildesh_log_warning("Pending input ignored by command.");
           }
           buffer.clear();
+          preventing_newline = true;
           matched_antiprompt.clear();  // For clarity.
           size_t offset = rendezllama::prev_newline_start_index(
               ctx, chat_tokens, chat_tokens.size());

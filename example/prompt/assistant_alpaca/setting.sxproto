@@ -1,3 +1,5 @@
+(protagonist "User")
+(confidant "Alpaca")
 (context_token_limit 2048)
 (thread_count 8)
 (x_priming "priming.txt")

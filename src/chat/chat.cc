@@ -108,6 +108,7 @@ rendezllama::augment_chat_input(
     }
     s = (maybe_newline + protagonist_line_prefix(opt) +
          s + '\n' + confidant_line_prefix(opt));
+    prevent_subsequent_newline = true;
   }
 }
 
