@@ -108,6 +108,23 @@ maybe_parse_bool_option(
 
 static
   bool
+maybe_parse_nat_option(unsigned* n, FildeshX* in, const char* name)
+{
+  int tmp_n = 0;
+  if (!skipstr_FildeshX(in, name)) {
+    return false;
+  }
+  else if (parse_int_FildeshX(in, &tmp_n) && tmp_n >= 0) {
+    *n = (unsigned) tmp_n;
+  }
+  else {
+    fildesh_log_warning("Need a non-negative int.");
+  }
+  return true;
+}
+
+static
+  bool
 parse_options_sxproto(
     rendezllama::ChatOptions& opt,
     const std::string& filename)
@@ -240,6 +257,7 @@ parse_options_sxproto(
       opt.template_confidant = parse_quoted_string(&slice);
     }
     else if (
+        maybe_parse_nat_option(&opt.seed, &slice, "seed") ||
         maybe_parse_bool_option(&opt.coprocess_mode_on, &slice, "coprocess_mode_on") ||
         maybe_parse_bool_option(&opt.linespace_on, &slice, "linespace_on") ||
         maybe_parse_bool_option(&opt.mlock_on, &slice, "mlock_on") ||
@@ -331,7 +349,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
   int exstatus = 0;
   int argi;
 
-  opt.seed = time(NULL);
+  opt.seed = INT_MAX & time(NULL);
 
   opt.antiprompts.push_back("!");
   opt.antiprompts.push_back(".");
@@ -430,7 +448,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     else if (0 == strcmp("--thread_count", argv[argi])) {
       int n = 0;
       argi += 1;
-      if (fildesh_parse_int(&n, argv[argi]) && n >= 0) {
+      if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
         opt.thread_count = n;
       }
       else {
@@ -441,11 +459,22 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     else if (0 == strcmp("--batch_count", argv[argi])) {
       int n = 0;
       argi += 1;
-      if (fildesh_parse_int(&n, argv[argi]) && n >= 0) {
+      if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
         opt.batch_count = n;
       }
       else {
         fildesh_log_error("--batch_count needs positive arg");
+        exstatus = 64;
+      }
+    }
+    else if (0 == strcmp("--seed", argv[argi])) {
+      int n = 0;
+      argi += 1;
+      if (fildesh_parse_int(&n, argv[argi]) && n >= 0) {
+        opt.seed = n;
+      }
+      else {
+        fildesh_log_error("--seed needs non-negative int");
         exstatus = 64;
       }
     }

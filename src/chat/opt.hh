@@ -52,7 +52,7 @@ struct ChatOptions {
   float mirostat_eta = 0.1;
   unsigned context_token_limit = 2048;
   unsigned batch_count = 8;
-  int seed;
+  unsigned seed;
   bool mlock_on = false;
   bool mmap_on = true;
   bool coprocess_mode_on = false;

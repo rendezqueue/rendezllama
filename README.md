@@ -98,3 +98,6 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--mlock_on 1` tries to lock the model in memory (default off).
   - `--mmap_on 0` turns off mmap (default on).
     - This can remove a bottleneck when low-priority stuff (like ZFS disk cache) is preventing the mmapped model from staying in RAM.
+- Misc.
+  - `--coprocess_mode_on 1` limits stdout and expects to be controlled as a coprocess via commands like `/puts`, `/gets`, and `/d` (see [assistant_coprocess example](example/prompt/assistant_coprocess/)).
+  - `--seed 1234` sets the random seed.
