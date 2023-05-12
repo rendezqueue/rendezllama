@@ -158,15 +158,13 @@ rendezllama::maybe_parse_yield_command(
     FildeshX* in,
     const rendezllama::ChatOptions& opt)
 {
-  if (!skip_cmd_prefix(in, "yield", opt)) {
+  if (!skip_cmd_prefix(in, "yield", opt) &&
+      !skip_cmd_prefix(in, "y", opt)) {
     return false;
   }
   s = '\n';
   if (in->off < in->size) {
     s.insert(s.end(), &in->at[in->off], &in->at[in->size]);
-    if (!until_char_FildeshX(in, ':').at) {
-      s += ':';
-    }
   }
   else {
     s += opt.confidant + ':';

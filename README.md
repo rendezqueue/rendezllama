@@ -39,7 +39,8 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - ` some text` (note blank space in front) adds `some text` to the current line.
   - ` some text ` (note blank spaces in front and back) adds `some text` and forces another token on the same line. Useful when inserting a sentence.
   - `\nsome text` (note the escaped newline in front) adds a new line of dialogue for the confidant that starts with `some text`.
-  - `/yield Char` adds a new line of dialogue for a character named `Char`.
+  - `/yield` or `/y` adds a new line dialogue for the confidant.
+  - `/yield Char:` or `/y Char:` adds a new line starting with `Char:`.
   - `/r` regenerates the current line of dialogue.
   - `/d` deletes current line.
   - `/b` or `/b 1` deletes the last token.
@@ -89,8 +90,8 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--o_rolling transcript.txt` specifies a place to save the chat transcript as it rolls out of context and can no longer be edited.
   - `--x_answer answer.txt` specifies a multi-line prefix to place before every generated line of chat. Try this for models like Alpaca that are fine-tuned to follow instructions.
 - Characters.
-  - `--protagonist User` sets the protagonist's name.
-  - `--confidant Bot` sets the confidant's name.
+  - `--protagonist User` sets the protagonist's name. Can be changed later via the `/protagonist User` command.
+  - `--confidant Bot` sets the confidant's name.  Can be changed later via the `/confidant Bot` command.
   - `--template_protagonist "{{user}}"` replaces "{{user}}" with the protagonist name.
   - `--template_confidant "{{char}}"` replaces "{{char}}" with the confidant name.
   - `--linespace_on 1` puts a space at the start of every line in the prompts (default off). This changes how the first word of a line (usually a character name) is tokenized.

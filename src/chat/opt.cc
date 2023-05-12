@@ -631,6 +631,26 @@ maybe_parse_positive(
   return true;
 }
 
+static
+  bool
+maybe_parse_line(
+    std::string* s, FildeshX* in, std::ostream& out,
+    const char* name,
+    const char* command_delim_chars)
+{
+  if (!skipstr_FildeshX(in, name)) {
+    return false;
+  }
+  if (!skipchrs_FildeshX(in, command_delim_chars)) {
+    out << name << "=" << *s << '\n'; out.flush();
+  }
+  else {
+    s->clear();
+    s->insert(s->end(), &in->at[in->off], &in->at[in->size]);
+  }
+  return true;
+}
+
   bool
 rendezllama::maybe_parse_option_command(
     rendezllama::ChatOptions& opt,
@@ -674,6 +694,11 @@ rendezllama::maybe_parse_option_command(
   else if (
       maybe_parse_nat(&opt.sentence_limit, in, out, "sentence_limit", delims) ||
       maybe_parse_nat(&opt.sentence_token_limit, in, out, "sentence_token_limit", delims)) {
+    // Success!
+  }
+  else if (
+      maybe_parse_line(&opt.protagonist, in, out, "protagonist", delims) ||
+      maybe_parse_line(&opt.confidant, in, out, "confidant", delims)) {
     // Success!
   }
   else if (skipstr_FildeshX(in, "opt")) {
