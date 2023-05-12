@@ -41,6 +41,7 @@ class ChatTrajectory {
   size_type display_token_count_ = 0;
   size_type context_token_count_ = 0;
   size_type priming_token_count_ = 0;
+  bool erased_since_eval_ = false;
 };
 
 }  // namespace rendezllama

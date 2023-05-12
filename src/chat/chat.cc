@@ -245,7 +245,12 @@ rendezllama::commit_to_context(
     ChatTrajectory& chat_traj,
     const ChatOptions& opt)
 {
-  assert(chat_traj.context_token_count_ < chat_traj.token_count());
+  
+  assert(!chat_traj.erased_since_eval_ ||
+         chat_traj.context_token_count_ < chat_traj.token_count());
+  if (chat_traj.context_token_count_ == chat_traj.token_count()) {
+    return true;
+  }
 
   if (chat_traj.token_count() > opt.context_token_limit) {
     // Drop some of the rolling prompt while keeping the priming prompt
@@ -289,6 +294,7 @@ rendezllama::commit_to_context(
     }
   }
   assert(chat_traj.context_token_count_ == chat_traj.token_count());
+  chat_traj.erased_since_eval_ = false;
   return true;
 }
 

@@ -42,6 +42,7 @@ ChatTrajectory::insert_all_at(
   void
 ChatTrajectory::erase_range(size_type beg, size_type end)
 {
+  erased_since_eval_ = true;
   assert(beg <= end);
   token_values_.erase(
       token_values_.begin() + beg,
