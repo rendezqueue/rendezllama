@@ -715,7 +715,6 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
 {
   llama_context_params params = llama_context_default_params();
   params.n_ctx = opt.context_token_limit;
-  params.n_parts = -1;
   params.seed = opt.seed;
   params.f16_kv = true;
   params.use_mlock = opt.mlock_on;
