@@ -321,13 +321,15 @@ int main(int argc, char** argv)
               llama_token_to_str(ctx, chat_tokens.back()),
               opt.antiprompts);
         }
-        else if (skipstr_FildeshX(&slice, "puts ")) {
+        else if (skipstr_FildeshX(&slice, "puts ") ||
+                 (slice.off + 4 == slice.size &&
+                  skipstr_FildeshX(&slice, "puts")))
+        {
           if (!buffer.empty()) {
             fildesh_log_warning("Pending input ignored by command.");
           }
           buffer.clear();
           std::string line;
-          if (matched_antiprompt != "\n") {line += '\n';}
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
           line += '\n';
           rendezllama::tokenize_extend(chat_traj, ctx, line);
@@ -339,13 +341,17 @@ int main(int argc, char** argv)
             break;
           }
         }
-        else if (skipstr_FildeshX(&slice, "gets ")) {
+        else if (skipstr_FildeshX(&slice, "gets ") ||
+                 (slice.off + 4 == slice.size &&
+                  skipstr_FildeshX(&slice, "gets")))
+        {
           if (!buffer.empty()) {
             fildesh_log_warning("Pending input ignored by command.");
           }
           buffer.clear();
           preventing_newline = true;
           matched_antiprompt.clear();  // For clarity.
+          line_byte_limit = 0;
           int tmp_n = 0;
           if (parse_int_FildeshX(&slice, &tmp_n) && tmp_n > 0) {
             line_byte_limit = (unsigned)tmp_n;
