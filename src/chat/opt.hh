@@ -15,6 +15,8 @@ struct ChatOptions {
   std::string confidant;
   std::string template_protagonist;
   std::string template_confidant;
+  std::vector<std::string> chat_prefixes;
+  std::vector<std::string> given_chat_prefixes;
   std::string model_filename;
   std::string lora_filename;
   std::string lora_base_model_filename;

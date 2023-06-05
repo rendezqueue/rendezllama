@@ -33,19 +33,6 @@ rendezllama::antiprompt_suffix(
   return empty_string;
 }
 
-static std::string protagonist_line_prefix(const rendezllama::ChatOptions& opt) {
-  std::string s;
-  if (opt.linespace_on) {s += ' ';}
-  s += opt.protagonist + ": ";
-  return s;
-}
-static std::string confidant_line_prefix(const rendezllama::ChatOptions& opt) {
-  std::string s;
-  if (opt.linespace_on) {s += ' ';}
-  s += opt.confidant + ':';
-  return s;
-}
-
 static bool maybe_trim_endspace(std::string& s)
 {
   bool result = false;
@@ -75,7 +62,8 @@ rendezllama::augment_tokenize_chat_input(
     if (s.empty() || s[0] != ' ') {
       maybe_space = ' ';
     }
-    s = confidant_line_prefix(opt) + maybe_space + s;
+    chat_traj.line_prefix_index() = opt.chat_prefixes.size()-1;
+    s = opt.chat_prefixes[chat_traj.line_prefix_index()] + maybe_space + s;
     prevent_subsequent_newline = maybe_trim_endspace(s);
   }
   else if (s.front() == '\n') {
@@ -85,6 +73,7 @@ rendezllama::augment_tokenize_chat_input(
       rendezllama::tokenize_extend(chat_traj, ctx, "\n");
     }
     if (opt.linespace_on) {s = ' ' + s;}
+    chat_traj.line_prefix_index() = opt.chat_prefixes.size();
   }
   else if (s.front() == ' ') {
     prevent_subsequent_newline = maybe_trim_endspace(s);
@@ -92,14 +81,24 @@ rendezllama::augment_tokenize_chat_input(
   else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
   }
+  else if (matched_antiprompt == opt.chat_prefixes[0]) {
+    rendezllama::tokenize_extend(
+        chat_traj, ctx, ' ' + s + '\n');
+    chat_traj.display_token_count_ = chat_traj.token_count();
+    chat_traj.line_prefix_index() = 1;
+    s = opt.chat_prefixes[1];
+    prevent_subsequent_newline = true;
+  }
   else {
     if (matched_antiprompt != "\n") {
       rendezllama::tokenize_extend(chat_traj, ctx, "\n");
     }
+    chat_traj.line_prefix_index() = 0;
     rendezllama::tokenize_extend(
         chat_traj, ctx,
-        protagonist_line_prefix(opt) + s + '\n');
-    s = confidant_line_prefix(opt);
+        opt.chat_prefixes[0] + ' ' + s + '\n');
+    chat_traj.line_prefix_index() = 1;
+    s = opt.chat_prefixes[1];
     prevent_subsequent_newline = true;
   }
   rendezllama::tokenize_extend(chat_traj, ctx, s);

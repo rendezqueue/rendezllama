@@ -99,6 +99,7 @@ int main(int argc, char** argv)
     chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
     chat_traj.transcript_out_ = open_transcript_outfile(
         exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
+    chat_traj.line_prefix_index() = 1;
   }
 
   // Tokenize the prompt.
@@ -182,7 +183,25 @@ int main(int argc, char** argv)
     }
     else if (!matched_antiprompt.empty()) {
       if (matched_antiprompt == "\n") {
-        inputting = true;
+        bool adding_next_prefix = true;
+        if (chat_traj.line_prefix_index() >= opt.chat_prefixes.size()-1) {
+          inputting = true;
+          adding_next_prefix = (opt.given_chat_prefixes.size() > 0);
+          if (adding_next_prefix) {
+            chat_traj.line_prefix_index() = 0;
+            matched_antiprompt = opt.chat_prefixes[0];
+          }
+        }
+        else {
+          chat_traj.line_prefix_index() += 1;
+        }
+        if (adding_next_prefix) {
+          rendezllama::tokenize_extend(
+              chat_traj, ctx, opt.chat_prefixes[chat_traj.line_prefix_index()]);
+          chat_disp.show_new(chat_traj, ctx);
+          sentence_count = 0;
+          sentence_token_count = 0;
+        }
       }
       else if (sentence_count + 1 == opt.sentence_limit) {
         // Reached the limit on number of sentences.
@@ -333,6 +352,12 @@ int main(int argc, char** argv)
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
           line += '\n';
           rendezllama::tokenize_extend(chat_traj, ctx, line);
+          if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
+            chat_traj.line_prefix_index() += 1;
+          }
+          else if (chat_traj.line_prefix_index() == opt.chat_prefixes.size()-1) {
+            chat_traj.line_prefix_index() = 0;
+          }
           matched_antiprompt = '\n';
           // Might as well process now.
           chat_traj.display_token_count_ = chat_traj.token_count();
@@ -357,6 +382,8 @@ int main(int argc, char** argv)
             line_byte_limit = (unsigned)tmp_n;
           }
           skipchrs_FildeshX(&slice, " ");
+          // Set this index so token generation stops after 1 line.
+          chat_traj.line_prefix_index() = opt.chat_prefixes.size();
           // Prefix with user text.
           std::string line;
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);

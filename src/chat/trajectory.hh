@@ -31,11 +31,17 @@ class ChatTrajectory {
   const float& mirostat_mu_at(unsigned i) const {return mirostat_mu_values_[i];}
   float& mirostat_mu_at(unsigned i) {return mirostat_mu_values_[i];}
 
+  unsigned line_prefix_index() const {return line_prefix_indices_.back();}
+  unsigned& line_prefix_index() {return line_prefix_indices_.back();}
+  unsigned line_prefix_index_at(unsigned i) const {return line_prefix_indices_[i];}
+  unsigned& line_prefix_index_at(unsigned i) {return line_prefix_indices_[i];}
+
   const std::vector<Token_id>& tokens() const {return token_values_;}
 
  private:
   std::vector<Token_id> token_values_;
   std::vector<float> mirostat_mu_values_;
+  std::vector<unsigned> line_prefix_indices_;
  public:
   FildeshO* transcript_out_ = nullptr;
   size_type display_token_count_ = 0;

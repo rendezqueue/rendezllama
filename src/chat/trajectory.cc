@@ -1,6 +1,7 @@
 #include "trajectory.hh"
 
 #include <cassert>
+#include <climits>
 
 #include <fildesh/fildesh.h>
 
@@ -11,6 +12,7 @@ using rendezllama::ChatTrajectory;
 ChatTrajectory::ChatTrajectory() {
   token_values_.push_back(llama_token_bos());
   mirostat_mu_values_.push_back(0);
+  line_prefix_indices_.push_back(UINT_MAX);
 }
 
 ChatTrajectory::~ChatTrajectory()
@@ -23,6 +25,7 @@ ChatTrajectory::push_back(Token_id token_id)
 {
   token_values_.push_back(token_id);
   mirostat_mu_values_.push_back(this->mirostat_mu());
+  line_prefix_indices_.push_back(this->line_prefix_index());
 }
 
   void
@@ -34,6 +37,9 @@ ChatTrajectory::insert_all_at(
   mirostat_mu_values_.insert(
       mirostat_mu_values_.begin() + i,
       a.size(), this->mirostat_mu_at(i-1));
+  line_prefix_indices_.insert(
+      line_prefix_indices_.begin() + i,
+      a.size(), this->line_prefix_index_at(i-1));
   if (i < display_token_count_) {
     display_token_count_ += a.size();
   }
@@ -57,6 +63,9 @@ ChatTrajectory::erase_range(size_type beg, size_type end)
   mirostat_mu_values_.erase(
       mirostat_mu_values_.begin() + beg,
       mirostat_mu_values_.begin() + end);
+  line_prefix_indices_.erase(
+      line_prefix_indices_.begin() + beg,
+      line_prefix_indices_.begin() + end);
   if (beg < display_token_count_) {
     if (end < display_token_count_) {
       display_token_count_ -= (end - beg);

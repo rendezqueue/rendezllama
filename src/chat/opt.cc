@@ -84,9 +84,23 @@ parse_quoted_string(FildeshX* in)
     FildeshX slice = until_char_FildeshX(in, '"');
     if (slice.at) {
       s.insert(s.end(), &slice.at[slice.off], &slice.at[slice.size]);
+      in->off += 1;
     }
   }
   return s;
+}
+
+static
+  std::vector<std::string>
+parse_quoted_strings(FildeshX* in)
+{
+  std::vector<std::string> v;
+  for (std::string s = parse_quoted_string(in); !s.empty();
+       s = parse_quoted_string(in))
+  {
+    v.push_back(s);
+  }
+  return v;
 }
 
 static
@@ -253,6 +267,9 @@ rendezllama::parse_options_sxproto_content(
     else if (skipstr_FildeshX(&slice, "template_confidant ")) {
       opt.template_confidant = parse_quoted_string(&slice);
     }
+    else if (skipstr_FildeshX(&slice, "(chat_prefixes)")) {
+      opt.given_chat_prefixes = parse_quoted_strings(&slice);
+    }
     else if (
         maybe_parse_nat_option(&opt.seed, &slice, "seed") ||
         maybe_parse_bool_option(&opt.coprocess_mode_on, &slice, "coprocess_mode_on") ||
@@ -331,7 +348,13 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
   out
     << "Characters: protagonist=" << opt.protagonist
     << ", confidant=" << opt.confidant
-    << '\n'
+    << '\n';
+  out << "Chat lines start with...\n";
+  for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
+    out << opt.chat_prefixes[i] << '\n';
+  }
+  out << '\n';
+  out
     << "Sampling: temp=" << opt.temp
     << ", top_k=" << opt.top_k
     << ", top_p=" << opt.top_p
@@ -352,6 +375,29 @@ static bool parse_truthy(const char* arg) {
       0 == strcmp("true", arg) ||
       0 == strcmp("on", arg) ||
       0 == strcmp("1", arg));
+}
+
+static void reinitialize_chat_prefixes(ChatOptions& opt) {
+  opt.chat_prefixes = opt.given_chat_prefixes;
+  for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
+    if (!opt.template_protagonist.empty()) {
+      string_replace(opt.chat_prefixes[i], opt.template_protagonist, opt.protagonist);
+    }
+    if (!opt.template_confidant.empty()) {
+      string_replace(opt.chat_prefixes[i], opt.template_confidant, opt.confidant);
+    }
+  }
+  if (opt.chat_prefixes.size() < 2) {
+    opt.given_chat_prefixes.clear();
+    opt.chat_prefixes.clear();
+    opt.chat_prefixes.resize(2);
+    if (opt.linespace_on) {
+      opt.chat_prefixes[0] += ' ';
+      opt.chat_prefixes[1] += ' ';
+    }
+    opt.chat_prefixes[0] += opt.protagonist + ':';
+    opt.chat_prefixes[1] += opt.confidant + ':';
+  }
 }
 
 static int initialize_options(ChatOptions& opt) {
@@ -378,8 +424,8 @@ static int initialize_options(ChatOptions& opt) {
     ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
     ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
     ensure_linespace(opt.answer_prompt, opt.linespace_on, opt.linespace_on);
-    if (opt.linespace_on) {opt.rolling_prompt += ' ';}
-    opt.rolling_prompt += opt.confidant + ':';
+    reinitialize_chat_prefixes(opt);
+    opt.rolling_prompt += opt.chat_prefixes[1];
   }
   return exstatus;
 }
@@ -733,7 +779,13 @@ rendezllama::maybe_parse_option_command(
   else if (
       maybe_parse_line(&opt.protagonist, in, out, "protagonist", delims) ||
       maybe_parse_line(&opt.confidant, in, out, "confidant", delims)) {
-    // Success!
+    reinitialize_chat_prefixes(opt);
+  }
+  else if (
+      skipstr_FildeshX(in, "((chat_prefixes)") ||
+      skipstr_FildeshX(in, "(chat_prefixes)")) {
+    opt.given_chat_prefixes = parse_quoted_strings(in);
+    reinitialize_chat_prefixes(opt);
   }
   else if (skipstr_FildeshX(in, "opt")) {
     print_options(out, opt);
