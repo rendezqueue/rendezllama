@@ -16,12 +16,17 @@ const std::string&
 antiprompt_suffix(const std::string& text,
                   const std::vector<std::string>& antiprompts);
 void
-augment_chat_input(std::string& s,
-                   bool& prevent_subsequent_newline,
-                   const std::string& matched_antiprompt,
-                   const ChatOptions& opt);
+augment_tokenize_chat_input(
+    ChatTrajectory& chat_traj,
+    llama_context* ctx,
+    bool& prevent_subsequent_newline,
+    std::string s,
+    const std::string& matched_antiprompt,
+    const ChatOptions& opt);
 
 
+struct llama_context*
+make_llama_context(const ChatOptions& opt);
 void
 tokenize_extend(
     rendezllama::ChatTrajectory& chat_traj,

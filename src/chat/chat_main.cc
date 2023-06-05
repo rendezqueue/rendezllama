@@ -401,9 +401,12 @@ int main(int argc, char** argv)
       if (exstatus != 0 || !slice.at) {break;}
 
       if (buffer.length() > 0) {
-        rendezllama::augment_chat_input(
-            buffer, preventing_newline, matched_antiprompt, opt);
-        rendezllama::tokenize_extend(chat_traj, ctx, buffer);
+        rendezllama::augment_tokenize_chat_input(
+            chat_traj, ctx,
+            preventing_newline,
+            buffer,
+            matched_antiprompt,
+            opt);
       }
     }
   }

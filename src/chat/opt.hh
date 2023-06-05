@@ -5,8 +5,6 @@
 #include <ostream>
 #include <vector>
 
-#include "llama.h"
-
 struct FildeshX;
 
 namespace rendezllama {
@@ -63,6 +61,15 @@ struct ChatOptions {
 
 void
 print_options(std::ostream& out, const ChatOptions& opt);
+bool
+parse_options_sxproto_content(
+    rendezllama::ChatOptions& opt,
+    FildeshX* in,
+    const std::string& filename);
+int
+parse_initialize_options_sxproto(
+    rendezllama::ChatOptions& opt,
+    const std::string& filename);
 int
 parse_options(ChatOptions& opt, int argc, char** argv);
 bool
@@ -70,8 +77,6 @@ maybe_parse_option_command(
     rendezllama::ChatOptions& opt,
     FildeshX* in,
     std::ostream& eout);
-struct llama_context*
-make_llama_context(const ChatOptions& opt);
 
 }  // namespace rendezllama
 #endif

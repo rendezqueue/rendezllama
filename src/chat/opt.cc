@@ -7,6 +7,8 @@
 #include <fildesh/fildesh.h>
 #include <fildesh/ofstream.hh>
 
+using rendezllama::ChatOptions;
+
 static
   void
 parse_rolling_prompt(FildeshX* in, rendezllama::ChatOptions& opt)
@@ -123,19 +125,14 @@ maybe_parse_nat_option(unsigned* n, FildeshX* in, const char* name)
   return true;
 }
 
-static
   bool
-parse_options_sxproto(
-    rendezllama::ChatOptions& opt,
+rendezllama::parse_options_sxproto_content(
+    ChatOptions& opt,
+    FildeshX* in,
     const std::string& filename)
 {
   bool all_good = true;
   unsigned line_count = 0;
-  FildeshX* in = open_FildeshXF(filename.c_str());
-  if (!in) {
-    fildesh_log_errorf("Cannot open %s.", filename.c_str());
-    return false;
-  }
   fildesh::ofstream nullout("/dev/null");
   FildeshX slice;
   for (slice = sliceline_FildeshX(in); slice.at;
@@ -274,6 +271,20 @@ parse_options_sxproto(
       all_good = false;
     }
   }
+  return all_good;
+}
+
+static
+  bool
+parse_options_sxproto(ChatOptions& opt, const std::string& filename)
+{
+  bool all_good = true;
+  FildeshX* in = open_FildeshXF(filename.c_str());
+  if (!in) {
+    fildesh_log_errorf("Cannot open %s.", filename.c_str());
+    return false;
+  }
+  all_good = rendezllama::parse_options_sxproto_content(opt, in, filename);
   close_FildeshX(in);
   return all_good;
 }
@@ -341,6 +352,51 @@ static bool parse_truthy(const char* arg) {
       0 == strcmp("true", arg) ||
       0 == strcmp("on", arg) ||
       0 == strcmp("1", arg));
+}
+
+static int initialize_options(ChatOptions& opt) {
+  int exstatus = 0;
+  if (exstatus == 0 && opt.protagonist.empty()) {
+    fildesh_log_error("Please provide a --protagonist name.");
+    exstatus = 64;
+  }
+  if (exstatus == 0 && opt.confidant.empty()) {
+    fildesh_log_error("Please provide a --confidant name.");
+    exstatus = 64;
+  }
+  if (exstatus == 0 && opt.priming_prompt.empty()) {
+    fildesh_log_error("Please provide a priming prompt with --x_priming.");
+    exstatus = 64;
+  }
+  if (exstatus == 0) {
+    if (!opt.template_protagonist.empty()) {
+      replace_in_prompts(opt, opt.template_protagonist, opt.protagonist);
+    }
+    if (!opt.template_confidant.empty()) {
+      replace_in_prompts(opt, opt.template_confidant, opt.confidant);
+    }
+    ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
+    ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
+    ensure_linespace(opt.answer_prompt, opt.linespace_on, opt.linespace_on);
+    if (opt.linespace_on) {opt.rolling_prompt += ' ';}
+    opt.rolling_prompt += opt.confidant + ':';
+  }
+  return exstatus;
+}
+
+  int
+rendezllama::parse_initialize_options_sxproto(
+    rendezllama::ChatOptions& opt,
+    const std::string& filename)
+{
+  int exstatus = 0;
+  if (!parse_options_sxproto(opt, filename)) {
+    exstatus = 1;
+  }
+  if (exstatus == 0) {
+    exstatus = initialize_options(opt);
+  }
+  return exstatus;
 }
 
   int
@@ -534,30 +590,8 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     fildesh_log_error("Please provide a model file with --model.");
     exstatus = 64;
   }
-  if (exstatus == 0 && opt.protagonist.empty()) {
-    fildesh_log_error("Please provide a --protagonist name.");
-    exstatus = 64;
-  }
-  if (exstatus == 0 && opt.confidant.empty()) {
-    fildesh_log_error("Please provide a --confidant name.");
-    exstatus = 64;
-  }
-  if (exstatus == 0 && opt.priming_prompt.empty()) {
-    fildesh_log_error("Please provide a priming prompt with --x_priming.");
-    exstatus = 64;
-  }
   if (exstatus == 0) {
-    if (!opt.template_protagonist.empty()) {
-      replace_in_prompts(opt, opt.template_protagonist, opt.protagonist);
-    }
-    if (!opt.template_confidant.empty()) {
-      replace_in_prompts(opt, opt.template_confidant, opt.confidant);
-    }
-    ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
-    ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
-    ensure_linespace(opt.answer_prompt, opt.linespace_on, opt.linespace_on);
-    if (opt.linespace_on) {opt.rolling_prompt += ' ';}
-    opt.rolling_prompt += opt.confidant + ':';
+    exstatus = initialize_options(opt);
   }
   return exstatus;
 }
@@ -709,22 +743,3 @@ rendezllama::maybe_parse_option_command(
   }
   return true;
 }
-
-  struct llama_context*
-rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
-{
-  llama_context_params params = llama_context_default_params();
-  params.n_ctx = opt.context_token_limit;
-  params.seed = opt.seed;
-  params.f16_kv = true;
-  params.use_mlock = opt.mlock_on;
-  params.use_mmap = opt.mmap_on;
-
-  struct llama_context* ctx = llama_init_from_file(
-      opt.model_filename.c_str(), params);
-  if (!ctx) {
-    fildesh_log_error("Failed to open model.");
-  }
-  return ctx;
-}
-

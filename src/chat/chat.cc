@@ -12,6 +12,7 @@
 #include "src/tokenize/tokenize.hh"
 
 using rendezllama::ChatDisplay;
+using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
 
 
@@ -56,60 +57,70 @@ static bool maybe_trim_endspace(std::string& s)
 }
 
   void
-rendezllama::augment_chat_input(
-    std::string& s,
+rendezllama::augment_tokenize_chat_input(
+    ChatTrajectory& chat_traj,
+    llama_context* ctx,
     bool& prevent_subsequent_newline,
+    std::string s,
     const std::string& matched_antiprompt,
-    const rendezllama::ChatOptions& opt)
+    const ChatOptions& opt)
 {
   prevent_subsequent_newline = false;
   if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
     s.erase(0, 2);
-    std::string maybe_newline, maybe_space;
+    std::string maybe_space;
     if (matched_antiprompt != "\n") {
-      maybe_newline = '\n';
+      rendezllama::tokenize_extend(chat_traj, ctx, "\n");
     }
     if (s.empty() || s[0] != ' ') {
       maybe_space = ' ';
     }
-    s = maybe_newline + confidant_line_prefix(opt) + maybe_space + s;
+    s = confidant_line_prefix(opt) + maybe_space + s;
     prevent_subsequent_newline = maybe_trim_endspace(s);
   }
   else if (s.front() == '\n') {
     s.erase(0, 1);
-    std::string pfx;
     // This is from /yield.
     if (matched_antiprompt != "\n") {
-      pfx += '\n';
+      rendezllama::tokenize_extend(chat_traj, ctx, "\n");
     }
-    if (opt.linespace_on) {pfx += ' ';}
-    s = pfx + s;
+    if (opt.linespace_on) {s = ' ' + s;}
   }
   else if (s.front() == ' ') {
     prevent_subsequent_newline = maybe_trim_endspace(s);
-  }
-  else if (s.front() == '\n') {
-    // This is from /yield.
-    s.erase(0, 1);
-    std::string pfx;
-    if (matched_antiprompt != "\n") {
-      pfx += '\n';
-    }
-    if (opt.linespace_on) {pfx += ' ';}
-    s = pfx + s;
   }
   else if (s.back() == '[' || s.back() == ':') {
     // Nothing.
   }
   else {
-    std::string maybe_newline;
     if (matched_antiprompt != "\n") {
-      maybe_newline = '\n';
+      rendezllama::tokenize_extend(chat_traj, ctx, "\n");
     }
-    s = (maybe_newline + protagonist_line_prefix(opt) +
-         s + '\n' + confidant_line_prefix(opt));
+    rendezllama::tokenize_extend(
+        chat_traj, ctx,
+        protagonist_line_prefix(opt) + s + '\n');
+    s = confidant_line_prefix(opt);
     prevent_subsequent_newline = true;
   }
+  rendezllama::tokenize_extend(chat_traj, ctx, s);
+}
+
+  struct llama_context*
+rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
+{
+  llama_context_params params = llama_context_default_params();
+  params.n_ctx = opt.context_token_limit;
+  params.seed = opt.seed;
+  params.f16_kv = true;
+  params.use_mlock = opt.mlock_on;
+  params.use_mmap = opt.mmap_on;
+
+  struct llama_context* ctx = llama_init_from_file(
+      opt.model_filename.c_str(), params);
+  if (!ctx) {
+    fildesh_log_error("Failed to open model.");
+  }
+  return ctx;
 }
 
   void
@@ -245,7 +256,6 @@ rendezllama::commit_to_context(
     ChatTrajectory& chat_traj,
     const ChatOptions& opt)
 {
-  
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {
