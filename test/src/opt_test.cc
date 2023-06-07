@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <fildesh/fildesh.h>
+#include <fildesh/ofstream.hh>
 
 #include "src/chat/opt.hh"
 
@@ -45,8 +46,26 @@ chat_prefixes_parse_test()
   close_FildeshX(in);
 }
 
+static
+  void
+sentence_terminals_parse_test()
+{
+  rendezllama::ChatOptions opt;
+  fildesh::ofstream eout("/dev/stderr");
+  FildeshX in[1] = {DEFAULT_FildeshX};
+  in->at = (char*) "((sentence_terminals) \"\\n\" \"\\\"\" \".\")";
+  in->size = strlen(in->at);
+  bool all_good = maybe_parse_option_command(opt, in, eout);
+  assert(all_good);
+  assert(opt.sentence_terminals.size() == 3);
+  assert(opt.sentence_terminals[0] == "\n");
+  assert(opt.sentence_terminals[1] == "\"");
+  assert(opt.sentence_terminals[2] == ".");
+}
+
 int main()
 {
   chat_prefixes_parse_test();
+  sentence_terminals_parse_test();
   return 0;
 }

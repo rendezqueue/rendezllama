@@ -73,6 +73,22 @@ replace_in_prompts(
   string_replace(opt.answer_prompt, s, r);
 }
 
+static void write_escaped_string(std::ostream& out, const std::string& s) {
+  out << '"';
+  for (char c : s) {
+    if (c == '\n') {
+      out << "\\n";
+    }
+    else if (c == '"') {
+      out << "\\\"";
+    }
+    else {
+      out << c;
+    }
+  }
+  out << '"';
+}
+
 static
   std::string
 parse_quoted_string(FildeshX* in)
@@ -81,10 +97,35 @@ parse_quoted_string(FildeshX* in)
   skipchrs_FildeshX(in, " ");
   if (peek_char_FildeshX(in, '"')) {
     in->off += 1;
-    FildeshX slice = until_char_FildeshX(in, '"');
-    if (slice.at) {
+    for (FildeshX slice = until_chars_FildeshX(in, "\\\"");
+         slice.at; slice = until_chars_FildeshX(in, "\\\"")) {
       s.insert(s.end(), &slice.at[slice.off], &slice.at[slice.size]);
-      in->off += 1;
+      if (in->off == in->size) {
+        break;
+      }
+      else if (in->at[in->off] == '"') {
+        in->off += 1;
+        break;
+      }
+      else if (in->at[in->off] == '\\') {
+        in->off += 1;
+        if (skipstr_FildeshX(in, "n")) {
+          s.push_back('\n');
+        }
+        else if (skipstr_FildeshX(in, "\"")) {
+          s.push_back('"');
+        }
+        else if (in->off < in->size) {
+          char c = in->at[in->off++];
+          fildesh_log_warningf("unrecognized escape: \\%c", c);
+        }
+        else {
+          fildesh_log_warningf("end of line escape not supported");
+        }
+      }
+      else {
+        in->off += 1;
+      }
     }
   }
   return s;
@@ -453,10 +494,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
 
   opt.seed = INT_MAX & time(NULL);
 
-  opt.antiprompts.push_back("!");
-  opt.antiprompts.push_back(".");
-  opt.antiprompts.push_back("?");
-  opt.antiprompts.push_back("…");
+  opt.antiprompts = opt.sentence_terminals;
   opt.antiprompts.push_back("\n");
 
   for (argi = 1; exstatus == 0 && argi < argc; ++argi) {
@@ -731,6 +769,35 @@ maybe_parse_line(
   return true;
 }
 
+static
+  bool
+maybe_parse_strings(
+    std::vector<std::string>* dsts,
+    const FildeshX* const_in,
+    std::ostream& out,
+    const char* name)
+{
+  FildeshX in[1];
+  *in = *const_in;
+  if (skipstr_FildeshX(in, name)) {
+    if (in->off != in->size) {return false;}
+    out << "((" << name << ")";
+    for (const auto& e : *dsts) {
+      out << ' ';
+      write_escaped_string(out, e);
+    }
+    out << ")\n";
+    out.flush();
+    return true;
+  }
+  if (!skipstr_FildeshX(in, "(")) {return false;}
+  skipstr_FildeshX(in, "(");
+  if (!skipstr_FildeshX(in, name)) {return false;}
+  if (!skipstr_FildeshX(in, ")")) {return false;}
+  *dsts = parse_quoted_strings(in);
+  return true;
+}
+
   bool
 rendezllama::maybe_parse_option_command(
     rendezllama::ChatOptions& opt,
@@ -776,15 +843,22 @@ rendezllama::maybe_parse_option_command(
       maybe_parse_nat(&opt.sentence_token_limit, in, out, "sentence_token_limit", delims)) {
     // Success!
   }
+  else if (maybe_parse_strings(&opt.sentence_terminals, in, out, "sentence_terminals")) {
+    opt.antiprompts = opt.sentence_terminals;
+    bool found = false;
+    for (const std::string& s : opt.antiprompts) {
+      if (s == "\n") {found = true;}
+    }
+    if (!found) {
+      opt.antiprompts.push_back("\n");
+    }
+  }
   else if (
       maybe_parse_line(&opt.protagonist, in, out, "protagonist", delims) ||
       maybe_parse_line(&opt.confidant, in, out, "confidant", delims)) {
     reinitialize_chat_prefixes(opt);
   }
-  else if (
-      skipstr_FildeshX(in, "((chat_prefixes)") ||
-      skipstr_FildeshX(in, "(chat_prefixes)")) {
-    opt.given_chat_prefixes = parse_quoted_strings(in);
+  else if (maybe_parse_strings(&opt.given_chat_prefixes, in, out, "chat_prefixes")) {
     reinitialize_chat_prefixes(opt);
   }
   else if (skipstr_FildeshX(in, "opt")) {

@@ -56,8 +56,9 @@ struct ChatOptions {
   bool mlock_on = false;
   bool mmap_on = true;
   bool coprocess_mode_on = false;
-  // Can't set these yet.
+  std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
+  // Can't set these yet.
   bool verbose_prompt = false;
 };
 
