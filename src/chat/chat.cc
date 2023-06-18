@@ -43,6 +43,34 @@ static bool maybe_trim_endspace(std::string& s)
   return result;
 }
 
+static
+  bool
+eom_newline_check(
+    const ChatOptions& opt,
+    const ChatTrajectory& chat_traj)
+{
+  if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
+    return true;
+  }
+  return !opt.multiline_confidant_on;
+}
+
+  bool
+rendezllama::eom_token_check(
+    llama_token token_id,
+    const ChatOptions& opt,
+    const ChatTrajectory& chat_traj)
+
+{
+  if (token_id == llama_token_eos()) {
+    return true;
+  }
+  if (eom_newline_check(opt, chat_traj)) {
+    return token_id == llama_token_nl();
+  }
+  return false;
+}
+
   void
 rendezllama::augment_tokenize_chat_input(
     ChatTrajectory& chat_traj,
@@ -239,7 +267,7 @@ rendezllama::generate_next_token(
   }
 
   // Interpret end-of-stream (technically "end-of-sentence" as a newline token.
-  if (chat_traj.token() == llama_token_eos()) {
+  if (chat_traj.token() == llama_token_eos() && eom_newline_check(opt, chat_traj)) {
     llama_token token_id = llama_token_eos();
     int n = llama_tokenize(ctx, "\n", &token_id, 1, /*add_bos=*/false);
     assert(n == 1);

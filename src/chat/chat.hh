@@ -15,6 +15,11 @@ class ChatTrajectory;
 const std::string&
 antiprompt_suffix(const std::string& text,
                   const std::vector<std::string>& antiprompts);
+bool
+eom_token_check(
+    llama_token token_id,
+    const ChatOptions& opt,
+    const ChatTrajectory& chat_traj);
 void
 augment_tokenize_chat_input(
     ChatTrajectory& chat_traj,

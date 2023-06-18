@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 
       chat_disp.show_new(chat_traj, ctx);
 
-      const std::string s = llama_token_to_str(ctx, chat_traj.token());
+      const std::string s = chat_disp.displaystring(chat_traj.token(), ctx);
       line_byte_count += s.size();
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
@@ -181,29 +181,34 @@ int main(int argc, char** argv)
         chat_disp.show_new(chat_traj, ctx);
       }
     }
-    else if (!matched_antiprompt.empty()) {
-      if (matched_antiprompt == "\n") {
-        bool adding_next_prefix = true;
-        if (chat_traj.line_prefix_index() >= opt.chat_prefixes.size()-1) {
-          inputting = true;
-          adding_next_prefix = (opt.given_chat_prefixes.size() > 0);
-          if (adding_next_prefix) {
-            chat_traj.line_prefix_index() = 0;
-            matched_antiprompt = opt.chat_prefixes[0];
-          }
-        }
-        else {
-          chat_traj.line_prefix_index() += 1;
-        }
+    else if (rendezllama::eom_token_check(chat_traj.token(), opt, chat_traj)) {
+      bool adding_next_prefix = true;
+      if (matched_antiprompt != "\n") {
+        rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+        chat_disp.show_new(chat_traj, ctx);
+        matched_antiprompt = "\n";
+      }
+      if (chat_traj.line_prefix_index() >= opt.chat_prefixes.size()-1) {
+        inputting = true;
+        adding_next_prefix = (opt.given_chat_prefixes.size() > 0);
         if (adding_next_prefix) {
-          rendezllama::tokenize_extend(
-              chat_traj, ctx, opt.chat_prefixes[chat_traj.line_prefix_index()]);
-          chat_disp.show_new(chat_traj, ctx);
-          sentence_count = 0;
-          sentence_token_count = 0;
+          chat_traj.line_prefix_index() = 0;
+          matched_antiprompt = opt.chat_prefixes[0];
         }
       }
-      else if (sentence_count + 1 == opt.sentence_limit) {
+      else {
+        chat_traj.line_prefix_index() += 1;
+      }
+      if (adding_next_prefix) {
+        rendezllama::tokenize_extend(
+            chat_traj, ctx, opt.chat_prefixes[chat_traj.line_prefix_index()]);
+        chat_disp.show_new(chat_traj, ctx);
+        sentence_count = 0;
+        sentence_token_count = 0;
+      }
+    }
+    else if (!matched_antiprompt.empty()) {
+      if (sentence_count + 1 == opt.sentence_limit) {
         // Reached the limit on number of sentences.
         inputting = true;
       }

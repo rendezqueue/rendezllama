@@ -16,6 +16,17 @@ ChatDisplay::~ChatDisplay() {
   close_FildeshO(out_);
 }
 
+  const char*
+ChatDisplay:: displaystring(
+      ChatTrajectory::Token_id token_id,
+      const struct llama_context* ctx)
+{
+  if (token_id == llama_token_eos()) {
+    return "";
+  }
+  return llama_token_to_str(ctx, token_id);
+}
+
   void
 ChatDisplay::show_new(
     size_type end,
@@ -32,7 +43,7 @@ ChatDisplay::show_new(
     {
       continue;
     }
-    puts_FildeshO(out_, llama_token_to_str(ctx, chat_traj.token_at(i)));
+    puts_FildeshO(out_, this->displaystring(chat_traj.token_at(i), ctx));
   }
   flush_FildeshO(out_);
 }

@@ -13,6 +13,12 @@ class ChatDisplay {
   ChatDisplay() {}
   ~ChatDisplay();
 
+  static
+    const char*
+  displaystring(
+      ChatTrajectory::Token_id token_id,
+      const struct llama_context* ctx);
+
   void show_new(size_type end,
                 ChatTrajectory& chat_traj,
                 const struct llama_context* ctx);

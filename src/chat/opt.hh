@@ -58,6 +58,8 @@ struct ChatOptions {
   bool coprocess_mode_on = false;
   std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
+  // Derived.
+  bool multiline_confidant_on = false;
   // Can't set these yet.
   bool verbose_prompt = false;
 };

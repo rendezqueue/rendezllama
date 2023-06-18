@@ -849,6 +849,7 @@ rendezllama::maybe_parse_option_command(
     for (const std::string& s : opt.antiprompts) {
       if (s == "\n") {found = true;}
     }
+    opt.multiline_confidant_on = found;
     if (!found) {
       opt.antiprompts.push_back("\n");
     }
