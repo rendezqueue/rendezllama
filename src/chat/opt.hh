@@ -54,7 +54,7 @@ struct ChatOptions {
   unsigned batch_count = 8;
   unsigned seed;
   bool mlock_on = false;
-  bool mmap_on = true;
+  bool mmap_on = false;
   bool coprocess_mode_on = false;
   std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
