@@ -1,4 +1,4 @@
-# Alpaca Assistant
+# Alpaca Confidant
 
 In this example, you chat with a whimsical character named Alpaca that sometimes spits at you.
 It should used with [Alpaca](https://crfm.stanford.edu/2023/03/13/alpaca.html)-style models that are tuned to behave like an assistant chatbot with a specific format.

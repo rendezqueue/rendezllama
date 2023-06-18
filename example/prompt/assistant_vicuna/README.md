@@ -11,7 +11,7 @@ If that's too annoying, increase these numbers in `setting.sxproto`:
 ```
 
 ## Prompt Format
-Vicuna-style models put the user's text and the chatbot's response on single lines (unless the reply is multi-line), so we don't do any weird formatting tricks like in the [Alpaca assistant example](../assistant_alpaca/).
+Vicuna-style models put the user's text and the chatbot's response on single lines (unless the reply is multi-line), so we don't do any weird formatting tricks like in the [Alpaca confidant example](../confidant_alpaca/).
 The prompt in this example was copied from the Vicuna authors' [FastChat](https://github.com/lm-sys/FastChat/blob/ecb5f2bbd51d848ec63001462be6d7a79938b6d4/fastchat/conversation.py#L109-L112) repository and uses a simpler opening message:
 ```text
 A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.
