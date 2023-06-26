@@ -308,7 +308,7 @@ rendezllama::parse_options_sxproto_content(
     else if (skipstr_FildeshX(&slice, "template_confidant ")) {
       opt.template_confidant = parse_quoted_string(&slice);
     }
-    else if (skipstr_FildeshX(&slice, "(chat_prefixes)")) {
+    else if (skipstr_FildeshX(&slice, "((chat_prefixes))")) {
       opt.given_chat_prefixes = parse_quoted_strings(&slice);
     }
     else if (

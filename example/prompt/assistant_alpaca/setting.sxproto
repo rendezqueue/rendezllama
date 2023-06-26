@@ -1,4 +1,4 @@
-((chat_prefixes) "\n### Instruction:\n\n" "\n### Response:\n\n")
+(((chat_prefixes)) "\n### Instruction:\n\n" "\n### Response:\n\n")
 ; Lines are considered as sentences.
 ; Model must be fine-tuned to end the response with EOS token.
 ((sentence_terminals) "\n")

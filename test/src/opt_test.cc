@@ -15,7 +15,7 @@ chat_prefixes_parse_test()
   FildeshX* in = open_FildeshXA();
   {
     const char content[] =
-      "((chat_prefixes) \"{{user}}:\" \"{{char}} feels:\" \"{{char}} wants:\" \"{{char}} plans:\" \"{{char}}:\")\n";
+      "(((chat_prefixes)) \"{{user}}:\" \"{{char}} feels:\" \"{{char}} wants:\" \"{{char}} plans:\" \"{{char}}:\")\n";
     const size_t content_size = strlen(content);
     memcpy(grow_FildeshX(in, content_size), content, content_size);
   }
