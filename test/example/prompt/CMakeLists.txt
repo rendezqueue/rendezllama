@@ -7,6 +7,8 @@ add_executable(example_prompt_parse_test
 target_link_libraries(example_prompt_parse_test
   ${Fildesh_LIBRARIES}
 )
+add_test(NAME example_prompt_assistant_alpaca_parse_test COMMAND example_prompt_parse_test
+  "${PROJECT_SOURCE_DIR}/example/prompt/assistant_alpaca/setting.sxproto")
 add_test(NAME example_prompt_assistant_coprocess_parse_test COMMAND example_prompt_parse_test
   "${PROJECT_SOURCE_DIR}/example/prompt/assistant_coprocess/setting.sxproto")
 add_test(NAME example_prompt_assistant_vicuna_parse_test COMMAND example_prompt_parse_test

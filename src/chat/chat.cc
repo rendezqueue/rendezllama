@@ -80,6 +80,9 @@ rendezllama::augment_tokenize_chat_input(
     const std::string& matched_antiprompt,
     const ChatOptions& opt)
 {
+  const char* const maybe_space_prefix = (
+      opt.chat_prefixes[0].back() == '\n'
+      ? "" : " ");
   prevent_subsequent_newline = false;
   if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
     s.erase(0, 2);
@@ -111,7 +114,7 @@ rendezllama::augment_tokenize_chat_input(
   }
   else if (matched_antiprompt == opt.chat_prefixes[0]) {
     rendezllama::tokenize_extend(
-        chat_traj, ctx, ' ' + s + '\n');
+        chat_traj, ctx, maybe_space_prefix + s + '\n');
     chat_traj.display_token_count_ = chat_traj.token_count();
     chat_traj.line_prefix_index() = 1;
     s = opt.chat_prefixes[1];
@@ -124,7 +127,7 @@ rendezllama::augment_tokenize_chat_input(
     chat_traj.line_prefix_index() = 0;
     rendezllama::tokenize_extend(
         chat_traj, ctx,
-        opt.chat_prefixes[0] + ' ' + s + '\n');
+        opt.chat_prefixes[0] + maybe_space_prefix + s + '\n');
     chat_traj.line_prefix_index() = 1;
     s = opt.chat_prefixes[1];
     prevent_subsequent_newline = true;
