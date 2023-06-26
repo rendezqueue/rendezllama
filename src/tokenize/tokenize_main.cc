@@ -60,7 +60,8 @@ int main(int argc, char** argv)
   }
 
   llama_context_params lparams = llama_context_default_params();
-  llama_context* ctx = llama_init_from_file(model_filename, lparams);
+  llama_model* model = llama_load_model_from_file(model_filename, lparams);
+  llama_context* ctx = llama_new_context_with_model(model, lparams);
 
   std::vector<llama_token> tokens;
   tokens.push_back(llama_token_bos());

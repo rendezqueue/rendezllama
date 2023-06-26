@@ -69,8 +69,9 @@ int main(int argc, char** argv)
   exstatus = parse_options(opt, argc, argv);
 
   llama_context* ctx = NULL;
+  llama_model* model = NULL;
   if (exstatus == 0) {
-    ctx = rendezllama::make_llama_context(opt);
+    std::tie(model, ctx) = rendezllama::make_llama_context(opt);
     if (!ctx) {exstatus = 1;}
   }
 
@@ -79,8 +80,9 @@ int main(int argc, char** argv)
     if (!opt.lora_base_model_filename.empty()) {
       base_model_filename = opt.lora_base_model_filename.c_str();
     }
-    int istat = llama_apply_lora_from_file(
-        ctx, opt.lora_filename.c_str(), base_model_filename, opt.thread_count);
+    int istat = llama_model_apply_lora_from_file(
+        model, opt.lora_filename.c_str(), base_model_filename,
+        opt.thread_count);
     if (istat != 0) {exstatus = 1;}
   }
 
@@ -448,5 +450,6 @@ int main(int argc, char** argv)
     chat_traj.rollforget(chat_traj.token_count(), ctx);
   }
   if (ctx) {llama_free(ctx);}
+  if (model) {llama_free_model(model);}
   return exstatus;
 }

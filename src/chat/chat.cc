@@ -135,7 +135,7 @@ rendezllama::augment_tokenize_chat_input(
   rendezllama::tokenize_extend(chat_traj, ctx, s);
 }
 
-  struct llama_context*
+  std::tuple<struct llama_model*, struct llama_context*>
 rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
 {
   llama_context_params params = llama_context_default_params();
@@ -145,12 +145,20 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
   params.use_mlock = opt.mlock_on;
   params.use_mmap = opt.mmap_on;
 
-  struct llama_context* ctx = llama_init_from_file(
+  struct llama_model* model = llama_load_model_from_file(
       opt.model_filename.c_str(), params);
-  if (!ctx) {
+  if (!model) {
     fildesh_log_error("Failed to open model.");
+    return std::make_tuple(nullptr, nullptr);
   }
-  return ctx;
+
+  struct llama_context* ctx = llama_new_context_with_model(model, params);
+  if (!ctx) {
+    llama_free_model(model);
+    fildesh_log_error("Failed to create context.");
+    return std::make_tuple(nullptr, nullptr);
+  }
+  return std::make_tuple(model, ctx);
 }
 
   void

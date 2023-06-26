@@ -2,6 +2,7 @@
 #define RENDEZLLAMA_CHAT_HH_
 #include <ostream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "llama.h"
@@ -30,7 +31,7 @@ augment_tokenize_chat_input(
     const ChatOptions& opt);
 
 
-struct llama_context*
+std::tuple<struct llama_model*, struct llama_context*>
 make_llama_context(const ChatOptions& opt);
 void
 tokenize_extend(
