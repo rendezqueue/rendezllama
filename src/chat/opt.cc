@@ -314,6 +314,7 @@ rendezllama::parse_options_sxproto_content(
     else if (
         maybe_parse_nat_option(&opt.seed, &slice, "seed") ||
         maybe_parse_bool_option(&opt.coprocess_mode_on, &slice, "coprocess_mode_on") ||
+        maybe_parse_bool_option(&opt.startspace_on, &slice, "startspace_on") ||
         maybe_parse_bool_option(&opt.linespace_on, &slice, "linespace_on") ||
         maybe_parse_bool_option(&opt.mlock_on, &slice, "mlock_on") ||
         maybe_parse_bool_option(&opt.mmap_on, &slice, "mmap_on")) {

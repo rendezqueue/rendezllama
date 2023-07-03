@@ -19,17 +19,14 @@ A also removed token penalization because penalties are very ad-hoc and this for
 
 ## Prompt Format
 Alpaca-style models put the user's text and the chatbot's response in markdown subsections, so it's a bit sparse.
-You can omit the blank lines, but I find that the output will also omit blank lines, some of which change the meaning in markdown (e.g., new paragraph).
 ```text
 Below is an instruction that describes a task. Write a response that appropriately completes the request.
 
 ### Instruction:
-
 Hello!
 
 ### Response:
 
-Generated text starts here.
 ```
 
 The response sections all end with an EOS token, which is preserved in the context but is otherwise invisible.
