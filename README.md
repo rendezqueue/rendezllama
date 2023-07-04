@@ -68,7 +68,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/mirostat_eta 0.1` sets the learning rate.
 - Execution parameters.
   - `/thread_count 8` sets the number of threads.
-  - `/batch_count 8` sets the batch size.
+  - `/batch_count 512` sets the batch size. (512 is default, large enough to make OpenBLAS useful)
 
 ### Chat CLI Options
 
@@ -97,7 +97,7 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `--linespace_on 1` puts a space at the start of every line in the prompts (default off). This changes how the first word of a line (usually a character name) is tokenized.
 - Memory.
   - `--mlock_on 1` tries to lock the model in memory (default off).
-  - `--mmap_on 1` loads the  model from disk via mmap (default off).
+  - `--mmap_on 1` loads the  model from disk via mmap (default on).
     - This makes the system hold and manage the model data, loading it as needed or letting multiple programs read it without duplicating it in memory.
     - This can introduce a bottleneck when low-priority stuff (like ZFS disk cache) is preventing the mmapped model from staying in RAM.
 - Misc.

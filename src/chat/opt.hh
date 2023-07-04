@@ -51,10 +51,10 @@ struct ChatOptions {
   float mirostat_tau = 5.0;
   float mirostat_eta = 0.1;
   unsigned context_token_limit = 2048;
-  unsigned batch_count = 8;
+  unsigned batch_count = 512;
   unsigned seed;
   bool mlock_on = false;
-  bool mmap_on = false;
+  bool mmap_on = true;
   bool coprocess_mode_on = false;
   std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
