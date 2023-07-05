@@ -41,8 +41,12 @@ class Bot(commands.Bot):
     content = message.content[5:]
 
     if message.author.name != self.nick:
-      chat_process.stdin.write(f'/puts USER: {content}\n')
-      chat_process.stdin.write(f'/gets 500 ASSISTANT:\n')
+      chat_process.stdin.write(f'/puts\n')
+      chat_process.stdin.write(f'/puts USER:\n')
+      chat_process.stdin.write(f'/puts {content}\n')
+      chat_process.stdin.write(f'/puts\n')
+      chat_process.stdin.write(f'/puts ASSISTANT:\n')
+      chat_process.stdin.write(f'/gets 500\n')
       chat_process.stdin.flush()
       s = chat_process.stdout.readline()
       if len(s) > 500:
