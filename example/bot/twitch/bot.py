@@ -41,7 +41,6 @@ class Bot(commands.Bot):
     content = message.content[5:]
 
     if message.author.name != self.nick:
-      chat_process.stdin.write(f'/puts\n')
       chat_process.stdin.write(f'/puts USER:\n')
       chat_process.stdin.write(f'/puts {content}\n')
       chat_process.stdin.write(f'/puts\n')
@@ -49,7 +48,7 @@ class Bot(commands.Bot):
       chat_process.stdin.write(f'/gets 500\n')
       chat_process.stdin.flush()
       s = chat_process.stdout.readline()
-      chat_process.stdin.write(f'/rollforget 6')
+      chat_process.stdin.write(f'/rollforget 5\n')
       if len(s) > 500:
         s = s[:500]
       await message.channel.send(s)
