@@ -5,7 +5,7 @@ from twitchio.ext import commands
 chat_process = subprocess.run(
     args=[
       '../../../bld/src/chat/chat',
-      '--x-setting',
+      '--x_setting',
       'setting.sxproto',
       '--model',
       os.environ['BOT_MODEL'],
