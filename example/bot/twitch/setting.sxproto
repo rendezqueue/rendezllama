@@ -1,0 +1,18 @@
+; Be a coprocess. Don't print much to stdout..
+(coprocess_mode_on 1)
+(confidant "Assistant")
+(protagonist "n/a")
+
+(context_token_limit 2048)
+
+(protagonist "### Human")
+(confidant "### Assistant")
+(context_token_limit 2048)
+(thread_count 8)
+(x_priming "priming.txt")
+(repeat_window 256)
+(repeat_penalty 1.17647)
+(sentence_limit 5)
+(sentence_token_limit 50)
+(temp 0.7)
+(mirostat 2)

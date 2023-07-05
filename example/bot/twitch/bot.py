@@ -1,5 +1,18 @@
 import os
+import subprocess
 from twitchio.ext import commands
+
+chat_process = subprocess.run(
+    args=[
+      '../../../bld/src/chat/chat',
+      '--x-setting',
+      'setting.sxproto',
+      '--model',
+      os.environ['BOT_MODEL'],
+    ],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+)
 
 class Bot(commands.Bot):
   def __init__(self):
@@ -15,15 +28,20 @@ class Bot(commands.Bot):
       print(f'Ready | {self.nick}')
 
   async def event_message(self, message):
-    if message.author:
-      print(f'{message.timestamp} - {message.author.name} -  {message.content}')
-      if "xdd" == message.content and message.author.name == "grencez":
-        await message.channel.send("xdd")
-    else:
+    if not message.author:
       print(f'{message.timestamp} - [Unknown Author] -  {message.content}')
+      return
+
+    print(f'{message.timestamp} - {message.author.name} -  {message.content}')
+    if message.author.name != self.nick:
+      chat_process.stdin.write(f'/puts {message.author.name}: {message.content}')
+      chat_process.stdin.write(f'/gets 0 Assistant:')
+      chat_process.stdin.flush()
+      s = chat_process.stdout.readline()
+      await message.channel.send(s)
 
 # bot.py
-if __name__ == "__main__":
+if __name__ == '__main__':
   print(os.environ['BOT_NICK'])
   bot = Bot()
   bot.run()
