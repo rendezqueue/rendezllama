@@ -38,7 +38,7 @@ class Bot(commands.Bot):
     if not message.content.startswith('!gen '):
       print('ignored')
       return
-    content message.content[5:]
+    content = message.content[5:]
 
     if message.author.name != self.nick:
       chat_process.stdin.write(f'/puts {message.author.name}: {content}\n')
