@@ -45,6 +45,8 @@ class Bot(commands.Bot):
       chat_process.stdin.write(f'/gets 500 ASSISTANT:\n')
       chat_process.stdin.flush()
       s = chat_process.stdout.readline()
+      if len(s) > 500:
+        s = s[:500]
       await message.channel.send(s)
 
 # bot.py
