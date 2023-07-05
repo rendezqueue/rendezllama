@@ -2,7 +2,7 @@ import os
 import subprocess
 from twitchio.ext import commands
 
-chat_process = subprocess.run(
+chat_process = subprocess.Popen(
     args=[
       '../../../bld/src/chat/chat',
       '--x_setting',
