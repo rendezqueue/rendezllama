@@ -10,6 +10,8 @@ chat_process = subprocess.Popen(
       '--model',
       os.environ['BOT_MODEL'],
     ],
+    universal_newlines=True,
+    bufsize=1,
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
 )
