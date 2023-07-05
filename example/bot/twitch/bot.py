@@ -35,15 +35,10 @@ class Bot(commands.Bot):
       return
 
     print(f'{message.timestamp} - {message.author.name} -  {message.content}')
-    # if not message.content.startswith(self.nick):
-    #   print('ignored')
-    #   return
-    # content = message.content.split(' ', 1)
-    # if not len(content) != 1:
-    #   print('no msg')
-    #   return
-    # content = content[1]
-    content = message.content
+    if not message.content.startswith('!gen '):
+      print('ignored')
+      return
+    content message.content[5:]
 
     if message.author.name != self.nick:
       chat_process.stdin.write(f'/puts {message.author.name}: {content}\n')
