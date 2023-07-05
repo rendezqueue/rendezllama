@@ -1,2 +1,5 @@
 /bld/
 /example/prompt/_*/
+
+*.env
+*.swp
