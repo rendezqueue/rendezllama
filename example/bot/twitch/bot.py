@@ -41,8 +41,8 @@ class Bot(commands.Bot):
     content = message.content[5:]
 
     if message.author.name != self.nick:
-      chat_process.stdin.write(f'/puts {message.author.name}: {content}\n')
-      chat_process.stdin.write(f'/gets 0 Assistant:\n')
+      chat_process.stdin.write(f'/puts ### Human: {content}\n')
+      chat_process.stdin.write(f'/gets 500 ### Assistant:\n')
       chat_process.stdin.flush()
       s = chat_process.stdout.readline()
       await message.channel.send(s)
