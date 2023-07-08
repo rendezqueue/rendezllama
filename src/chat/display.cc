@@ -22,7 +22,9 @@ ChatDisplay:: displaystring(
       const struct llama_context* ctx)
 {
   if (token_id == llama_token_eos()) {
-    return "";
+    // TODO(#30): remove hack.
+    return "\n";
+    //return "";
   }
   const char* s = llama_token_to_str(ctx, token_id);
   // TODO(#30): remove hack.

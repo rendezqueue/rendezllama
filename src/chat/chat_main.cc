@@ -179,6 +179,9 @@ int main(int argc, char** argv)
     if (line_byte_limit > 0 && line_byte_count >= line_byte_limit) {
       inputting = true;
       if (matched_antiprompt != "\n") {
+        // TODO(#30): remove hack.
+        chat_traj.push_back(llama_token_eos());
+        //rendezllama::tokenize_extend(chat_traj, ctx, "\n");
         rendezllama::tokenize_extend(chat_traj, ctx, "\n");
         chat_disp.show_new(chat_traj, ctx);
       }
