@@ -35,10 +35,13 @@ class Bot(commands.Bot):
       return
 
     print(f'{message.timestamp} - {message.author.name} -  {message.content}')
-    if not message.content.startswith('!gen '):
+    if message.content.startswith('!gen '):
+      await message.channel.send('I only answer to !qq now')
+      return
+    if not message.content.startswith('!qq '):
       print('ignored')
       return
-    content = message.content[5:]
+    content = message.content[4:]
 
     if message.author.name != self.nick:
       chat_process.stdin.write(f'/puts USER:\n')
