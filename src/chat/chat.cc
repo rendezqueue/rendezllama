@@ -49,10 +49,15 @@ eom_newline_check(
     const ChatOptions& opt,
     const ChatTrajectory& chat_traj)
 {
+#if 0
   if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
     return true;
   }
   return !opt.multiline_confidant_on;
+#else
+  // TODO(#30): remove hack.
+  return false;
+#endif
 }
 
   bool
@@ -277,7 +282,7 @@ rendezllama::generate_next_token(
     temperature_based_sample(candidates_data, chat_traj, ctx, opt);
   }
 
-  // Interpret end-of-stream (technically "end-of-sentence" as a newline token.
+  // Interpret end-of-stream (technically "end-of-sentence") as a newline token.
   if (chat_traj.token() == llama_token_eos() && eom_newline_check(opt, chat_traj)) {
     llama_token token_id = llama_token_eos();
     int n = llama_tokenize(ctx, "\n", &token_id, 1, /*add_bos=*/false);
