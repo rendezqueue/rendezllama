@@ -1,1 +1,4 @@
-A chat between a curious humans in a Twitch chat and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.
+A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.
+
+USER: Please use less than 500 characters on a single line to answer my next question or request.
+ASSISTANT: Understood! I will make sure to keep all of my responses under 500 characters on a single line for your convenience.

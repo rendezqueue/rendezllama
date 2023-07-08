@@ -6,8 +6,8 @@
 (context_token_limit 2048)
 
 (thread_count 8)
-;(x_priming "priming.txt")
-(x_priming "../../prompt/assistant_vicuna/priming.txt")
+(x_priming "priming.txt")
+;(x_priming "../../prompt/assistant_vicuna/priming.txt")
 (o_rolling "../../../bld/example/prompt/twitch.txt")
 (repeat_window 256)
 (repeat_penalty 1.17647)
