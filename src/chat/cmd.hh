@@ -22,6 +22,12 @@ maybe_do_back_command(
     struct llama_context* ctx,
     const ChatOptions& opt);
 bool
+maybe_do_rollforget_command(
+    ChatTrajectory& chat_traj,
+    FildeshX* in,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt);
+bool
 maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,

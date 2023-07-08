@@ -48,7 +48,8 @@ class Bot(commands.Bot):
       chat_process.stdin.write(f'/gets 500\n')
       chat_process.stdin.flush()
       s = chat_process.stdout.readline()
-      chat_process.stdin.write(f'/d\n/d\n/d\n/d\n/d\n')
+      # chat_process.stdin.write(f'/d\n/d\n/d\n/d\n/d\n')
+      chat_process.stdin.write(f'/rollforget 5\n')
       chat_process.stdin.flush()
       if len(s) > 500:
         s = s[:500]

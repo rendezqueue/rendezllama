@@ -299,33 +299,7 @@ int main(int argc, char** argv)
             fildesh_log_warning("Need some content for less=.");
           }
         }
-        else if (skipstr_FildeshX(&slice, "forget")) {
-          unsigned n = 10;
-          {
-            int tmp_n = 0;
-            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
-                parse_int_FildeshX(&slice, &tmp_n) &&
-                tmp_n > 0)
-            {
-              n = tmp_n;
-            }
-            else {
-              eout << "Ignoring /forget command without line count.\n"; eout.flush();
-              continue;
-            }
-          }
-          for (unsigned i = chat_traj.priming_token_count_;
-               i < chat_traj.token_count();
-               ++i)
-          {
-            if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
-              n -= 1;
-              if (n == 0) {
-                chat_traj.rollforget(i+1, ctx);
-                break;
-              }
-            }
-          }
+        else if (maybe_do_rollforget_command(chat_traj, &slice, ctx, opt)) {
           if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
             exstatus = 1;
             break;

@@ -7,6 +7,10 @@
 #include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
 
+using rendezllama::ChatOptions;
+using rendezllama::ChatTrajectory;
+
+
 static
   bool
 skip_cmd_prefix(FildeshX* in, const char* pfx,
@@ -96,6 +100,41 @@ rendezllama::maybe_do_back_command(
     }
   }
   print_tail_lines(out, ctx, chat_traj, 1);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_rollforget_command(
+    ChatTrajectory& chat_traj,
+    FildeshX* in,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "rollforget", opt) &&
+      !skip_cmd_prefix(in, "forget", opt)) {
+    return false;
+  }
+
+  unsigned n = 10;
+  {
+    int tmp_n = 0;
+    if (parse_int_FildeshX(in, &tmp_n)) {
+      if (tmp_n >= 0) {
+        n = tmp_n;
+      }
+      else {
+        n = chat_traj.priming_token_count_;
+      }
+    }
+  }
+
+  unsigned i = chat_traj.priming_token_count_;
+  for (; n > 0 && i < chat_traj.token_count(); ++i) {
+    if (rendezllama::token_endswith(ctx, chat_traj.token_at(i), '\n')) {
+      n -= 1;
+    }
+  }
+  chat_traj.rollforget(i, ctx);
   return true;
 }
 
