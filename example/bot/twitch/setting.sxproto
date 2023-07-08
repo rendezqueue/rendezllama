@@ -4,6 +4,9 @@
 (confidant "ASSISTANT")
 
 (context_token_limit 2048)
+((sentence_terminals) "\n")
+(sentence_limit 0)
+(sentence_token_limit 0)
 
 (thread_count 8)
 (x_priming "priming.txt")
@@ -11,7 +14,5 @@
 (o_rolling "../../../bld/example/prompt/twitch.txt")
 (repeat_window 256)
 (repeat_penalty 1.17647)
-(sentence_limit 0)
-(sentence_token_limit 0)
 (temp 0.7)
 (mirostat 2)

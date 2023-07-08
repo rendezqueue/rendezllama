@@ -24,7 +24,11 @@ ChatDisplay:: displaystring(
   if (token_id == llama_token_eos()) {
     return "";
   }
-  return llama_token_to_str(ctx, token_id);
+  const char* s = llama_token_to_str(ctx, token_id);
+  if (s[0] == '\n') {
+    s = " / ";
+  }
+  return s;
 }
 
   void
