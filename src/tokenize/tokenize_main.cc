@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv)
 {
-  llama_init_backend();
+  llama_backend_init(/*numa=*/false);
   const char* count_filename = NULL;
   const char* model_filename = NULL;
   const char* prompt_filename = "-";
