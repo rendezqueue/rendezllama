@@ -149,6 +149,10 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
   params.f16_kv = true;
   params.use_mlock = opt.mlock_on;
   params.use_mmap = opt.mmap_on;
+  params.rope_freq_scale = 1.0;
+  while ((unsigned)(2048/params.rope_freq_scale) < opt.context_token_limit) {
+    params.rope_freq_scale /= 2;
+  }
 
   struct llama_model* model = llama_load_model_from_file(
       opt.model_filename.c_str(), params);

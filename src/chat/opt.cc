@@ -657,9 +657,6 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
         opt.context_token_limit = n;
-        if (opt.context_token_limit > 2048) {
-          fildesh_log_warning("--context_token_limit is above 2048. Expect poor results.");
-        }
       }
       else {
         fildesh_log_error("--context_token_limit needs positive arg");
