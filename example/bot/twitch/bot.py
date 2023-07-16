@@ -33,30 +33,38 @@ class Bot(commands.Bot):
     if not message.author:
       print(f'{message.timestamp} - [Unknown Author] -  {message.content}')
       return
+    if message.author.name == self.nick:
+      print(f'ignoring self')
+      return
 
     print(f'{message.timestamp} - {message.author.name} -  {message.content}')
-    if message.content.startswith('!gen '):
-      await message.channel.send('I only answer to !qq now')
-      return
-    if not message.content.startswith('!qq '):
+    content = message.content
+    if content.startswith('!qq '):
+      content = content[4:]
+    elif content.startswith(self.nick):
+      pass
+    elif content.startswith(f'@{self.nick}'):
+      pass
+    else:
       print('ignored')
       return
-    content = message.content[4:]
 
-    if message.author.name != self.nick:
-      chat_process.stdin.write(f'/puts USER:\n')
-      chat_process.stdin.write(f'/puts {content}\n')
-      chat_process.stdin.write(f'/puts\n')
-      chat_process.stdin.write(f'/puts ASSISTANT:\n')
-      chat_process.stdin.write(f'/gets 500\n')
-      chat_process.stdin.flush()
-      s = chat_process.stdout.readline()
-      # chat_process.stdin.write(f'/d\n/d\n/d\n/d\n/d\n')
-      chat_process.stdin.write(f'/rollforget 2048\n')
-      chat_process.stdin.flush()
-      if len(s) > 500:
-        s = s[:500]
-      await message.channel.send(s)
+    chat_process.stdin.write(f'/puts\n')
+    chat_process.stdin.write(f'/puts USER:\n')
+    chat_process.stdin.write(f'/puts {message.author.name}: {content}\n')
+    chat_process.stdin.write(f'/puts\n')
+    chat_process.stdin.write(f'/puts ASSISTANT:\n')
+    chat_process.stdin.write(f'/gets 500 {self.nick}:\n')
+    #chat_process.stdin.write(f'/gets 500\n')
+    chat_process.stdin.flush()
+    s = chat_process.stdout.readline()
+    chat_process.stdin.write(f'/rollforget 2048\n')
+    chat_process.stdin.flush()
+    s = s.strip(' \\')
+    s = s.replace('\\_', '_')
+    if len(s) > 500:
+      s = s[:500]
+    await message.channel.send(s)
 
 # bot.py
 if __name__ == '__main__':
