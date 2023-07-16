@@ -61,7 +61,7 @@ open_transcript_outfile(
 
 int main(int argc, char** argv)
 {
-  llama_init_backend(false);
+  llama_backend_init(/*numa=*/false);
   fildesh::ofstream eout("/dev/stderr");
   FildeshX* in = NULL;
   int exstatus = 0;
