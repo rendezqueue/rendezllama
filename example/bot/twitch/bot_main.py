@@ -66,7 +66,6 @@ class Bot(commands.Bot):
       s = s[:500]
     await message.channel.send(s)
 
-# bot.py
 if __name__ == '__main__':
   print(os.environ['BOT_NICK'])
   bot = Bot()
