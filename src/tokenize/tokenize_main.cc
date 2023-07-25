@@ -6,6 +6,7 @@
 
 int main(int argc, char** argv)
 {
+  llama_backend_init(/*numa=*/false);
   const char* count_filename = NULL;
   const char* model_filename = NULL;
   const char* prompt_filename = "-";
@@ -30,7 +31,6 @@ int main(int argc, char** argv)
     else {
       exstatus = 64;
     }
-    const char* arg = argv[argi];
   }
 
   if (exstatus == 0 && !model_filename) {
@@ -60,7 +60,8 @@ int main(int argc, char** argv)
   }
 
   llama_context_params lparams = llama_context_default_params();
-  llama_context* ctx = llama_init_from_file(model_filename, lparams);
+  llama_model* model = llama_load_model_from_file(model_filename, lparams);
+  llama_context* ctx = llama_new_context_with_model(model, lparams);
 
   std::vector<llama_token> tokens;
   tokens.push_back(llama_token_bos());

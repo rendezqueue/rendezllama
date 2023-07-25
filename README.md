@@ -6,56 +6,20 @@ For now, there's just a command-line interface, but the plan is to make a progre
 
 ## Chat CLI
 
-Assuming you have the quantized weights already, you can start the chat CLI with:
+Assuming you have the quantized weights already and can compile C++, you can try the [assistant_vicuna example](example/prompt/assistant_vicuna/) with a few commands:
 ```shell
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
 # Make just creates a bld/ directory and invokes CMake to build there.
-make
+make LLAMA_OPENBLAS=0
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
-  --x_setting example/prompt/roshambo_kira/setting.sxproto \
+  --x_setting example/prompt/assistant_vicuna/setting.sxproto \
   --thread_count 8 \
   --model "${MODEL}"
 ```
 
-The confidant (bot) and protagonist (you) names are determined from last two lines of the rolling prompt (in that order).
-
-### Chat CLI Commands
-
-In the chat, most things you type will be prefixed with the protagonist's name and suffixed by the confidant's dialogue line.
-There are some special inputs and commands that help keep an infinite chat from going off the rails.
-Remember, the recent chat content is just a rolling prompt concatenated to the end of the priming prompt, so its quality is just as important!
-- Interactivity.
-  - An empty input lets token generation keep happening.
-  - Antiprompts are `.!?…` and newline. There's no way to change them right now.
-  - `/sentence_limit 3` sets the number of sentences to generate before reading more input.
-  - `/sentence_token_limit 40` sets the maximum number of tokens in a sentence before giving control to the user.
-  - `/tail` or `/tail 10` shows the last 10 lines.
-  - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
-  - `/forget 10` removes the first 10 lines of the rolling prompt.
-- Editing.
-  - A blank space forces token generation to continue on the same line.
-  - ` some text` (note blank space in front) adds `some text` to the current line.
-  - ` some text ` (note blank spaces in front and back) adds `some text` and forces another token on the same line. Useful when inserting a sentence.
-  - `\nsome text` (note the escaped newline in front) adds a new line of dialogue for the confidant that starts with `some text`.
-  - `/yield Char` adds a new line of dialogue for a character named `Char`.
-  - `/r` regenerates the current line of dialogue.
-  - `/d` deletes current line.
-  - `/b` or `/b 1` deletes the last token.
-  - `/B` or `/B 1` deletes the last word.
-- Repeat penalty.
-  - `/repeat_penalty 1.2` sets the repeated token penalty.
-  - `/repeat_window 20` penalizes the most recent 20 tokens from being generated.
-  - `/less= some unwanted words` adds extra tokens to be penalized.
-  - `/dropless` clears the extra penalized tokens list.
-- Generation parameters.
-  - `/temp 0.7` sets the temperature.
-  - `/top_k 40` sets the `top_k` parameter.
-  - `/top_p 0.9` sets the `top_p` parameter.
-- Execution parameters.
-  - `/thread_count 8` sets the number of threads.
-  - `/batch_count 8` sets the batch size.
+See the [example/prompt/](example/prompt/) directory for more interesting/whimsical examples.
 
 ### Chat CLI Options
 
@@ -64,15 +28,45 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
     - All other options can be set within this file.
 - Model files.
   - `--model ggml-model-q4_0.bin` are the model weights. Usually quantized.
-    - Required.
-  - `--lora ggml-adapter-model.bin` gives a LoRA.
-  - `--lora_base ggml-model-f16.bin` gives higher-precision model weights to apply the LoRA on top of.
-    - Not required when using `--lora` but you'll otherwise get a warning if the `--model` weights are low-precision.
+  - See [doc/setting/model.md](doc/setting/model.md) for LoRA files and memory options.
 - Prompt files.
   - `--x_priming priming.txt` specifies the priming prompt text file. This is the prompt that never changes.
-    - Required.
   - `--x_rolling rolling.txt` specifies rolling prompt. This is the initial chat dialogue. As the chat continues, older dialogue expires and "rolls" out of context.
-    - Required.
-  - `--o_rolling transcript.txt` specifies a place to save the chat transcript as it rolls out of context and can no longer be edited.
-- All chat commands that tweak numbers are also available as CLI options. Just use `--` to specify them as flags instead of `/`. Or preferably use a `setting.sxproto` file.
+    - The protagonist and confidant names are derived automatically from this.
+  - See [doc/setting/prompt.md](doc/setting/prompt.md) for more prompt file & format options.
+
+### Chat CLI Commands
+
+In the chat, most things you type will be prefixed with the protagonist's name and suffixed by the confidant's dialogue line.
+There are some special inputs and commands that help keep an infinite chat from going off the rails.
+Remember, the recent chat content is just a rolling prompt concatenated to the end of the priming prompt, so its quality is just as important!
+- Interactivity.
+  - An empty input lets token generation keep happening.
+  - See [doc/setting/stdio.md](doc/setting/stdio.md) for settings that I/O behavior and limits.
+  - `/tail` or `/tail 10` shows the last 10 lines.
+  - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
+  - `/forget 10` removes the first 10 lines of the rolling prompt.
+- Characters.
+  - `/protagonist User` changes the protagonist's name to "User".
+  - `/confidant Char` changes the confidant's name to "Char".
+  - See [doc/setting/prompt.md#prefix](doc/setting/prompt.md#prefix) for more ways to control chat line prefixes.
+- Editing.
+  - A blank space forces token generation to continue on the same line.
+  - ` some text` (note blank space in front) adds `some text` to the current line.
+  - ` some text ` (note blank spaces in front and back) adds `some text` and forces another token on the same line. Useful when inserting a sentence.
+  - `\nsome text` (note the escaped newline in front) adds a new line of dialogue for the confidant that starts with `some text`.
+  - `/puts A line of text.` adds a new line of text. Does not echo anything.
+  - `/yield` or `/y` adds a new line dialogue for the confidant.
+  - `/yield Char:` or `/y Char:` adds a new line starting with `Char:`.
+  - `/gets 64 Char:` is like `/yield` but generates slightly over a max of 64 bytes. Only prints the newly-generated text. Always includes a newline at the end.
+  - `/r` regenerates the current line of dialogue.
+  - `/d` deletes current line.
+  - `/b` or `/b 1` deletes the last token.
+  - `/B` or `/B 1` deletes the last word.
+- Repeat penalty.
+  - `/less= some unwanted words` adds extra tokens to be penalized.
+  - `/dropless` clears the extra penalized tokens list.
+  - See [doc/setting/penalty.md](doc/setting/penalty.md) for algorithm parameters. Defaults are okay for a chatbot.
+- Temperature-based sampling.
+  - See [doc/setting/sample.md](doc/setting/sample.md) for algorithm parameters. Defaults are okay for a chatbot.
 

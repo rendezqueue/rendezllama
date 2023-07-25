@@ -8,32 +8,81 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-latest
-            cmake_build_type: RelOnHost
-          - platform: macos-latest
-            cmake_build_type: RelOnHost
-          - platform: windows-latest
-            cmake_build_type: Release
+        - platform: ubuntu-latest
+          cmake_build_type: RelOnHost
+        - platform: macos-latest
+          cmake_build_type: RelOnHost
+        - platform: windows-latest
+          cmake_build_type: Release
 
     runs-on: ${{ matrix.platform }}
 
     steps:
     - uses: actions/checkout@v3
 
-    - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/bld
-
     - name: Configure CMake
-      # Use a bash shell so we can use the same syntax for environment variable
-      # access regardless of the host operating system
-      shell: bash
-      working-directory: ${{runner.workspace}}/bld
-      # Note the current convention is to use the -S and -B options here to specify source
-      # and build directories, but this is only available with CMake 3.13 and higher.
-      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.cmake_build_type}}
+      run: >
+        cmake
+        -DCMAKE_BUILD_TYPE=${{matrix.cmake_build_type}}
+        -S "${{github.workspace}}" -B "${{runner.workspace}}/bld"
 
     - name: Build
+      run: >
+        cmake
+        --build "${{runner.workspace}}/bld"
+        --config ${{matrix.cmake_build_type}}
+
+    - name: Test
       working-directory: ${{runner.workspace}}/bld
-      shell: bash
-      run: cmake --build . --config ${{matrix.cmake_build_type}}
+      run: >
+        ctest
+        --timeout 10
+        -C ${{matrix.cmake_build_type}}
+
+
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      cmake_build_type: Debug
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: >
+        cmake
+        -DCMAKE_BUILD_TYPE=${{env.cmake_build_type}}
+        -DCMAKE_C_FLAGS="--coverage -Og"
+        -DCMAKE_CXX_FLAGS="--coverage -Og"
+        -DCMAKE_EXE_LINKER_FLAGS="--coverage -Og"
+        -S "${{github.workspace}}" -B "${{runner.workspace}}/bld"
+
+    - name: Build
+      run: >
+        cmake
+        --build "${{runner.workspace}}/bld"
+        --config ${{env.cmake_build_type}}
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/bld
+      run: >
+        ctest
+        --timeout 10
+        -C ${{env.cmake_build_type}}
+
+    - name: LCOV
+      uses: imciner2/run-lcov@v1
+      with:
+        input_directory: "${{runner.workspace}}/bld/"
+        exclude: '"/usr/include/*" "${{runner.workspace}}/bld/_deps/*"'
+        output_file: "${{runner.workspace}}/bld/coverage_report.info"
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: "${{runner.workspace}}/bld/coverage_report.info"
+

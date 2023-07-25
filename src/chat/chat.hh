@@ -2,6 +2,7 @@
 #define RENDEZLLAMA_CHAT_HH_
 #include <ostream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "llama.h"
@@ -9,28 +10,44 @@
 namespace rendezllama {
 
 struct ChatOptions;
+class ChatDisplay;
+class ChatTrajectory;
 
 const std::string&
 antiprompt_suffix(const std::string& text,
                   const std::vector<std::string>& antiprompts);
+bool
+eom_token_check(
+    llama_token token_id,
+    const ChatOptions& opt,
+    const ChatTrajectory& chat_traj);
 void
-augment_chat_input(std::string& s,
-                   bool& prevent_subsequent_newline,
-                   const std::string& matched_antiprompt,
-                   const ChatOptions& opt);
+augment_tokenize_chat_input(
+    ChatTrajectory& chat_traj,
+    llama_context* ctx,
+    bool& prevent_subsequent_newline,
+    std::string s,
+    const std::string& matched_antiprompt,
+    const ChatOptions& opt);
 
-llama_token
-generate_next_token(struct llama_context* ctx,
-                    bool preventing_newline,
-                    const std::vector<llama_token>& extra_penalized_tokens,
-                    const std::vector<llama_token>& tokens,
-                    const ChatOptions& opt);
-unsigned
+
+std::tuple<struct llama_model*, struct llama_context*>
+make_llama_context(const ChatOptions& opt);
+void
+tokenize_extend(
+    rendezllama::ChatTrajectory& chat_traj,
+    llama_context* ctx, const std::string& s);
+void
+generate_next_token(
+    ChatTrajectory& chat_traj,
+    struct llama_context* ctx,
+    bool preventing_newline,
+    const std::vector<llama_token>& extra_penalized_tokens,
+    const ChatOptions& opt);
+bool
 commit_to_context(struct llama_context* ctx,
-                  std::ostream& out,
-                  std::ostream& transcript_out,
-                  std::vector<llama_token>& chat_tokens,
-                  unsigned context_token_count,
+                  ChatDisplay& chat_disp,
+                  ChatTrajectory& chat_traj,
                   const ChatOptions& opt);
 
 }  // namespace rendezllama

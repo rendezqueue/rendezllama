@@ -1,10 +1,6 @@
 
-if(LLAMA_OPENBLAS)
-  set(BLA_VENDOR OpenBLAS)
-  find_package(BLAS REQUIRED)
-endif()
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_module")
 
-find_package(Threads REQUIRED)
 
 include(FetchContent)
 include("cmake_fetchcontent/fildesh.cmake")

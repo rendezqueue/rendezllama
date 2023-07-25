@@ -12,21 +12,28 @@
 namespace rendezllama {
 
 struct ChatOptions;
+class ChatTrajectory;
 
 bool
 maybe_do_back_command(
-    std::vector<llama_token>& chat_tokens,
-    unsigned& context_token_count,
+    ChatTrajectory& chat_traj,
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
     const ChatOptions& opt);
 bool
+maybe_do_head_command(
+    FildeshX* in,
+    std::ostream& out,
+    struct llama_context* ctx,
+    const ChatTrajectory& chat_traj,
+    const rendezllama::ChatOptions& opt);
+bool
 maybe_do_tail_command(
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
-    const std::vector<llama_token>& chat_tokens,
+    const ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt);
 bool
 maybe_parse_yield_command(

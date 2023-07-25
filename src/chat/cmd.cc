@@ -1,8 +1,10 @@
 #include "cmd.hh"
 
+#include <cassert>
 #include <cstring>
 
 #include "src/chat/opt.hh"
+#include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
 
 static
@@ -11,45 +13,47 @@ skip_cmd_prefix(FildeshX* in, const char* pfx,
                 const rendezllama::ChatOptions& opt)
 {
   const unsigned n = strlen(pfx);
-  if (peek_bytestring_FildeshX(in, NULL, n+1)) {
-    if (memchr(opt.command_delim_chars, in->at[in->off+n],
-               sizeof(opt.command_delim_chars)-1))
-    {
-      in->off += n+1;
-      return true;
-    }
+  if (!peek_bytestring_FildeshX(in, (const unsigned char*)pfx, n)) {
     return false;
   }
-  return skip_bytestring_FildeshX(in, (const unsigned char*)pfx, n);
+
+  if (!peek_bytestring_FildeshX(in, NULL, n+1)) {
+    // No more to read.
+    in->off += n;
+    return true;
+  }
+
+  if (memchr(opt.command_delim_chars, in->at[in->off+n],
+             sizeof(opt.command_delim_chars)-1))
+  {
+    // Caught a delimiter.
+    in->off += n+1;
+    return true;
+  }
+  return false;
 }
 
 static
   void
 print_tail_lines(std::ostream& out, struct llama_context* ctx,
-                 const std::vector<llama_token> chat_tokens,
+                 const rendezllama::ChatTrajectory& chat_traj,
                  unsigned n)
 {
-  size_t i = chat_tokens.size();
-  while (i > 0) {
-    i -= 1;
-    if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
-      n -= 1;
-      if (n == 0) {
-        i += 1;
-        break;
-      }
-    }
+  unsigned i = chat_traj.token_count();
+  while (n > 0) {
+    i = rendezllama::prev_newline_start_index(
+        ctx, chat_traj.tokens(), i);
+    n -= 1;
   }
-  for (; i < chat_tokens.size(); ++i) {
-    out << llama_token_to_str(ctx, chat_tokens[i]);
+  for (; i < chat_traj.token_count(); ++i) {
+    out << llama_token_to_str(ctx, chat_traj.token_at(i));
   }
   out.flush();
 }
 
   bool
 rendezllama::maybe_do_back_command(
-    std::vector<llama_token>& chat_tokens,
-    unsigned& context_token_count,
+    rendezllama::ChatTrajectory& chat_traj,
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
@@ -70,12 +74,11 @@ rendezllama::maybe_do_back_command(
   }
   bool skipping_contiguous_space = space_delim_on;
   while (n > 0) {
-    if (chat_tokens.size() <= opt.priming_token_count) {
+    if (chat_traj.token_count() <= chat_traj.priming_token_count_) {
       break;
     }
-    const llama_token token_id = chat_tokens.back();
-    chat_tokens.pop_back();
-    context_token_count -= 1;
+    const llama_token token_id = chat_traj.token();
+    chat_traj.erase_all_at(chat_traj.token_count()-1);
     if (space_delim_on) {
       const char* s = llama_token_to_str(ctx, token_id);
       if (s && (s[0] == ' ' || s[0] == '\n')) {
@@ -92,7 +95,38 @@ rendezllama::maybe_do_back_command(
       n -= 1;
     }
   }
-  print_tail_lines(out, ctx, chat_tokens, 1);
+  print_tail_lines(out, ctx, chat_traj, 1);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_head_command(
+    FildeshX* in,
+    std::ostream& out,
+    struct llama_context* ctx,
+    const rendezllama::ChatTrajectory& chat_traj,
+    const rendezllama::ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "head", opt)) {
+    return false;
+  }
+  unsigned n = 10;
+  {
+    int tmp_n = 0;
+    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
+      n = tmp_n;
+    }
+  }
+  for (size_t i = chat_traj.priming_token_count_; i < chat_traj.token_count(); ++i) {
+    out << llama_token_to_str(ctx, chat_traj.token_at(i));
+    if (rendezllama::token_endswith(ctx, chat_traj.token_at(i), '\n')) {
+      n -= 1;
+      if (n == 0) {
+        break;
+      }
+    }
+  }
+  out.flush();
   return true;
 }
 
@@ -101,7 +135,7 @@ rendezllama::maybe_do_tail_command(
     FildeshX* in,
     std::ostream& out,
     struct llama_context* ctx,
-    const std::vector<llama_token>& chat_tokens,
+    const rendezllama::ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt)
 {
   if (!skip_cmd_prefix(in, "tail", opt)) {
@@ -114,7 +148,7 @@ rendezllama::maybe_do_tail_command(
       n = tmp_n;
     }
   }
-  print_tail_lines(out, ctx, chat_tokens, n);
+  print_tail_lines(out, ctx, chat_traj, n);
   return true;
 }
 
@@ -124,15 +158,13 @@ rendezllama::maybe_parse_yield_command(
     FildeshX* in,
     const rendezllama::ChatOptions& opt)
 {
-  if (!skip_cmd_prefix(in, "yield", opt)) {
+  if (!skip_cmd_prefix(in, "yield", opt) &&
+      !skip_cmd_prefix(in, "y", opt)) {
     return false;
   }
   s = '\n';
   if (in->off < in->size) {
     s.insert(s.end(), &in->at[in->off], &in->at[in->size]);
-    if (!until_char_FildeshX(in, ':').at) {
-      s += ':';
-    }
   }
   else {
     s += opt.confidant + ':';

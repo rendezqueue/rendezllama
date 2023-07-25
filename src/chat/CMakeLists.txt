@@ -4,20 +4,16 @@ add_executable(chat
   "chat.hh"
   "cmd.cc"
   "cmd.hh"
+  "display.cc"
+  "display.hh"
   "opt.cc"
   "opt.hh"
+  "trajectory.cc"
+  "trajectory.hh"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )
-target_include_directories(chat PRIVATE
-  ${LlamaCpp_INCLUDE_DIRS}
-)
-target_link_libraries(chat
+target_link_libraries(chat PRIVATE
   ${Fildesh_LIBRARIES}
   ${LlamaCpp_LIBRARIES}
-  ${CMAKE_THREAD_LIBS_INIT}
 )
-if(LLAMA_OPENBLAS)
-  target_link_options(chat PRIVATE ${BLAS_LINKER_FLAGS})
-  target_link_libraries(chat ${BLAS_LIBRARIES})
-endif()

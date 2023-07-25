@@ -3,10 +3,39 @@
 #include <fildesh/ofstream.hh>
 
 #include "src/chat/chat.hh"
+#include "src/chat/display.hh"
 #include "src/chat/cmd.hh"
 #include "src/chat/opt.hh"
+#include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
 
+static
+  void
+print_initialization(
+    std::ostream& out,
+    struct llama_context* ctx,
+    const rendezllama::ChatOptions& opt,
+    const rendezllama::ChatTrajectory& chat_traj)
+{
+  if (opt.verbose_prompt && ctx && chat_traj.token_count() > 0) {
+    out
+      << "Number of tokens in priming prompt: " << chat_traj.priming_token_count_ << "\n"
+      << "Number of tokens in full prompt: " << chat_traj.token_count() << "\n";
+    for (size_t i = 0; i < chat_traj.token_count(); i++) {
+      out << chat_traj.token_at(i) << " -> '"
+        << llama_token_to_str(ctx, chat_traj.token_at(i)) << "'\n";
+    }
+    out << "\n\n";
+  }
+
+  for (auto antiprompt : opt.antiprompts) {
+    out << "Reverse prompt: " << antiprompt << "\n";
+  }
+
+  print_options(out, opt);
+  out << "\n\n";
+  out.flush();
+}
 
 static
   FildeshO*
@@ -32,16 +61,17 @@ open_transcript_outfile(
 
 int main(int argc, char** argv)
 {
+  llama_backend_init(/*numa=*/false);
   fildesh::ofstream eout("/dev/stderr");
-  fildesh::ofstream out("/dev/stdout");
   FildeshX* in = NULL;
   int exstatus = 0;
   rendezllama::ChatOptions opt;
   exstatus = parse_options(opt, argc, argv);
 
   llama_context* ctx = NULL;
+  llama_model* model = NULL;
   if (exstatus == 0) {
-    ctx = rendezllama::make_llama_context(opt);
+    std::tie(model, ctx) = rendezllama::make_llama_context(opt);
     if (!ctx) {exstatus = 1;}
   }
 
@@ -50,34 +80,43 @@ int main(int argc, char** argv)
     if (!opt.lora_base_model_filename.empty()) {
       base_model_filename = opt.lora_base_model_filename.c_str();
     }
-    int istat = llama_apply_lora_from_file(
-        ctx, opt.lora_filename.c_str(), base_model_filename, opt.thread_count);
+    int istat = llama_model_apply_lora_from_file(
+        model, opt.lora_filename.c_str(), base_model_filename,
+        opt.thread_count);
     if (istat != 0) {exstatus = 1;}
   }
 
-  fildesh::ofstream transcript_out(open_transcript_outfile(
-          exstatus, opt.transcript_sibling_filename, opt.transcript_filename));
-
-  // tokenize the prompt
-  std::vector<llama_token> chat_tokens;
+  rendezllama::ChatDisplay chat_disp;
   if (exstatus == 0) {
-    chat_tokens.push_back(llama_token_bos());
-    rendezllama::tokenize_extend(chat_tokens, ctx, opt.priming_prompt);
-    // No need for --keep, we just directly compute the priming prompt number of tokens.
-    opt.priming_token_count = chat_tokens.size();
-    if (opt.priming_token_count < 0) {
-      fildesh_log_error("bad priming tokenization");
-      exstatus = 1;
-    }
-    else {
-      rendezllama::tokenize_extend(chat_tokens, ctx, opt.rolling_prompt);
-      rendezllama::print_initialization(eout, ctx, opt, chat_tokens);
+    chat_disp.out_ = open_FildeshOF("/dev/stdout");
+    if (!opt.answer_prompt.empty()) {
+      rendezllama::tokenize_extend(
+          chat_disp.answer_prompt_tokens_,
+          ctx, opt.answer_prompt);
     }
   }
 
+  rendezllama::ChatTrajectory chat_traj;
   if (exstatus == 0) {
-    assert(opt.context_token_limit == llama_n_ctx(ctx));
-    if ((int) chat_tokens.size() > opt.context_token_limit - 4) {
+    chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
+    chat_traj.transcript_out_ = open_transcript_outfile(
+        exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
+    chat_traj.line_prefix_index() = 1;
+  }
+
+  // Tokenize the prompt.
+  const std::vector<llama_token>& chat_tokens = chat_traj.tokens();
+  if (exstatus == 0) {
+    rendezllama::tokenize_extend(chat_traj, ctx, opt.priming_prompt);
+    // No need for --keep, we just directly compute the priming prompt number of tokens.
+    chat_traj.priming_token_count_ = chat_traj.token_count();
+    rendezllama::tokenize_extend(chat_traj, ctx, opt.rolling_prompt);
+    print_initialization(eout, ctx, opt, chat_traj);
+  }
+
+  if (exstatus == 0) {
+    assert((int)opt.context_token_limit == llama_n_ctx(ctx));
+    if (chat_tokens.size() > opt.context_token_limit - 4) {
       fildesh_log_error("Prompt is longer than context_token_limit - 4.");
       exstatus = 1;
     }
@@ -94,45 +133,84 @@ int main(int argc, char** argv)
   }
 
   std::vector<llama_token> extra_penalized_tokens;
+  unsigned line_byte_limit = 0;
+  unsigned line_byte_count = 0;
   unsigned sentence_count = 0;
   unsigned sentence_token_count = 0;
-  unsigned context_token_count = 0;
   bool preventing_newline = false;
+  // Skip straight to user input when in coprocess mode.
+  bool token_generation_on = !opt.coprocess_mode_on;
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
-    context_token_count = rendezllama::commit_to_context(
-        ctx, out, transcript_out,
-        chat_tokens, context_token_count, opt);
-    if (context_token_count == 0) {exstatus = 1; break;}
-    assert(context_token_count == (int)chat_tokens.size());
+    if (opt.coprocess_mode_on) {
+      // Print nothing except for prompted.
+      chat_traj.display_token_count_ = chat_traj.token_count();
+    }
+    chat_disp.maybe_insert_answer_prompt(chat_traj, ctx);
+    if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+      exstatus = 1;
+      break;
+    }
 
+    bool inputting = false;
     std::string matched_antiprompt;
-    {
-      llama_token id = rendezllama::generate_next_token(
-          ctx, preventing_newline, extra_penalized_tokens, chat_tokens, opt);
+    if (!token_generation_on) {
+      // Just skip the first token.
+      token_generation_on = true;
+      inputting = true;
+    }
+    else {
+      rendezllama::generate_next_token(
+          chat_traj, ctx,
+          preventing_newline, extra_penalized_tokens, opt);
       preventing_newline = false;
 
-      // add it to the context
-      chat_tokens.push_back(id);
+      chat_disp.show_new(chat_traj, ctx);
 
-      // Display.
-      const std::string s = llama_token_to_str(ctx, id);
-      out << s;
-      out.flush();
-
+      const std::string s = chat_disp.displaystring(chat_traj.token(), ctx);
+      line_byte_count += s.size();
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
       // (If we used longer antiprompts, they could be split across iterations.)
       matched_antiprompt = rendezllama::antiprompt_suffix(s, opt.antiprompts);
     }
 
-    bool inputting = false;
-    if (!matched_antiprompt.empty()) {
-      if (matched_antiprompt == "\n") {
-        inputting = true;
+    if (line_byte_limit > 0 && line_byte_count >= line_byte_limit) {
+      inputting = true;
+      if (matched_antiprompt != "\n") {
+        rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+        chat_disp.show_new(chat_traj, ctx);
       }
-      else if (sentence_count + 1 == opt.sentence_limit) {
+    }
+    else if (rendezllama::eom_token_check(chat_traj.token(), opt, chat_traj)) {
+      bool adding_next_prefix = true;
+      if (matched_antiprompt != "\n") {
+        rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+        chat_disp.show_new(chat_traj, ctx);
+        matched_antiprompt = "\n";
+      }
+      if (chat_traj.line_prefix_index() >= opt.chat_prefixes.size()-1) {
+        inputting = true;
+        adding_next_prefix = (opt.given_chat_prefixes.size() > 0);
+        if (adding_next_prefix) {
+          chat_traj.line_prefix_index() = 0;
+          matched_antiprompt = opt.chat_prefixes[0];
+        }
+      }
+      else {
+        chat_traj.line_prefix_index() += 1;
+      }
+      if (adding_next_prefix) {
+        rendezllama::tokenize_extend(
+            chat_traj, ctx, opt.chat_prefixes[chat_traj.line_prefix_index()]);
+        chat_disp.show_new(chat_traj, ctx);
+        sentence_count = 0;
+        sentence_token_count = 0;
+      }
+    }
+    else if (!matched_antiprompt.empty()) {
+      if (sentence_count + 1 == opt.sentence_limit) {
         // Reached the limit on number of sentences.
         inputting = true;
       }
@@ -151,7 +229,10 @@ int main(int argc, char** argv)
       }
     }
 
+    chat_disp.maybe_remove_answer_prompt(chat_traj, inputting);
+
     if (inputting) {
+      line_byte_count = 0;
       sentence_token_count = 0;
       sentence_count = 0;
 
@@ -172,8 +253,7 @@ int main(int argc, char** argv)
           }
           if (slice.at[0] == ' ' && buffer.empty() && matched_antiprompt == "\n") {
             // Remove preceeding newline
-            chat_tokens.pop_back();
-            context_token_count -= 1;
+            chat_traj.erase_all_at(chat_traj.token_count()-1);
             matched_antiprompt.clear();
           }
           buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
@@ -185,20 +265,22 @@ int main(int argc, char** argv)
           // Nothing.
         }
         else if (slice.off + 1 == slice.size && skipstr_FildeshX(&slice, "r")) {
-          size_t n = buffer.rfind(':');
-          if (n < buffer.size()) {
-            buffer.resize(n+1);
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
           }
-          else {
-            buffer.clear();
-            while (chat_tokens.size() > opt.priming_token_count) {
-              const char* s = llama_token_to_str(ctx, chat_tokens.back());
-              if (s[0] == ':' && s[1] == '\0') {
-                break;
-              }
-              chat_tokens.pop_back();
-              context_token_count -= 1;
+          buffer.clear();
+          preventing_newline = true;
+          matched_antiprompt.clear();  // For clarity.
+          size_t offset = rendezllama::prev_newline_start_index(
+              ctx, chat_tokens, chat_tokens.size());
+          for (size_t i = offset; i < chat_tokens.size(); ++i) {
+            if (rendezllama::token_endswith(ctx, chat_tokens[i], ':')) {
+              offset = i+1;
+              break;
             }
+          }
+          if (offset >= chat_traj.priming_token_count_) {
+            chat_traj.erase_all_at(offset);
           }
           break;
         }
@@ -232,54 +314,31 @@ int main(int argc, char** argv)
               continue;
             }
           }
-          bool copying = false;
-          size_t dst_index = opt.priming_token_count;
-          for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
-            if (copying) {
-              chat_tokens[dst_index] = chat_tokens[i];
-              dst_index += 1;
-            }
-            else if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
-              n -= 1;
-              copying = (n == 0);
-            }
-          }
-          fildesh::ofstream nullout("/dev/null");
-          chat_tokens.resize(dst_index);
-          context_token_count = rendezllama::commit_to_context(
-              ctx, nullout, transcript_out,
-              chat_tokens, opt.priming_token_count, opt);
-          if (context_token_count == 0) {exstatus = 1; break;}
-          assert(context_token_count == (int)chat_tokens.size());
-        }
-        else if (skipstr_FildeshX(&slice, "head")) {
-          unsigned n = 10;
+          for (unsigned i = chat_traj.priming_token_count_;
+               i < chat_traj.token_count();
+               ++i)
           {
-            int tmp_n = 0;
-            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
-                parse_int_FildeshX(&slice, &tmp_n) &&
-                tmp_n > 0)
-            {
-              n = tmp_n;
-            }
-          }
-          for (size_t i = opt.priming_token_count; i < chat_tokens.size(); ++i) {
-            eout << llama_token_to_str(ctx, chat_tokens[i]);
             if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
               n -= 1;
               if (n == 0) {
+                chat_traj.rollforget(i+1, ctx);
                 break;
               }
             }
           }
-          eout.flush();
+          if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+            exstatus = 1;
+            break;
+          }
         }
-        else if (maybe_do_tail_command(&slice, eout, ctx, chat_tokens, opt)) {
+        else if (maybe_do_head_command(&slice, eout, ctx, chat_traj, opt)) {
+          // Nothing else.
+        }
+        else if (maybe_do_tail_command(&slice, eout, ctx, chat_traj, opt)) {
           // Nothing else.
         }
         else if (rendezllama::maybe_do_back_command(
-                chat_tokens, context_token_count,
-                &slice, eout, ctx, opt))
+                chat_traj, &slice, eout, ctx, opt))
         {
           if (!buffer.empty()) {
             fildesh_log_warning("Pending input ignored by command.");
@@ -288,33 +347,77 @@ int main(int argc, char** argv)
               llama_token_to_str(ctx, chat_tokens.back()),
               opt.antiprompts);
         }
+        else if (skipstr_FildeshX(&slice, "puts ") ||
+                 (slice.off + 4 == slice.size &&
+                  skipstr_FildeshX(&slice, "puts")))
+        {
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
+          }
+          buffer.clear();
+          std::string line;
+          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
+          line += '\n';
+          rendezllama::tokenize_extend(chat_traj, ctx, line);
+          if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
+            chat_traj.line_prefix_index() += 1;
+          }
+          else if (chat_traj.line_prefix_index() == opt.chat_prefixes.size()-1) {
+            chat_traj.line_prefix_index() = 0;
+          }
+          matched_antiprompt = '\n';
+          // Might as well process now.
+          chat_traj.display_token_count_ = chat_traj.token_count();
+          if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+            exstatus = 1;
+            break;
+          }
+        }
+        else if (skipstr_FildeshX(&slice, "gets ") ||
+                 (slice.off + 4 == slice.size &&
+                  skipstr_FildeshX(&slice, "gets")))
+        {
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
+          }
+          buffer.clear();
+          preventing_newline = true;
+          matched_antiprompt.clear();  // For clarity.
+          line_byte_limit = 0;
+          int tmp_n = 0;
+          if (parse_int_FildeshX(&slice, &tmp_n) && tmp_n > 0) {
+            line_byte_limit = (unsigned)tmp_n;
+          }
+          skipchrs_FildeshX(&slice, " ");
+          // Set this index so token generation stops after 1 line.
+          chat_traj.line_prefix_index() = opt.chat_prefixes.size();
+          // Prefix with user text.
+          std::string line;
+          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
+          rendezllama::tokenize_extend(chat_traj, ctx, line);
+          // Not printing any inserted text.
+          chat_traj.display_token_count_ = chat_traj.token_count();
+          break;
+        }
         else if (skipstr_FildeshX(&slice, "d")) {
           if (slice.off != slice.size) {
             fildesh_log_warning("Ignoring extra characters after \"d\".");
           }
-          if (chat_tokens.size() > opt.priming_token_count && buffer.empty() &&
-              rendezllama::token_endswith(ctx, chat_tokens.back(), '\n'))
-          {
-              chat_tokens.pop_back();
-              context_token_count -= 1;
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
           }
-          size_t n = buffer.rfind('\n');
-          if (n < buffer.size()) {
-            buffer.resize(n);
+          buffer.clear();
+          size_t offset = rendezllama::prev_newline_start_index(
+              ctx, chat_tokens, chat_tokens.size());
+          if (offset <= chat_traj.priming_token_count_) {
+            offset = chat_traj.priming_token_count_;
           }
           else {
-            buffer.clear();
-            while (chat_tokens.size() > opt.priming_token_count) {
-              llama_token token_id = chat_tokens.back();
-              chat_tokens.pop_back();
-              context_token_count -= 1;
-              if (rendezllama::token_endswith(ctx, token_id, '\n')) {
-                break;
-              }
-            }
+            offset -= 1;
           }
+          chat_traj.erase_all_at(offset);
           matched_antiprompt.clear();
-          if (chat_tokens.size() == opt.priming_token_count && buffer.empty()) {
+          if (chat_traj.token_count() == chat_traj.priming_token_count_) {
             matched_antiprompt = '\n';
           }
         }
@@ -332,21 +435,21 @@ int main(int argc, char** argv)
       if (exstatus != 0 || !slice.at) {break;}
 
       if (buffer.length() > 0) {
-        rendezllama::augment_chat_input(
-            buffer, preventing_newline, matched_antiprompt, opt);
-        rendezllama::tokenize_extend(chat_tokens, ctx, buffer);
+        rendezllama::augment_tokenize_chat_input(
+            chat_traj, ctx,
+            preventing_newline,
+            buffer,
+            matched_antiprompt,
+            opt);
       }
     }
   }
 
   close_FildeshX(in);
   if (exstatus == 0) {
-    rendezllama::print_tokens(
-        transcript_out,
-        chat_tokens.begin() + opt.priming_token_count,
-        chat_tokens.end(),
-        ctx);
+    chat_traj.rollforget(chat_traj.token_count(), ctx);
   }
   if (ctx) {llama_free(ctx);}
+  if (model) {llama_free_model(model);}
   return exstatus;
 }
