@@ -188,7 +188,7 @@ temperature_based_sample(
   llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
   llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
   llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
-  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  llama_sample_temperature(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token(ctx, candidates_data));
 }
 
@@ -202,7 +202,7 @@ mirostat1_sample(
 {
   float mirostat_mu = chat_traj.mirostat_mu();
   const int mirostat_m = 100;
-  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  llama_sample_temperature(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token_mirostat(
       ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
@@ -217,7 +217,7 @@ mirostat2_sample(
     const rendezllama::ChatOptions& opt)
 {
   float mirostat_mu = chat_traj.mirostat_mu();
-  llama_sample_temperature(ctx, candidates_data, opt.temp);
+  llama_sample_temperature(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token_mirostat_v2(
       ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
