@@ -158,7 +158,8 @@ maybe_parse_bool_option(
     *b = (tmp_b != 0);
   }
   else {
-    fildesh_log_warning("Need a 1 or 0.");
+    fildesh_log_errorf("Need a 1 or 0 for option %s.", name);
+    return false;
   }
   return true;
 }
@@ -397,7 +398,7 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
   }
   out << '\n';
   out
-    << "Sampling: temp=" << opt.temp
+    << "Sampling: temperature=" << opt.temperature
     << ", top_k=" << opt.top_k
     << ", top_p=" << opt.top_p
     << ", repeat_window=" << opt.repeat_last_count
@@ -410,13 +411,6 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
     << ", seed=" << opt.seed
     << '\n';
   out.flush();
-}
-
-static bool parse_truthy(const char* arg) {
-  return (
-      0 == strcmp("true", arg) ||
-      0 == strcmp("on", arg) ||
-      0 == strcmp("1", arg));
 }
 
 static void reinitialize_chat_prefixes(ChatOptions& opt) {
@@ -444,13 +438,18 @@ static void reinitialize_chat_prefixes(ChatOptions& opt) {
 
 static int initialize_options(ChatOptions& opt) {
   int exstatus = 0;
-  if (exstatus == 0 && opt.protagonist.empty()) {
-    fildesh_log_error("Please provide a --protagonist name.");
-    exstatus = 64;
-  }
-  if (exstatus == 0 && opt.confidant.empty()) {
-    fildesh_log_error("Please provide a --confidant name.");
-    exstatus = 64;
+  if (exstatus == 0 &&
+      opt.given_chat_prefixes.size() < 2 &&
+      !opt.coprocess_mode_on)
+  {
+    if (opt.protagonist.empty()) {
+      fildesh_log_error("Please provide a --protagonist name.");
+      exstatus = 64;
+    }
+    if (opt.confidant.empty()) {
+      fildesh_log_error("Please provide a --confidant name.");
+      exstatus = 64;
+    }
   }
   if (exstatus == 0 && opt.priming_prompt.empty()) {
     fildesh_log_error("Please provide a priming prompt with --x_priming.");
@@ -577,10 +576,6 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         }
       }
       close_FildeshX(answer_in);
-    }
-    else if (0 == strcmp("--linespace_on", argv[argi])) {
-      argi += 1;
-      opt.linespace_on = parse_truthy(argv[argi]);
     }
     else if (0 == strcmp("--command_prefix_char", argv[argi])) {
       argi += 1;
@@ -817,13 +812,14 @@ rendezllama::maybe_parse_option_command(
       maybe_parse_float(&opt.top_p, in, out, "top_p", delims) ||
       maybe_parse_float(&opt.tfs_z, in, out, "tfs_z", delims) ||
       maybe_parse_float(&opt.typical_p, in, out, "typical_p", delims) ||
-      maybe_parse_float(&opt.temp, in, out, "temp", delims)) {
+      maybe_parse_float(&opt.temperature, in, out, "temperature", delims) ||
+      maybe_parse_float(&opt.temperature, in, out, "temp", delims)) {
     // Success!
   }
   else if (maybe_parse_nat(&opt.mirostat_sampling, in, out, "mirostat", delims)) {
     if (opt.mirostat_sampling > 2) {
-      fildesh_log_error("Mirostat must be <= 2. Resetting to 0 (off).");
-      opt.mirostat_sampling = 0;
+      fildesh_log_error("Mirostat must be <= 2. Resetting to 2 (on).");
+      opt.mirostat_sampling = 2;
     }
   }
   else if (

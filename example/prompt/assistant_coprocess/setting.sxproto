@@ -1,6 +1,5 @@
 ; Bot name is replaced in the prompt.
 (confidant "Banterbot")
-(protagonist "n/a")
 
 (context_token_limit 2048)
 (thread_count 2)
@@ -10,11 +9,11 @@
 ;(o_rolling "../../../bld/example/prompt/assistant_coprocess.txt")
 (template_confidant "{{char}}")
 
-; Be a coprocess. Don't print much to stdout..
+; Be a coprocess. Don't print much to stdout.
 (coprocess_mode_on 1)
 
 ; Sampling parameters.
 (repeat_window 256)
 (repeat_penalty 1.17647)
-(temp 0.7)
+(temperature 0.7)
 (mirostat 2)
