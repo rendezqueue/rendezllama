@@ -299,7 +299,10 @@ int main(int argc, char** argv)
             fildesh_log_warning("Need some content for less=.");
           }
         }
-        else if (skipstr_FildeshX(&slice, "forget")) {
+        else if (
+            skipstr_FildeshX(&slice, "forget") ||
+            skipstr_FildeshX(&slice, "rollforget"))
+        {
           unsigned n = 10;
           {
             int tmp_n = 0;

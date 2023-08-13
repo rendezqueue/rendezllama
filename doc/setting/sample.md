@@ -32,12 +32,4 @@ Mirostat version 2 is the current default with the following parameters.
 ```lisp
 ; Random seed (default is time-based, different every run).
 (seed 1234)
-
-; Number of threads to use (default is 1).
-; Can be changed later via the `/thread_count 8` command.
-(thread_count 8)
-
-; Batch size (default is 512, large enough to make OpenBLAS useful).
-; Can be changed later via the `/batch_count 8` command.
-(batch_count 512)
 ```
