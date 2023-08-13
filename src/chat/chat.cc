@@ -150,7 +150,7 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
   params.use_mlock = opt.mlock_on;
   params.use_mmap = opt.mmap_on;
   params.rope_freq_scale = 1.0;
-  while ((unsigned)(2048/params.rope_freq_scale) < opt.context_token_limit) {
+  while ((unsigned)(opt.model_token_limit/params.rope_freq_scale) < opt.context_token_limit) {
     params.rope_freq_scale /= 2;
   }
 
@@ -326,6 +326,7 @@ rendezllama::commit_to_context(
     if (chat_traj.token_count() >= opt.context_token_limit) {
       chat_traj.rollforget(chat_traj.token_count() - rolling_token_count, ctx);
     }
+    assert(chat_traj.token_count() < opt.context_token_limit);
   }
 
   while (chat_traj.context_token_count_ < chat_traj.token_count()) {

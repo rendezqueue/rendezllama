@@ -220,6 +220,18 @@ rendezllama::parse_options_sxproto_content(
         all_good = false;
       }
     }
+    else if (skipstr_FildeshX(&slice, "model_token_limit ")) {
+      int n = 0;
+      if (parse_int_FildeshX(&slice, &n) && n > 0) {
+        opt.model_token_limit = n;
+      }
+      else {
+        fildesh_log_errorf(
+            "Line %u of %s: Need positive int.\n",
+            line_count, filename.c_str());
+        all_good = false;
+      }
+    }
     else if (skipstr_FildeshX(&slice, "x_priming ")) {
       std::string priming_filename = parse_quoted_string(&slice);
       FildeshX* priming_in = NULL;
@@ -438,6 +450,9 @@ static void reinitialize_chat_prefixes(ChatOptions& opt) {
 
 static int initialize_options(ChatOptions& opt) {
   int exstatus = 0;
+  if (exstatus == 0 && opt.context_token_limit == 0) {
+    opt.context_token_limit = opt.model_token_limit;
+  }
   if (exstatus == 0 &&
       opt.given_chat_prefixes.size() < 2 &&
       !opt.coprocess_mode_on)
@@ -647,14 +662,14 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
-    else if (0 == strcmp("--context_token_limit", argv[argi])) {
+    else if (0 == strcmp("--model_token_limit", argv[argi])) {
       int n = 0;
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
-        opt.context_token_limit = n;
+        opt.model_token_limit = n;
       }
       else {
-        fildesh_log_error("--context_token_limit needs positive arg");
+        fildesh_log_error("--model_token_limit needs positive arg");
         exstatus = 64;
       }
     }

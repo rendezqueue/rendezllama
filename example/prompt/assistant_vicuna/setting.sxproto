@@ -1,6 +1,5 @@
 (protagonist "### Human")
 (confidant "### Assistant")
-(context_token_limit 2048)
 (x_priming "priming.txt")
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/assistant_vicuna.txt")
@@ -8,6 +7,9 @@
 (template_confidant "{{char}}")
 (sentence_limit 5)
 (sentence_token_limit 50)
+
+; Defaults.
+(model_token_limit 2048)
 (repeat_window 256)
 (repeat_penalty 1.17647)
 (temperature 0.7)
