@@ -3,6 +3,7 @@
 #include <fildesh/fildesh.h>
 #include <fildesh/ofstream.hh>
 
+#include "src/language/vocabulary.hh"
 
 int main(int argc, char** argv)
 {
@@ -64,7 +65,8 @@ int main(int argc, char** argv)
   llama_context* ctx = llama_new_context_with_model(model, lparams);
 
   std::vector<llama_token> tokens;
-  tokens.push_back(llama_token_bos());
+  const rendezllama::Vocabulary vocabulary(ctx);
+  tokens.push_back(vocabulary.bos_token_id());
   rendezllama::tokenize_extend(tokens, ctx, prompt);
 
   fildesh::ofstream out(count_filename);

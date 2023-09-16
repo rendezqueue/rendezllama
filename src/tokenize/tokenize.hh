@@ -8,8 +8,6 @@
 
 namespace rendezllama {
 
-llama_token
-newline_token(const struct llama_context* ctx);
 void
 tokenize_extend(
     std::vector<llama_token>& tokens,

@@ -6,10 +6,12 @@
 
 #include "llama.h"
 
+#include "src/language/vocabulary.hh"
 #include "src/tokenize/tokenize.hh"
 
 using rendezllama::ChatDisplay;
 using rendezllama::ChatTrajectory;
+using rendezllama::Vocabulary;
 
 
 ChatDisplay::~ChatDisplay() {
@@ -21,7 +23,8 @@ ChatDisplay:: displaystring(
       ChatTrajectory::Token_id token_id,
       const struct llama_context* ctx)
 {
-  if (token_id == llama_token_eos()) {
+  const Vocabulary vocabulary(ctx);
+  if (token_id == vocabulary.eos_token_id()) {
     return "";
   }
   return llama_token_to_str(ctx, token_id);
