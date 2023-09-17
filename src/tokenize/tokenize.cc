@@ -7,20 +7,6 @@
 
 using rendezllama::Vocabulary;
 
-  void
-rendezllama::tokenize_extend(
-    std::vector<Vocabulary::Token_id>& tokens,
-    struct llama_context* ctx,
-    const std::string& text)
-{
-  const size_t offset = tokens.size();
-  tokens.resize(offset + text.size());
-  int n = llama_tokenize(
-      ctx, text.c_str(), &tokens[offset], text.size(), false);
-  assert(n >= 0);
-  tokens.resize(offset + (size_t)n);
-}
-
   size_t
 rendezllama::prev_newline_start_index(
     const Vocabulary& vocabulary,

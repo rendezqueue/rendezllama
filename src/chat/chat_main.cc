@@ -88,17 +88,17 @@ int main(int argc, char** argv)
     if (istat != 0) {exstatus = 1;}
   }
 
+  const rendezllama::Vocabulary vocabulary(ctx);
   rendezllama::ChatDisplay chat_disp;
   if (exstatus == 0) {
     chat_disp.out_ = open_FildeshOF("/dev/stdout");
     if (!opt.answer_prompt.empty()) {
-      rendezllama::tokenize_extend(
+      vocabulary.tokenize_to(
           chat_disp.answer_prompt_tokens_,
-          ctx, opt.answer_prompt);
+          opt.answer_prompt);
     }
   }
 
-  const rendezllama::Vocabulary vocabulary(ctx);
   rendezllama::ChatTrajectory chat_traj(vocabulary.bos_token_id());
   if (exstatus == 0) {
     chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
@@ -110,10 +110,10 @@ int main(int argc, char** argv)
   // Tokenize the prompt.
   const std::vector<llama_token>& chat_tokens = chat_traj.tokens();
   if (exstatus == 0) {
-    rendezllama::tokenize_extend(chat_traj, ctx, opt.priming_prompt);
+    chat_traj.tokenize_append(opt.priming_prompt, vocabulary);
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
-    rendezllama::tokenize_extend(chat_traj, ctx, opt.rolling_prompt);
+    chat_traj.tokenize_append(opt.rolling_prompt, vocabulary);
     print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
@@ -183,14 +183,14 @@ int main(int argc, char** argv)
     if (line_byte_limit > 0 && line_byte_count >= line_byte_limit) {
       inputting = true;
       if (matched_antiprompt != "\n") {
-        rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+        chat_traj.push_back(vocabulary.newline_token_id());
         chat_disp.show_new(chat_traj, vocabulary);
       }
     }
     else if (rendezllama::eom_token_check(vocabulary, chat_traj.token(), opt, chat_traj)) {
       bool adding_next_prefix = true;
       if (matched_antiprompt != "\n") {
-        rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+        chat_traj.push_back(vocabulary.newline_token_id());
         chat_disp.show_new(chat_traj, vocabulary);
         matched_antiprompt = "\n";
       }
@@ -206,8 +206,9 @@ int main(int argc, char** argv)
         chat_traj.line_prefix_index() += 1;
       }
       if (adding_next_prefix) {
-        rendezllama::tokenize_extend(
-            chat_traj, ctx, opt.chat_prefixes[chat_traj.line_prefix_index()]);
+        chat_traj.tokenize_append(
+            opt.chat_prefixes[chat_traj.line_prefix_index()],
+            vocabulary);
         chat_disp.show_new(chat_traj, vocabulary);
         sentence_count = 0;
         sentence_token_count = 0;
@@ -297,7 +298,12 @@ int main(int argc, char** argv)
           {
             std::string line;
             line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-            rendezllama::tokenize_extend(extra_penalized_tokens, ctx, line);
+
+            std::vector<llama_token> tmp;
+            vocabulary.tokenize_to(tmp, line);
+            extra_penalized_tokens.insert(
+                extra_penalized_tokens.end(),
+                tmp.begin(), tmp.end());
           }
           else {
             fildesh_log_warning("Need some content for less=.");
@@ -366,7 +372,7 @@ int main(int argc, char** argv)
           std::string line;
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
           line += '\n';
-          rendezllama::tokenize_extend(chat_traj, ctx, line);
+          chat_traj.tokenize_append(line, vocabulary);
           if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
             chat_traj.line_prefix_index() += 1;
           }
@@ -402,7 +408,7 @@ int main(int argc, char** argv)
           // Prefix with user text.
           std::string line;
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-          rendezllama::tokenize_extend(chat_traj, ctx, line);
+          chat_traj.tokenize_append(line, vocabulary);
           // Not printing any inserted text.
           chat_traj.display_token_count_ = chat_traj.token_count();
           break;
@@ -444,10 +450,11 @@ int main(int argc, char** argv)
 
       if (buffer.length() > 0) {
         rendezllama::augment_tokenize_chat_input(
-            chat_traj, ctx,
+            chat_traj,
             preventing_newline,
             buffer,
             matched_antiprompt,
+            vocabulary,
             opt);
       }
     }

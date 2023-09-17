@@ -77,10 +77,10 @@ rendezllama::eom_token_check(
   void
 rendezllama::augment_tokenize_chat_input(
     ChatTrajectory& chat_traj,
-    llama_context* ctx,
     bool& prevent_subsequent_newline,
     std::string s,
     const std::string& matched_antiprompt,
+    const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
   const char* const maybe_space_prefix = (
@@ -91,7 +91,7 @@ rendezllama::augment_tokenize_chat_input(
     s.erase(0, 2);
     std::string maybe_space;
     if (matched_antiprompt != "\n") {
-      rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+      chat_traj.push_back(vocabulary.newline_token_id());
     }
     if (s.empty() || s[0] != ' ') {
       maybe_space = ' ';
@@ -104,7 +104,7 @@ rendezllama::augment_tokenize_chat_input(
     s.erase(0, 1);
     // This is from /yield.
     if (matched_antiprompt != "\n") {
-      rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+      chat_traj.push_back(vocabulary.newline_token_id());
     }
     if (opt.linespace_on) {s = ' ' + s;}
     chat_traj.line_prefix_index() = opt.chat_prefixes.size();
@@ -116,8 +116,7 @@ rendezllama::augment_tokenize_chat_input(
     // Nothing.
   }
   else if (matched_antiprompt == opt.chat_prefixes[0]) {
-    rendezllama::tokenize_extend(
-        chat_traj, ctx, maybe_space_prefix + s + '\n');
+    chat_traj.tokenize_append(maybe_space_prefix + s + '\n', vocabulary);
     chat_traj.display_token_count_ = chat_traj.token_count();
     chat_traj.line_prefix_index() = 1;
     s = opt.chat_prefixes[1];
@@ -125,17 +124,17 @@ rendezllama::augment_tokenize_chat_input(
   }
   else {
     if (matched_antiprompt != "\n") {
-      rendezllama::tokenize_extend(chat_traj, ctx, "\n");
+      chat_traj.push_back(vocabulary.newline_token_id());
     }
     chat_traj.line_prefix_index() = 0;
-    rendezllama::tokenize_extend(
-        chat_traj, ctx,
-        opt.chat_prefixes[0] + maybe_space_prefix + s + '\n');
+    chat_traj.tokenize_append(
+        opt.chat_prefixes[0] + maybe_space_prefix + s + '\n',
+        vocabulary);
     chat_traj.line_prefix_index() = 1;
     s = opt.chat_prefixes[1];
     prevent_subsequent_newline = true;
   }
-  rendezllama::tokenize_extend(chat_traj, ctx, s);
+  chat_traj.tokenize_append(s, vocabulary);
 }
 
   std::tuple<struct llama_model*, struct llama_context*>
@@ -168,16 +167,6 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
   return std::make_tuple(model, ctx);
 }
 
-  void
-rendezllama::tokenize_extend(
-    ChatTrajectory& chat_traj,
-    llama_context* ctx, const std::string& s)
-{
-  std::vector<llama_token> tokens;
-  rendezllama::tokenize_extend(tokens, ctx, s);
-  chat_traj.insert_all_at(chat_traj.token_count(), tokens);
-}
-
 static
   void
 temperature_based_sample(
@@ -207,7 +196,7 @@ mirostat1_sample(
   const int mirostat_m = 100;
   llama_sample_temperature(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token_mirostat(
-      ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
+          ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
 }
 
@@ -222,7 +211,7 @@ mirostat2_sample(
   float mirostat_mu = chat_traj.mirostat_mu();
   llama_sample_temperature(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token_mirostat_v2(
-      ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
+          ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
 }
 
