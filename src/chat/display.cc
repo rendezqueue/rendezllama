@@ -4,13 +4,9 @@
 
 #include <fildesh/fildesh.h>
 
-#include "src/language/vocabulary.hh"
-#include "src/tokenize/tokenize.hh"
-
 using rendezllama::ChatDisplay;
 using rendezllama::ChatTrajectory;
 using rendezllama::Vocabulary;
-
 
 ChatDisplay::~ChatDisplay() {
   close_FildeshO(out_);
@@ -20,7 +16,7 @@ ChatDisplay::~ChatDisplay() {
 ChatDisplay::displaystring_to(
     std::string& out,
     ChatTrajectory::Token_id token_id,
-    const Vocabulary& vocabulary)
+    const Vocabulary& vocabulary) const
 {
   if (token_id == vocabulary.eos_token_id()) {
     out.clear();
@@ -32,14 +28,14 @@ ChatDisplay::displaystring_to(
 
   void
 ChatDisplay::show_new(
-    size_type end,
+    ChatTrajectory::size_type end,
     ChatTrajectory& chat_traj,
     const Vocabulary& vocabulary)
 {
   assert(end <= chat_traj.token_count());
   std::string buf;
   while (chat_traj.display_token_count_ < end) {
-    const size_type i = chat_traj.display_token_count_;
+    const ChatTrajectory::size_type i = chat_traj.display_token_count_;
     chat_traj.display_token_count_ += 1;
     if (answer_prompt_offset_ > 0 &&
         i >= answer_prompt_offset_ &&
