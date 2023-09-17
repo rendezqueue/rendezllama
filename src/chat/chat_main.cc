@@ -14,17 +14,18 @@ static
   void
 print_initialization(
     std::ostream& out,
-    struct llama_context* ctx,
+    const rendezllama::Vocabulary& vocabulary,
     const rendezllama::ChatOptions& opt,
     const rendezllama::ChatTrajectory& chat_traj)
 {
-  if (opt.verbose_prompt && ctx && chat_traj.token_count() > 0) {
+  if (opt.verbose_prompt && chat_traj.token_count() > 0) {
     out
       << "Number of tokens in priming prompt: " << chat_traj.priming_token_count_ << "\n"
       << "Number of tokens in full prompt: " << chat_traj.token_count() << "\n";
     for (size_t i = 0; i < chat_traj.token_count(); i++) {
-      out << chat_traj.token_at(i) << " -> '"
-        << llama_token_to_str(ctx, chat_traj.token_at(i)) << "'\n";
+      out << chat_traj.token_at(i) << " -> '";
+      vocabulary.detokenize_to(out, chat_traj.token_at(i));
+      out << "'\n";
     }
     out << "\n\n";
   }
@@ -113,7 +114,7 @@ int main(int argc, char** argv)
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
     rendezllama::tokenize_extend(chat_traj, ctx, opt.rolling_prompt);
-    print_initialization(eout, ctx, opt, chat_traj);
+    print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
   if (exstatus == 0) {
@@ -149,7 +150,7 @@ int main(int argc, char** argv)
       // Print nothing except for prompted.
       chat_traj.display_token_count_ = chat_traj.token_count();
     }
-    chat_disp.maybe_insert_answer_prompt(chat_traj, ctx);
+    chat_disp.maybe_insert_answer_prompt(chat_traj, vocabulary);
     if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
       exstatus = 1;
       break;
@@ -168,9 +169,10 @@ int main(int argc, char** argv)
           preventing_newline, extra_penalized_tokens, opt);
       preventing_newline = false;
 
-      chat_disp.show_new(chat_traj, ctx);
+      chat_disp.show_new(chat_traj, vocabulary);
 
-      const std::string s = chat_disp.displaystring(chat_traj.token(), ctx);
+      std::string s;
+      chat_disp.displaystring_to(s, chat_traj.token(), vocabulary);
       line_byte_count += s.size();
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
@@ -182,14 +184,14 @@ int main(int argc, char** argv)
       inputting = true;
       if (matched_antiprompt != "\n") {
         rendezllama::tokenize_extend(chat_traj, ctx, "\n");
-        chat_disp.show_new(chat_traj, ctx);
+        chat_disp.show_new(chat_traj, vocabulary);
       }
     }
     else if (rendezllama::eom_token_check(vocabulary, chat_traj.token(), opt, chat_traj)) {
       bool adding_next_prefix = true;
       if (matched_antiprompt != "\n") {
         rendezllama::tokenize_extend(chat_traj, ctx, "\n");
-        chat_disp.show_new(chat_traj, ctx);
+        chat_disp.show_new(chat_traj, vocabulary);
         matched_antiprompt = "\n";
       }
       if (chat_traj.line_prefix_index() >= opt.chat_prefixes.size()-1) {
@@ -206,7 +208,7 @@ int main(int argc, char** argv)
       if (adding_next_prefix) {
         rendezllama::tokenize_extend(
             chat_traj, ctx, opt.chat_prefixes[chat_traj.line_prefix_index()]);
-        chat_disp.show_new(chat_traj, ctx);
+        chat_disp.show_new(chat_traj, vocabulary);
         sentence_count = 0;
         sentence_token_count = 0;
       }
@@ -274,9 +276,9 @@ int main(int argc, char** argv)
           preventing_newline = true;
           matched_antiprompt.clear();  // For clarity.
           size_t offset = rendezllama::prev_newline_start_index(
-              ctx, chat_tokens, chat_tokens.size());
+              vocabulary, chat_tokens, chat_tokens.size());
           for (size_t i = offset; i < chat_tokens.size(); ++i) {
-            if (rendezllama::token_endswith(ctx, chat_tokens[i], ':')) {
+            if (vocabulary.last_char_of(chat_tokens[i]) == ':') {
               offset = i+1;
               break;
             }
@@ -323,7 +325,7 @@ int main(int argc, char** argv)
                i < chat_traj.token_count();
                ++i)
           {
-            if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
+            if (vocabulary.last_char_of(chat_tokens[i]) == '\n') {
               n -= 1;
               if (n == 0) {
                 chat_traj.rollforget(i+1, vocabulary);
@@ -336,20 +338,21 @@ int main(int argc, char** argv)
             break;
           }
         }
-        else if (maybe_do_head_command(&slice, eout, ctx, chat_traj, opt)) {
+        else if (maybe_do_head_command(&slice, eout, vocabulary, chat_traj, opt)) {
           // Nothing else.
         }
-        else if (maybe_do_tail_command(&slice, eout, ctx, chat_traj, opt)) {
+        else if (maybe_do_tail_command(&slice, eout, vocabulary, chat_traj, opt)) {
           // Nothing else.
         }
         else if (rendezllama::maybe_do_back_command(
-                chat_traj, &slice, eout, ctx, opt))
+                chat_traj, &slice, eout, vocabulary, opt))
         {
           if (!buffer.empty()) {
             fildesh_log_warning("Pending input ignored by command.");
           }
+          vocabulary.detokenize_to(matched_antiprompt, chat_tokens.back());
           matched_antiprompt = rendezllama::antiprompt_suffix(
-              llama_token_to_str(ctx, chat_tokens.back()),
+              matched_antiprompt,
               opt.antiprompts);
         }
         else if (skipstr_FildeshX(&slice, "puts ") ||
@@ -413,7 +416,7 @@ int main(int argc, char** argv)
           }
           buffer.clear();
           size_t offset = rendezllama::prev_newline_start_index(
-              ctx, chat_tokens, chat_tokens.size());
+              vocabulary, chat_tokens, chat_tokens.size());
           if (offset <= chat_traj.priming_token_count_) {
             offset = chat_traj.priming_token_count_;
           }

@@ -7,6 +7,8 @@
 #include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
 
+using rendezllama::Vocabulary;
+
 static
   bool
 skip_cmd_prefix(FildeshX* in, const char* pfx,
@@ -35,18 +37,19 @@ skip_cmd_prefix(FildeshX* in, const char* pfx,
 
 static
   void
-print_tail_lines(std::ostream& out, struct llama_context* ctx,
+print_tail_lines(std::ostream& out,
+                 const Vocabulary& vocabulary,
                  const rendezllama::ChatTrajectory& chat_traj,
                  unsigned n)
 {
   unsigned i = chat_traj.token_count();
   while (n > 0) {
     i = rendezllama::prev_newline_start_index(
-        ctx, chat_traj.tokens(), i);
+        vocabulary, chat_traj.tokens(), i);
     n -= 1;
   }
   for (; i < chat_traj.token_count(); ++i) {
-    out << llama_token_to_str(ctx, chat_traj.token_at(i));
+    vocabulary.detokenize_to(out, chat_traj.token_at(i));
   }
   out.flush();
 }
@@ -56,7 +59,7 @@ rendezllama::maybe_do_back_command(
     rendezllama::ChatTrajectory& chat_traj,
     FildeshX* in,
     std::ostream& out,
-    struct llama_context* ctx,
+    const Vocabulary& vocabulary,
     const rendezllama::ChatOptions& opt)
 {
   bool space_delim_on = skip_cmd_prefix(in, "B", opt);
@@ -73,16 +76,17 @@ rendezllama::maybe_do_back_command(
     }
   }
   bool skipping_contiguous_space = space_delim_on;
+  std::string s;
   while (n > 0) {
     if (chat_traj.token_count() <= chat_traj.priming_token_count_) {
       break;
     }
-    const llama_token token_id = chat_traj.token();
+    const Vocabulary::Token_id token_id = chat_traj.token();
     chat_traj.erase_all_at(chat_traj.token_count()-1);
     if (space_delim_on) {
-      const char* s = llama_token_to_str(ctx, token_id);
-      if (s && (s[0] == ' ' || s[0] == '\n')) {
-        if (!skipping_contiguous_space || s[1] != '\0') {
+      vocabulary.detokenize_to(s, token_id);
+      if (!s.empty() && (s[0] == ' ' || s[0] == '\n')) {
+        if (!skipping_contiguous_space || s.size() != 1) {
           n -= 1;
         }
         skipping_contiguous_space = true;
@@ -95,7 +99,7 @@ rendezllama::maybe_do_back_command(
       n -= 1;
     }
   }
-  print_tail_lines(out, ctx, chat_traj, 1);
+  print_tail_lines(out, vocabulary, chat_traj, 1);
   return true;
 }
 
@@ -103,7 +107,7 @@ rendezllama::maybe_do_back_command(
 rendezllama::maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
-    struct llama_context* ctx,
+    const Vocabulary& vocabulary,
     const rendezllama::ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt)
 {
@@ -118,8 +122,8 @@ rendezllama::maybe_do_head_command(
     }
   }
   for (size_t i = chat_traj.priming_token_count_; i < chat_traj.token_count(); ++i) {
-    out << llama_token_to_str(ctx, chat_traj.token_at(i));
-    if (rendezllama::token_endswith(ctx, chat_traj.token_at(i), '\n')) {
+    vocabulary.detokenize_to(out, chat_traj.token_at(i));
+    if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
       n -= 1;
       if (n == 0) {
         break;
@@ -134,7 +138,7 @@ rendezllama::maybe_do_head_command(
 rendezllama::maybe_do_tail_command(
     FildeshX* in,
     std::ostream& out,
-    struct llama_context* ctx,
+    const Vocabulary& vocabulary,
     const rendezllama::ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt)
 {
@@ -148,7 +152,7 @@ rendezllama::maybe_do_tail_command(
       n = tmp_n;
     }
   }
-  print_tail_lines(out, ctx, chat_traj, n);
+  print_tail_lines(out, vocabulary, chat_traj, n);
   return true;
 }
 
