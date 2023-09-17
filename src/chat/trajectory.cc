@@ -8,9 +8,10 @@
 #include "llama.h"
 
 using rendezllama::ChatTrajectory;
+using rendezllama::Vocabulary;
 
-ChatTrajectory::ChatTrajectory() {
-  token_values_.push_back(llama_token_bos());
+ChatTrajectory::ChatTrajectory(Token_id token_id) {
+  token_values_.push_back(token_id);
   mirostat_mu_values_.push_back(0);
   line_prefix_indices_.push_back(UINT_MAX);
 }
@@ -77,13 +78,13 @@ ChatTrajectory::erase_range(size_type beg, size_type end)
 }
 
   void
-ChatTrajectory::rollforget(size_type end, const struct llama_context* ctx)
+ChatTrajectory::rollforget(size_type end, const Vocabulary& vocabulary)
 {
   assert(end <= this->token_count());
   const size_type beg = priming_token_count_;
   if (transcript_out_) {
     for (size_type i = beg; i < end; ++i) {
-      puts_FildeshO(transcript_out_, llama_token_to_str(ctx, this->token_at(i)));
+      vocabulary.detokenize_to(transcript_out_, this->token_at(i));
     }
     flush_FildeshO(transcript_out_);
   }

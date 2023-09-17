@@ -1,7 +1,6 @@
 ; Bot name is replaced in the prompt.
 (confidant "Banterbot")
 
-(context_token_limit 2048)
 (thread_count 2)
 
 (x_priming "priming.txt")
@@ -12,7 +11,8 @@
 ; Be a coprocess. Don't print much to stdout.
 (coprocess_mode_on 1)
 
-; Sampling parameters.
+; Defaults.
+(model_token_limit 2048)
 (repeat_window 256)
 (repeat_penalty 1.17647)
 (temperature 0.7)

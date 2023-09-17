@@ -10,6 +10,8 @@ add_executable(chat
   "opt.hh"
   "trajectory.cc"
   "trajectory.hh"
+  "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
+  "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )

@@ -7,6 +7,7 @@
 #include "src/chat/cmd.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
+#include "src/language/vocabulary.hh"
 #include "src/tokenize/tokenize.hh"
 
 static
@@ -96,7 +97,8 @@ int main(int argc, char** argv)
     }
   }
 
-  rendezllama::ChatTrajectory chat_traj;
+  const rendezllama::Vocabulary vocabulary(ctx);
+  rendezllama::ChatTrajectory chat_traj(vocabulary.bos_token_id());
   if (exstatus == 0) {
     chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
     chat_traj.transcript_out_ = open_transcript_outfile(
@@ -183,7 +185,7 @@ int main(int argc, char** argv)
         chat_disp.show_new(chat_traj, ctx);
       }
     }
-    else if (rendezllama::eom_token_check(chat_traj.token(), opt, chat_traj)) {
+    else if (rendezllama::eom_token_check(vocabulary, chat_traj.token(), opt, chat_traj)) {
       bool adding_next_prefix = true;
       if (matched_antiprompt != "\n") {
         rendezllama::tokenize_extend(chat_traj, ctx, "\n");
@@ -299,7 +301,10 @@ int main(int argc, char** argv)
             fildesh_log_warning("Need some content for less=.");
           }
         }
-        else if (skipstr_FildeshX(&slice, "forget")) {
+        else if (
+            skipstr_FildeshX(&slice, "forget") ||
+            skipstr_FildeshX(&slice, "rollforget"))
+        {
           unsigned n = 10;
           {
             int tmp_n = 0;
@@ -321,7 +326,7 @@ int main(int argc, char** argv)
             if (rendezllama::token_endswith(ctx, chat_tokens[i], '\n')) {
               n -= 1;
               if (n == 0) {
-                chat_traj.rollforget(i+1, ctx);
+                chat_traj.rollforget(i+1, vocabulary);
                 break;
               }
             }
@@ -447,7 +452,7 @@ int main(int argc, char** argv)
 
   close_FildeshX(in);
   if (exstatus == 0) {
-    chat_traj.rollforget(chat_traj.token_count(), ctx);
+    chat_traj.rollforget(chat_traj.token_count(), vocabulary);
   }
   if (ctx) {llama_free(ctx);}
   if (model) {llama_free_model(model);}

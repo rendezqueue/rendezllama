@@ -6,11 +6,13 @@
 (sentence_limit 10)
 (sentence_token_limit 1000)
 
-(context_token_limit 2048)
 (x_priming "priming.txt")
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/assistant_alpaca.txt")
 
-(mirostat 2)
 ; No token penalization.
 (repeat_window 0)
+
+; Defaults.
+(model_token_limit 2048)
+(mirostat 2)
