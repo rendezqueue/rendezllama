@@ -3,16 +3,7 @@
 #include <cassert>
 #include <cstring>
 
-  llama_token
-rendezllama::newline_token(const struct llama_context* ctx)
-{
-  llama_token token_id = 0;
-  int n = llama_tokenize(
-      const_cast<struct llama_context*>(ctx),
-      "\n", &token_id, 1, false);
-  assert(n >= 0);
-  return token_id;
-}
+#include "src/language/vocabulary.hh"
 
   void
 rendezllama::tokenize_extend(
@@ -43,7 +34,8 @@ rendezllama::prev_newline_start_index(
     const std::vector<llama_token>& tokens,
     size_t offset)
 {
-  const llama_token newline_token = rendezllama::newline_token(ctx);
+  const Vocabulary vocabulary(ctx);
+  const llama_token newline_token = vocabulary.newline_token_id();
   size_t i = offset;
   if (i > 0) {
     i -= 1;

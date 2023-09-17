@@ -9,6 +9,7 @@
 
 using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
+using rendezllama::Vocabulary;
 
 
 static
@@ -110,6 +111,7 @@ rendezllama::maybe_do_rollforget_command(
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
+  const Vocabulary vocabulary(ctx);
   if (!skip_cmd_prefix(in, "rollforget", opt) &&
       !skip_cmd_prefix(in, "forget", opt)) {
     return false;
@@ -134,7 +136,7 @@ rendezllama::maybe_do_rollforget_command(
       n -= 1;
     }
   }
-  chat_traj.rollforget(i, ctx);
+  chat_traj.rollforget(i, vocabulary);
   return true;
 }
 

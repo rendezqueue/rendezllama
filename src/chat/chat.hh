@@ -12,12 +12,14 @@ namespace rendezllama {
 struct ChatOptions;
 class ChatDisplay;
 class ChatTrajectory;
+class Vocabulary;
 
 const std::string&
 antiprompt_suffix(const std::string& text,
                   const std::vector<std::string>& antiprompts);
 bool
 eom_token_check(
+    const Vocabulary& vocabulary,
     llama_token token_id,
     const ChatOptions& opt,
     const ChatTrajectory& chat_traj);
