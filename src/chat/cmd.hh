@@ -7,32 +7,31 @@
 
 #include <fildesh/fildesh.h>
 
-#include "llama.h"
-
 namespace rendezllama {
 
 struct ChatOptions;
 class ChatTrajectory;
+class Vocabulary;
 
 bool
 maybe_do_back_command(
     ChatTrajectory& chat_traj,
     FildeshX* in,
     std::ostream& out,
-    struct llama_context* ctx,
+    const Vocabulary& vocabulary,
     const ChatOptions& opt);
 bool
 maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
-    struct llama_context* ctx,
+    const Vocabulary& vocabulary,
     const ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt);
 bool
 maybe_do_tail_command(
     FildeshX* in,
     std::ostream& out,
-    struct llama_context* ctx,
+    const Vocabulary& vocabulary,
     const ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt);
 bool

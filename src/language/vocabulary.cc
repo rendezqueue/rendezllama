@@ -1,5 +1,7 @@
 #include "src/language/vocabulary.hh"
 
+#include <cstring>
+
 #include <fildesh/fildesh.h>
 
 #include "llama.h"
@@ -24,9 +26,35 @@ Token_id Vocabulary::newline_token_id() const {
   return llama_token_nl();
 }
 
+char Vocabulary::last_char_of(Token_id token_id) const {
+  const char* s = llama_token_to_str(ctx_, token_id);
+  if (s) {
+    return s[strlen(s)-1];
+  }
+  return '\0';
+}
+
 void Vocabulary::detokenize_to(FildeshO* out, Token_id token_id) const {
   const char* s = llama_token_to_str(ctx_, token_id);
   if (s) {
     puts_FildeshO(out, s);
   }
 }
+
+void Vocabulary::detokenize_to(std::ostream& out, Token_id token_id) const {
+  const char* s = llama_token_to_str(ctx_, token_id);
+  if (s) {
+    out << s;
+  }
+}
+
+void Vocabulary::detokenize_to(std::string& out, Token_id token_id) const {
+  const char* s = llama_token_to_str(ctx_, token_id);
+  if (s) {
+    out = s;
+  }
+  else {
+    out.clear();
+  }
+}
+

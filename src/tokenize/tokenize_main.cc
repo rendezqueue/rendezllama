@@ -3,6 +3,8 @@
 #include <fildesh/fildesh.h>
 #include <fildesh/ofstream.hh>
 
+#include "llama.h"
+
 #include "src/language/vocabulary.hh"
 
 int main(int argc, char** argv)
