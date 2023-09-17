@@ -3,11 +3,13 @@
 #include <cassert>
 #include <cstring>
 
-#include "src/language/vocabulary.hh"
+#include "llama.h"
+
+using rendezllama::Vocabulary;
 
   void
 rendezllama::tokenize_extend(
-    std::vector<llama_token>& tokens,
+    std::vector<Vocabulary::Token_id>& tokens,
     struct llama_context* ctx,
     const std::string& text)
 {
@@ -19,22 +21,12 @@ rendezllama::tokenize_extend(
   tokens.resize(offset + (size_t)n);
 }
 
-  bool
-rendezllama::token_endswith(const struct llama_context* ctx, llama_token token_id, char c)
-{
-  const char* s = llama_token_to_str(ctx, token_id);
-  if (!s) {return false;}
-  s = strrchr(s, c);
-  return (s && s[1] == '\0');
-}
-
   size_t
 rendezllama::prev_newline_start_index(
-    const struct llama_context* ctx,
-    const std::vector<llama_token>& tokens,
+    const Vocabulary& vocabulary,
+    const std::vector<Vocabulary::Token_id>& tokens,
     size_t offset)
 {
-  const Vocabulary vocabulary(ctx);
   const llama_token newline_token = vocabulary.newline_token_id();
   size_t i = offset;
   if (i > 0) {

@@ -320,7 +320,7 @@ rendezllama::commit_to_context(
          i < chat_traj.token_count();
          ++i)
     {
-      if (rendezllama::token_endswith(ctx, chat_traj.token_at(i), '\n')) {
+      if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
         chat_traj.rollforget(i+1, vocabulary);
         break;
       }
@@ -336,7 +336,7 @@ rendezllama::commit_to_context(
         opt.batch_count,
         chat_traj.token_count() - chat_traj.context_token_count_);
 
-    chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, ctx);
+    chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
 
     const int istat = llama_eval(
         ctx,

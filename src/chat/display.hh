@@ -14,17 +14,19 @@ class ChatDisplay {
   ~ChatDisplay();
 
   static
-    const char*
-  displaystring(
+    void
+  displaystring_to(
+      std::string& out,
       ChatTrajectory::Token_id token_id,
-      const struct llama_context* ctx);
+      const Vocabulary& vocabulary);
 
   void show_new(size_type end,
                 ChatTrajectory& chat_traj,
-                const struct llama_context* ctx);
+                const Vocabulary& vocabulary);
   void show_new(ChatTrajectory& chat_traj,
-                const struct llama_context* ctx);
-  void maybe_insert_answer_prompt(ChatTrajectory& chat_traj, struct llama_context* ctx);
+                const Vocabulary& vocabulary);
+  void maybe_insert_answer_prompt(ChatTrajectory& chat_traj,
+                                  const Vocabulary& vocabulary);
   void maybe_remove_answer_prompt(ChatTrajectory& chat_traj, bool inputting);
 
  public:
