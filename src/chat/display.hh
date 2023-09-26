@@ -6,21 +6,16 @@ namespace rendezllama {
 
 class ChatDisplay {
  public:
-  typedef ChatTrajectory::size_type size_type;
-  typedef ChatTrajectory::Token_id Token_id;
-
- public:
   ChatDisplay() {}
   ~ChatDisplay();
 
-  static
-    void
+  void
   displaystring_to(
       std::string& out,
-      ChatTrajectory::Token_id token_id,
-      const Vocabulary& vocabulary);
+      Vocabulary::Token_id token_id,
+      const Vocabulary& vocabulary) const;
 
-  void show_new(size_type end,
+  void show_new(ChatTrajectory::size_type end,
                 ChatTrajectory& chat_traj,
                 const Vocabulary& vocabulary);
   void show_new(ChatTrajectory& chat_traj,
@@ -32,9 +27,8 @@ class ChatDisplay {
  public:
   FildeshO* out_ = nullptr;
   unsigned answer_prompt_offset_ = 0;
-  std::vector<Token_id> answer_prompt_tokens_;
+  std::vector<Vocabulary::Token_id> answer_prompt_tokens_;
 };
 
 }  // namespace rendezllama
 #endif
-

@@ -69,7 +69,7 @@ int main(int argc, char** argv)
   std::vector<llama_token> tokens;
   const rendezllama::Vocabulary vocabulary(ctx);
   tokens.push_back(vocabulary.bos_token_id());
-  rendezllama::tokenize_extend(tokens, ctx, prompt);
+  vocabulary.tokenize_to(tokens, prompt);
 
   fildesh::ofstream out(count_filename);
   if (tokens.size() > 0) {

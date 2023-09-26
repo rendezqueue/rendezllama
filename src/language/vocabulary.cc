@@ -1,5 +1,6 @@
 #include "src/language/vocabulary.hh"
 
+#include <cassert>
 #include <cstring>
 
 #include <fildesh/fildesh.h>
@@ -58,3 +59,16 @@ void Vocabulary::detokenize_to(std::string& out, Token_id token_id) const {
   }
 }
 
+  void
+Vocabulary::tokenize_to(
+    std::vector<Token_id>& tokens,
+    const std::string& text) const
+{
+  tokens.resize(text.size());
+  int n = llama_tokenize(
+      (llama_context*)ctx_,
+      text.c_str(),
+      &tokens[0], tokens.size(), false);
+  assert(n >= 0);
+  tokens.resize((size_t)n);
+}

@@ -91,3 +91,13 @@ ChatTrajectory::rollforget(size_type end, const Vocabulary& vocabulary)
   this->erase_range(beg, end);
 }
 
+  void
+ChatTrajectory::tokenize_append(
+    const std::string& s,
+    const Vocabulary& vocabulary)
+{
+  std::vector<llama_token> tmp;
+  vocabulary.tokenize_to(tmp, s);
+  this->insert_all_at(this->token_count(), tmp);
+}
+
