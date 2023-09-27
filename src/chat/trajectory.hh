@@ -1,6 +1,5 @@
 #ifndef RENDEZLLAMA_CHAT_TRAJECTORY_HH_
 #define RENDEZLLAMA_CHAT_TRAJECTORY_HH_
-#include <vector>
 
 #include "src/language/vocabulary.hh"
 
@@ -21,6 +20,7 @@ class ChatTrajectory {
   void erase_range(size_type beg, size_type end);
   void erase_all_at(size_type beg) {this->erase_range(beg, this->token_count());}
   void rollforget(size_type end, const Vocabulary& vocabulary);
+  void tokenize_append(const std::string& s, const Vocabulary& vocabulary);
 
   Token_id token() const {return token_values_.back();}
   const Token_id& token_at(size_type i) const {return token_values_[i];}
