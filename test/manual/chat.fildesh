@@ -3,9 +3,9 @@
 (: scene Str (?? .self.opt.scene "roshambo_kira"))
 (: model_file Filename
  (?? .self.opt.model
-  "/mnt/llama_model_data/llama_cpp_models/13B/ggml-model-q4_0.bin"))
+  "/mnt/llama_model_data/llama_cpp_models/7B/ggml-model-q4_0.gguf"))
 (: setting_file Filename (++ "example/prompt/" scene "/setting.sxproto"))
-(: thread_count Str (?? .self.opt.thread_count "16"))
+(: thread_count Str (?? .self.opt.thread_count "8"))
 
 |< stdin
 |- ./bld/src/chat/chat \

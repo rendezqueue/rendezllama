@@ -34,7 +34,7 @@ augment_tokenize_chat_input(
 
 
 std::tuple<struct llama_model*, struct llama_context*>
-make_llama_context(const ChatOptions& opt);
+make_llama_context(ChatOptions& opt);
 void
 generate_next_token(
     ChatTrajectory& chat_traj,

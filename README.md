@@ -9,7 +9,7 @@ For now, there's just a command-line interface, but the plan is to make a progre
 Assuming you have the quantized weights already and can compile C++, you can try the [assistant_vicuna example](example/prompt/assistant_vicuna/) with a few commands:
 ```shell
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
-MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.bin}"
+MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.gguf}"
 # Make just creates a bld/ directory and invokes CMake to build there.
 make LLAMA_OPENBLAS=0
 # Run with specific settings from a file. They can be given as flags too.
@@ -27,7 +27,7 @@ See the [example/prompt/](example/prompt/) directory for more interesting/whimsi
   - `--x_setting setting.sxproto` loads settings from `setting.sxproto`.
     - All other options can be set within this file.
 - Model files.
-  - `--model ggml-model-q4_0.bin` are the model weights. Usually quantized.
+  - `--model ggml-model-q4_0.gguf` are the model weights. Usually quantized.
   - See [doc/setting/model.md](doc/setting/model.md) for LoRA files and memory options.
 - Prompt files.
   - `--x_priming priming.txt` specifies the priming prompt text file. This is the prompt that never changes.

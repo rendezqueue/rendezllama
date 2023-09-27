@@ -2,22 +2,22 @@
 
 ## File
 I prefer using flags to specify model files.
-- `--model ggml-model-q4_0.bin` are the model weights. Usually quantized.
+- `--model ggml-model-q4_0.gguf` are the model weights. Usually quantized.
   - Required.
-- `--lora ggml-adapter-model.bin` gives a LoRA.
-- `--lora_base ggml-model-f16.bin` gives higher-precision model weights to apply the LoRA on top of.
+- `--lora ggml-adapter-model.gguf` gives a LoRA.
+- `--lora_base ggml-model-f16.gguf` gives higher-precision model weights to apply the LoRA on top of.
   - Not required when using `--lora` but you'll otherwise get a warning if the `--model` weights are low-precision.
 
 Even though the flags are preferred, `setting.sxproto` supports them too:
 ```lisp
-(model "ggml-model-q4_0.bin")
-(lora "ggml-adapter-model.bin")
-(lora_base "ggml-model-f16.bin")
+(model "ggml-model-q4_0.gguf")
+(lora "ggml-adapter-model.gguf")
+(lora_base "ggml-model-f16.gguf")
 ```
 
 ## Context
 ```lisp
-; Set the model's default context limit as 4096 for Llama-2 (default 2048).
+; Set the model's default context limit as 4096 for Llama-2 (default comes from the model).
 (model_token_limit 4096)
 ; Set the prompt's context limit as 5000 (default is model_token_limit).
 (context_token_limit 5000)

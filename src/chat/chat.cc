@@ -143,9 +143,26 @@ rendezllama::augment_tokenize_chat_input(
 }
 
   std::tuple<struct llama_model*, struct llama_context*>
-rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
+rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 {
   llama_context_params params = llama_context_default_params();
+  params.vocab_only = true;
+
+  struct llama_model* model = llama_load_model_from_file(
+      opt.model_filename.c_str(), params);
+  if (!model) {
+    fildesh_log_error("Failed to open model.");
+    return std::make_tuple(nullptr, nullptr);
+  }
+
+  if (opt.model_token_limit == 0) {
+    opt.model_token_limit = llama_model_n_ctx_train(model);
+  }
+  if (opt.context_token_limit == 0) {
+    opt.context_token_limit = opt.model_token_limit;
+  }
+
+  params = llama_context_default_params();
   params.n_ctx = opt.context_token_limit;
   params.seed = opt.seed;
   params.f16_kv = true;
@@ -156,7 +173,8 @@ rendezllama::make_llama_context(const rendezllama::ChatOptions& opt)
     params.rope_freq_scale /= 2;
   }
 
-  struct llama_model* model = llama_load_model_from_file(
+  llama_free_model(model);
+  model = llama_load_model_from_file(
       opt.model_filename.c_str(), params);
   if (!model) {
     fildesh_log_error("Failed to open model.");
