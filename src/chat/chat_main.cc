@@ -184,8 +184,7 @@ int main(int argc, char** argv)
       inputting = true;
       if (matched_antiprompt != "\n") {
         // TODO(#30): remove hack.
-        chat_traj.push_back(llama_token_eos());
-        chat_traj.push_back(vocabulary.newline_token_id());
+        chat_traj.push_back(vocabulary.eos_token_id());
         //chat_traj.push_back(vocabulary.newline_token_id());
         chat_disp.show_new(chat_traj, vocabulary);
       }
