@@ -181,6 +181,23 @@ maybe_parse_nat_option(unsigned* n, FildeshX* in, const char* name)
   return true;
 }
 
+static
+  bool
+maybe_parse_positive_option(unsigned* n, FildeshX* in, const char* name)
+{
+  int tmp_n = 0;
+  if (!skipstr_FildeshX(in, name)) {
+    return false;
+  }
+  else if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
+    *n = (unsigned) tmp_n;
+  }
+  else {
+    fildesh_log_warning("Need a positive int.");
+  }
+  return true;
+}
+
   bool
 rendezllama::parse_options_sxproto_content(
     ChatOptions& opt,
@@ -326,6 +343,7 @@ rendezllama::parse_options_sxproto_content(
     }
     else if (
         maybe_parse_nat_option(&opt.seed, &slice, "seed") ||
+        maybe_parse_positive_option(&opt.batch_count, &slice, "batch_count") ||
         maybe_parse_bool_option(&opt.coprocess_mode_on, &slice, "coprocess_mode_on") ||
         maybe_parse_bool_option(&opt.startspace_on, &slice, "startspace_on") ||
         maybe_parse_bool_option(&opt.linespace_on, &slice, "linespace_on") ||
@@ -843,8 +861,7 @@ rendezllama::maybe_parse_option_command(
     // Success!
   }
   else if (
-      maybe_parse_positive(&opt.thread_count, in, out, "thread_count", delims) ||
-      maybe_parse_positive(&opt.batch_count, in, out, "batch_count", delims)) {
+      maybe_parse_positive(&opt.thread_count, in, out, "thread_count", delims)) {
     // Success!
   }
   else if (
