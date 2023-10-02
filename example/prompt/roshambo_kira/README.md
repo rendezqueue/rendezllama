@@ -10,9 +10,9 @@ Some things you can try:
 - Try complimenting his intelligence and then bet on the outcome of a game of roshambo.
   - This works better with smaller models like 7B.
 - Type `/r` to regenerate Kira's response when he doesn't make sense.
-- Add `(linespace_on 1)` to `setting.sxproto`.
+- Add `(linespace_on 1)` to `setting.sxpb`.
   - For some reason, the different tokenization makes Kira more susceptible to influence.
-- Add `(confidant "Light")` to `setting.sxproto` to rename Kira as Light.
+- Add `(confidant "Light")` to `setting.sxpb` to rename Kira as Light.
   - Then literally just ask him who Kira is. Most times he just admits to being Kira.
 - Type `/yield Ryuk` to bring Ryuk into the conversation.
   - Definitely try this if you got Kira's real name. Keep hitting enter to see the anime ending play out.
