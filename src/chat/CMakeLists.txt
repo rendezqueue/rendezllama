@@ -16,6 +16,6 @@ add_executable(chat
   "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )
 target_link_libraries(chat PRIVATE
-  ${Fildesh_LIBRARIES}
+  ${FildeshSxproto_LIBRARIES}
   ${LlamaCpp_LIBRARIES}
 )

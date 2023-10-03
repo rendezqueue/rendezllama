@@ -268,8 +268,11 @@ int main(int argc, char** argv)
         }
 
         slice.off += 1;
-        if (rendezllama::maybe_parse_option_command(opt, &slice, eout)) {
-          // Nothing.
+        if (peek_char_FildeshX(&slice, '(')) {
+          rendezllama::parse_dynamic_sxpb_options(opt, &slice);
+        }
+        else if (skipstr_FildeshX(&slice, "opt")) {
+          rendezllama::print_options(eout, opt);
         }
         else if (slice.off + 1 == slice.size && skipstr_FildeshX(&slice, "r")) {
           if (!buffer.empty()) {
