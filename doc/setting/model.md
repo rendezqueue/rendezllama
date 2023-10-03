@@ -8,7 +8,7 @@ I prefer using flags to specify model files.
 - `--lora_base ggml-model-f16.gguf` gives higher-precision model weights to apply the LoRA on top of.
   - Not required when using `--lora` but you'll otherwise get a warning if the `--model` weights are low-precision.
 
-Even though the flags are preferred, `setting.sxproto` supports them too:
+Even though the flags are preferred, `setting.sxpb` supports them too:
 ```lisp
 (model "ggml-model-q4_0.gguf")
 (lora "ggml-adapter-model.gguf")
@@ -44,13 +44,14 @@ These memory options are also supported as `--mlock_on 1` and `--mmap_on 0` flag
 ## Compute
 ```lisp
 ; Number of threads to use (default is 1).
-; Can be changed later via the `/thread_count 8` command.
+; Can be changed later via the `/(thread_count 8)` command.
 (thread_count 8)
 ; Warning: This number should exclude hyperthreads.
 
 ; Batch size (default is 512, large enough to make OpenBLAS useful).
-; Can be changed later via the `/batch_count 8` command.
 (batch_count 512)
 ; Warning: Setting this too large (e.g., 2048) can cause assertion violations.
 ```
+
+These compute options are also supported as `--thread_count 8` and `--batch_count 512` flags.
 

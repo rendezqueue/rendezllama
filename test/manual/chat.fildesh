@@ -4,7 +4,7 @@
 (: model_file Filename
  (?? .self.opt.model
   "/mnt/llama_model_data/llama_cpp_models/7B/ggml-model-q4_0.gguf"))
-(: setting_file Filename (++ "example/prompt/" scene "/setting.sxproto"))
+(: setting_file Filename (++ "example/prompt/" scene "/setting.sxpb"))
 (: thread_count Str (?? .self.opt.thread_count "8"))
 
 |< stdin

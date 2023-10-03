@@ -5,7 +5,7 @@ add_executable(src_opt_test
   "${PROJECT_SOURCE_DIR}/src/chat/opt.hh"
 )
 target_link_libraries(src_opt_test
-  ${Fildesh_LIBRARIES}
+  ${FildeshSxproto_LIBRARIES}
 )
 add_test(NAME src_opt_test COMMAND src_opt_test)
 

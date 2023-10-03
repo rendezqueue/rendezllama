@@ -145,43 +145,51 @@ rendezllama::augment_tokenize_chat_input(
   std::tuple<struct llama_model*, struct llama_context*>
 rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 {
-  llama_context_params params = llama_context_default_params();
-  params.vocab_only = true;
+  llama_model_params model_params = llama_model_default_params();
+  model_params.vocab_only = true;
 
   struct llama_model* model = llama_load_model_from_file(
-      opt.model_filename.c_str(), params);
+      opt.model_filename.c_str(), model_params);
   if (!model) {
     fildesh_log_error("Failed to open model.");
     return std::make_tuple(nullptr, nullptr);
   }
 
   if (opt.model_token_limit == 0) {
-    opt.model_token_limit = llama_model_n_ctx_train(model);
+    opt.model_token_limit = llama_n_ctx_train(model);
   }
   if (opt.context_token_limit == 0) {
     opt.context_token_limit = opt.model_token_limit;
   }
 
-  params = llama_context_default_params();
-  params.n_ctx = opt.context_token_limit;
-  params.seed = opt.seed;
-  params.f16_kv = true;
-  params.use_mlock = opt.mlock_on;
-  params.use_mmap = opt.mmap_on;
-  params.rope_freq_scale = 1.0;
-  while ((unsigned)(opt.model_token_limit/params.rope_freq_scale) < opt.context_token_limit) {
-    params.rope_freq_scale /= 2;
+  model_params = llama_model_default_params();
+  model_params.use_mlock = opt.mlock_on;
+  model_params.use_mmap = opt.mmap_on;
+
+  llama_context_params ctx_params = llama_context_default_params();
+  ctx_params.n_ctx = opt.context_token_limit;
+  ctx_params.seed = opt.seed;
+  ctx_params.f16_kv = true;
+  ctx_params.rope_freq_scale = 1.0;
+  ctx_params.n_threads = opt.thread_count;
+  ctx_params.n_batch = opt.batch_count;
+  while (
+      (unsigned)(opt.model_token_limit / ctx_params.rope_freq_scale)
+      <
+      opt.context_token_limit)
+  {
+    ctx_params.rope_freq_scale /= 2;
   }
 
   llama_free_model(model);
   model = llama_load_model_from_file(
-      opt.model_filename.c_str(), params);
+      opt.model_filename.c_str(), model_params);
   if (!model) {
     fildesh_log_error("Failed to open model.");
     return std::make_tuple(nullptr, nullptr);
   }
 
-  struct llama_context* ctx = llama_new_context_with_model(model, params);
+  struct llama_context* ctx = llama_new_context_with_model(model, ctx_params);
   if (!ctx) {
     llama_free_model(model);
     fildesh_log_error("Failed to create context.");
@@ -203,7 +211,7 @@ temperature_based_sample(
   llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
   llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
   llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
-  llama_sample_temperature(ctx, candidates_data, opt.temperature);
+  llama_sample_temp(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token(ctx, candidates_data));
 }
 
@@ -217,7 +225,7 @@ mirostat1_sample(
 {
   float mirostat_mu = chat_traj.mirostat_mu();
   const int mirostat_m = 100;
-  llama_sample_temperature(ctx, candidates_data, opt.temperature);
+  llama_sample_temp(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token_mirostat(
           ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
@@ -232,7 +240,7 @@ mirostat2_sample(
     const rendezllama::ChatOptions& opt)
 {
   float mirostat_mu = chat_traj.mirostat_mu();
-  llama_sample_temperature(ctx, candidates_data, opt.temperature);
+  llama_sample_temp(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token_mirostat_v2(
           ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
@@ -268,7 +276,7 @@ rendezllama::generate_next_token(
       extra_penalized_tokens.begin(), extra_penalized_tokens.end());
 
   std::vector<llama_token_data> candidates;
-  candidates.resize(llama_n_vocab(ctx));
+  candidates.resize(vocabulary.cardinality());
   for (llama_token i = 0; i < (llama_token)candidates.size(); ++i) {
     candidates[i] = llama_token_data{
       i, logits[i], 0.0f,
@@ -338,6 +346,11 @@ rendezllama::commit_to_context(
     assert(chat_traj.token_count() < opt.context_token_limit);
   }
 
+  // Reset thread count just in case the user reconfigured it.
+  llama_set_n_threads(ctx, opt.thread_count, opt.thread_count);
+  // Clear KV cache past current position just in case the user deleted tokens.
+  llama_kv_cache_tokens_rm(ctx, chat_traj.context_token_count_, -1);
+
   while (chat_traj.context_token_count_ < chat_traj.token_count()) {
     const unsigned n = std::min(
         opt.batch_count,
@@ -345,12 +358,12 @@ rendezllama::commit_to_context(
 
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
 
-    const int istat = llama_eval(
-        ctx,
-        &chat_traj.token_at(chat_traj.context_token_count_),
+    llama_batch batch = llama_batch_get_one(
+        (int*)&chat_traj.token_at(chat_traj.context_token_count_),
         n,
         chat_traj.context_token_count_,
-        opt.thread_count);
+        0);
+    const int istat = llama_decode(ctx, batch);
     if (istat != 0) {
       fildesh_log_error("Failed to eval.");
       chat_traj.context_token_count_ = 0;

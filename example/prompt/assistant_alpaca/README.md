@@ -5,7 +5,7 @@ Most importantly, the model must be tuned to end the assistant's replies with an
 
 You might like to use this for code, so we constrain output by number of lines instead of number of sentences.
 Just press enter to let it continue 10 more lines.
-You can adjust this behavior in `setting.sxproto`:
+You can adjust this behavior in `setting.sxpb`:
 ```lisp
 ((sentence_terminals) "\n")
 (sentence_limit 10)

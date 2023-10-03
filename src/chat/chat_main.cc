@@ -82,8 +82,10 @@ int main(int argc, char** argv)
     if (!opt.lora_base_model_filename.empty()) {
       base_model_filename = opt.lora_base_model_filename.c_str();
     }
+    const float scale = 1.0f;
     int istat = llama_model_apply_lora_from_file(
-        model, opt.lora_filename.c_str(), base_model_filename,
+        model, opt.lora_filename.c_str(), scale,
+        base_model_filename,
         opt.thread_count);
     if (istat != 0) {exstatus = 1;}
   }
@@ -268,8 +270,11 @@ int main(int argc, char** argv)
         }
 
         slice.off += 1;
-        if (rendezllama::maybe_parse_option_command(opt, &slice, eout)) {
-          // Nothing.
+        if (peek_char_FildeshX(&slice, '(')) {
+          rendezllama::parse_dynamic_sxpb_options(opt, &slice);
+        }
+        else if (skipstr_FildeshX(&slice, "opt")) {
+          rendezllama::print_options(eout, opt);
         }
         else if (slice.off + 1 == slice.size && skipstr_FildeshX(&slice, "r")) {
           if (!buffer.empty()) {
