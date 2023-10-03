@@ -1,10 +1,16 @@
 (protagonist "L")
 (confidant "Kira")
+(template_protagonist "{{user}}")
+(template_confidant "{{char}}")
+(((chat_prefixes))
+ "{{user}}:"
+ "{{char}} thinks to self:"
+ "{{char}}:")
+
 (x_priming "priming.txt")
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/roshambo_kira.txt")
-(template_protagonist "{{user}}")
-(template_confidant "{{char}}")
+
 (sentence_limit 5)
 (sentence_token_limit 70)
 (repeat_window 20)
