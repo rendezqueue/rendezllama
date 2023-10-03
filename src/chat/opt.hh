@@ -6,6 +6,7 @@
 #include <vector>
 
 struct FildeshX;
+struct FildeshSxprotoField;
 
 namespace rendezllama {
 
@@ -65,13 +66,12 @@ struct ChatOptions {
   bool verbose_prompt = false;
 };
 
+const FildeshSxprotoField*
+dynamic_options_sxproto_schema();
+const FildeshSxprotoField*
+options_sxproto_schema();
 void
 print_options(std::ostream& out, const ChatOptions& opt);
-bool
-parse_options_sxproto_content(
-    rendezllama::ChatOptions& opt,
-    FildeshX* in,
-    const std::string& filename);
 int
 parse_initialize_options_sxproto(
     rendezllama::ChatOptions& opt,
@@ -79,10 +79,15 @@ parse_initialize_options_sxproto(
 int
 parse_options(ChatOptions& opt, int argc, char** argv);
 bool
-maybe_parse_option_command(
+parse_sxpb_options(
     rendezllama::ChatOptions& opt,
     FildeshX* in,
-    std::ostream& eout);
+    const FildeshSxprotoField* schema,
+    const std::string& filename);
+bool
+parse_dynamic_sxpb_options(
+    rendezllama::ChatOptions& opt,
+    FildeshX* in);
 
 }  // namespace rendezllama
 #endif

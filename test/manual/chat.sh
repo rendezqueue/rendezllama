@@ -15,7 +15,7 @@ if [ -z "${prompt_name}" ]; then
   echo "Give a prompt name (a subdirectory in example/prompt/)." 1>&2
   exit 64
 fi
-setting_file="example/prompt/${prompt_name}/setting.sxproto"
+setting_file="example/prompt/${prompt_name}/setting.sxpb"
 transcript_file="bld/example/prompt/${prompt_name}.txt"
 
 # Second arg can be "--" to indicate that we're forarding the rest.

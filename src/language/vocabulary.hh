@@ -19,6 +19,7 @@ class Vocabulary {
   Token_id bos_token_id() const;
   Token_id eos_token_id() const;
   Token_id newline_token_id() const;
+  unsigned cardinality() const;
 
   char last_char_of(Token_id token_id) const;
 

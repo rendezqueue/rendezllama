@@ -2,7 +2,7 @@
 
 ## Limit
 Token generated can be limited to sentence boundaries.
-These options can be set via commands or in `setting.sxproto` as:
+These options can be set via commands or in `setting.sxpb` as:
 ```lisp
 ; Limit number of sentences to 10 (default is 0, unlimited).
 (sentence_limit 10)

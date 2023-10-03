@@ -4,7 +4,7 @@ This example should be used with [Vicuna](https://lmsys.org/blog/2023-03-30-vicu
 
 AI assistants like to talk a lot, so this one often hits output limits.
 Just press enter to let it continue.
-If that's too annoying, increase these numbers in `setting.sxproto`:
+If that's too annoying, increase these numbers in `setting.sxpb`:
 ```lisp
 (sentence_limit 5)
 (sentence_token_limit 50)
@@ -21,5 +21,5 @@ A chat between a curious human and an artificial intelligence assistant. The ass
 ```
 
 Other Vicuna-style models use a similar format but usually differ slightly.
-To use those, please change the priming prompt in `priming.txt` and the character names in `setting.sxproto`.
+To use those, please change the priming prompt in `priming.txt` and the character names in `setting.sxpb`.
 

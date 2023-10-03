@@ -14,7 +14,7 @@ MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.gguf}"
 make LLAMA_OPENBLAS=0
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
-  --x_setting example/prompt/assistant_vicuna/setting.sxproto \
+  --x_setting example/prompt/assistant_vicuna/setting.sxpb \
   --thread_count 8 \
   --model "${MODEL}"
 ```
@@ -24,7 +24,7 @@ See the [example/prompt/](example/prompt/) directory for more interesting/whimsi
 ### Chat CLI Options
 
 - Setting file.
-  - `--x_setting setting.sxproto` loads settings from `setting.sxproto`.
+  - `--x_setting setting.sxpb` loads settings from `setting.sxpb`.
     - All other options can be set within this file.
 - Model files.
   - `--model ggml-model-q4_0.gguf` are the model weights. Usually quantized.
@@ -47,8 +47,8 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/head` or `/head 10` shows the first 10 lines of the rolling prompt.
   - `/forget 10` removes the first 10 lines of the rolling prompt.
 - Characters.
-  - `/protagonist User` changes the protagonist's name to "User".
-  - `/confidant Char` changes the confidant's name to "Char".
+  - `/(protagonist "User")` changes the protagonist's name to "User".
+  - `/(confidant "Char")` changes the confidant's name to "Char".
   - See [doc/setting/prompt.md#prefix](doc/setting/prompt.md#prefix) for more ways to control chat line prefixes.
 - Editing.
   - A blank space forces token generation to continue on the same line.
