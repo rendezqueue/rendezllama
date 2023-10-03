@@ -1,11 +1,20 @@
-(context_token_limit 2048)
-(thread_count 8)
+(protagonist "Anon")
+(confidant "Miku")
+(template_protagonist "{{user}}")
+(template_confidant "{{char}}")
+
 (x_priming "priming.txt")
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/assistant_miku.txt")
-(repeat_window 256)
+
+(context_token_limit 2048)
 (sentence_limit 4)
 (sentence_token_limit 40)
+
+(mirostat 0)
+
+; Defaults.
+(repeat_window 256)
 (repeat_penalty 1.17647)
 (temp 0.7)
 (top_k 40)
