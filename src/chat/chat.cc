@@ -165,7 +165,7 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
   ctx_params.n_ctx = opt.context_token_limit;
   ctx_params.seed = opt.seed;
   ctx_params.f16_kv = true;
-  ctx_params.rope_freq_scale = 1.0;
+  ctx_params.rope_freq_scale = llama_rope_freq_scale_train(model);
   ctx_params.n_threads = opt.thread_count;
   ctx_params.n_batch = opt.batch_count;
   while (
