@@ -287,7 +287,6 @@ static int initialize_options(ChatOptions& opt) {
     ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
     ensure_linespace(opt.answer_prompt, opt.linespace_on, opt.linespace_on);
     reinitialize_chat_prefixes(opt);
-    opt.rolling_prompt += opt.chat_prefixes[1];
   }
   return exstatus;
 }

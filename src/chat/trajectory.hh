@@ -1,6 +1,8 @@
 #ifndef RENDEZLLAMA_CHAT_TRAJECTORY_HH_
 #define RENDEZLLAMA_CHAT_TRAJECTORY_HH_
 
+#include <limits>
+
 #include "src/language/vocabulary.hh"
 
 namespace rendezllama {
@@ -8,6 +10,7 @@ namespace rendezllama {
 class ChatTrajectory {
  public:
   typedef Vocabulary::Token_id Token_id;
+  typedef unsigned message_prefix_id;
   typedef unsigned size_type;
 
  public:
@@ -21,6 +24,15 @@ class ChatTrajectory {
   void erase_all_at(size_type beg) {this->erase_range(beg, this->token_count());}
   void rollforget(size_type end, const Vocabulary& vocabulary);
   void tokenize_append(const std::string& s, const Vocabulary& vocabulary);
+  void tokenize_append_message_prefix(
+      message_prefix_id id,
+      const std::string& s,
+      const Vocabulary& vocabulary);
+  size_type rfind_message_prefix_at(size_type i) const;
+  size_type rfind_message_prefix_begin_at(size_type i) const;
+  size_type rfind_last_message_prefix_end_at(size_type i) const;
+  size_type rfind_last_message_prefix_begin_at(size_type i) const;
+  message_prefix_id last_message_prefix_id_at(size_type i) const;
 
   Token_id token() const {return token_values_.back();}
   const Token_id& token_at(size_type i) const {return token_values_[i];}
@@ -30,22 +42,25 @@ class ChatTrajectory {
   const float& mirostat_mu_at(unsigned i) const {return mirostat_mu_values_[i];}
   float& mirostat_mu_at(unsigned i) {return mirostat_mu_values_[i];}
 
-  unsigned line_prefix_index() const {return line_prefix_indices_.back();}
-  unsigned& line_prefix_index() {return line_prefix_indices_.back();}
-  unsigned line_prefix_index_at(unsigned i) const {return line_prefix_indices_[i];}
-  unsigned& line_prefix_index_at(unsigned i) {return line_prefix_indices_[i];}
+  static message_prefix_id unknown_message_prefix_id() {
+    return std::numeric_limits<message_prefix_id>::max()-1;
+  }
+  static message_prefix_id not_a_message_prefix_id() {
+   return std::numeric_limits<message_prefix_id>::max();
+  }
 
   const std::vector<Token_id>& tokens() const {return token_values_;}
 
  private:
   std::vector<Token_id> token_values_;
   std::vector<float> mirostat_mu_values_;
-  std::vector<unsigned> line_prefix_indices_;
+  std::vector<unsigned> message_prefix_ids_;
  public:
   FildeshO* transcript_out_ = nullptr;
   size_type display_token_count_ = 0;
   size_type context_token_count_ = 0;
   size_type priming_token_count_ = 0;
+  message_prefix_id message_prefix_id_ = ChatTrajectory::unknown_message_prefix_id();
   bool erased_since_eval_ = false;
 };
 

@@ -21,12 +21,22 @@ maybe_do_back_command(
     const Vocabulary& vocabulary,
     const ChatOptions& opt);
 bool
+maybe_do_delete_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt);
+bool
 maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
     const Vocabulary& vocabulary,
     const ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt);
+bool
+maybe_do_regen_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt);
 bool
 maybe_do_tail_command(
     FildeshX* in,

@@ -7,6 +7,8 @@
 #include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
 
+using rendezllama::ChatOptions;
+using rendezllama::ChatTrajectory;
 using rendezllama::Vocabulary;
 
 static
@@ -104,6 +106,23 @@ rendezllama::maybe_do_back_command(
 }
 
   bool
+rendezllama::maybe_do_delete_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "d", opt)) {
+    return false;
+  }
+  size_t offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count()-1);
+  if (offset > chat_traj.priming_token_count_) {
+    offset = chat_traj.rfind_message_prefix_begin_at(offset-1);
+  }
+  chat_traj.erase_all_at(offset);
+  return true;
+}
+
+  bool
 rendezllama::maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
@@ -131,6 +150,20 @@ rendezllama::maybe_do_head_command(
     }
   }
   out.flush();
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_regen_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "r", opt)) {
+    return false;
+  }
+  size_t offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count()-1);
+  chat_traj.erase_all_at(offset);
   return true;
 }
 

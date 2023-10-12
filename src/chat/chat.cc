@@ -51,7 +51,7 @@ eom_newline_check(
     const ChatOptions& opt,
     const ChatTrajectory& chat_traj)
 {
-  if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
+  if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
     return true;
   }
   return !opt.multiline_confidant_on;
@@ -96,9 +96,15 @@ rendezllama::augment_tokenize_chat_input(
     if (s.empty() || s[0] != ' ') {
       maybe_space = ' ';
     }
-    chat_traj.line_prefix_index() = opt.chat_prefixes.size()-1;
-    s = opt.chat_prefixes[chat_traj.line_prefix_index()] + maybe_space + s;
+    chat_traj.tokenize_append_message_prefix(
+        opt.chat_prefixes.size()-1,
+        opt.chat_prefixes.back(),
+        vocabulary);
+
     prevent_subsequent_newline = maybe_trim_endspace(s);
+    chat_traj.tokenize_append(
+        maybe_space + s,
+        vocabulary);
   }
   else if (s.front() == '\n') {
     s.erase(0, 1);
@@ -107,34 +113,44 @@ rendezllama::augment_tokenize_chat_input(
       chat_traj.push_back(vocabulary.newline_token_id());
     }
     if (opt.linespace_on) {s = ' ' + s;}
-    chat_traj.line_prefix_index() = opt.chat_prefixes.size();
+    chat_traj.tokenize_append_message_prefix(
+        chat_traj.unknown_message_prefix_id(),
+        s,
+        vocabulary);
   }
   else if (s.front() == ' ') {
     prevent_subsequent_newline = maybe_trim_endspace(s);
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else if (s.back() == '[' || s.back() == ':') {
-    // Nothing.
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else if (matched_antiprompt == opt.chat_prefixes[0]) {
     chat_traj.tokenize_append(maybe_space_prefix + s + '\n', vocabulary);
     chat_traj.display_token_count_ = chat_traj.token_count();
-    chat_traj.line_prefix_index() = 1;
-    s = opt.chat_prefixes[1];
+    chat_traj.tokenize_append_message_prefix(
+        1,
+        opt.chat_prefixes[1],
+        vocabulary);
     prevent_subsequent_newline = true;
   }
   else {
     if (matched_antiprompt != "\n") {
       chat_traj.push_back(vocabulary.newline_token_id());
     }
-    chat_traj.line_prefix_index() = 0;
-    chat_traj.tokenize_append(
-        opt.chat_prefixes[0] + maybe_space_prefix + s + '\n',
+    chat_traj.tokenize_append_message_prefix(
+        0,
+        opt.chat_prefixes[0],
         vocabulary);
-    chat_traj.line_prefix_index() = 1;
-    s = opt.chat_prefixes[1];
+    chat_traj.tokenize_append(
+        maybe_space_prefix + s + '\n',
+        vocabulary);
+    chat_traj.tokenize_append_message_prefix(
+        1,
+        opt.chat_prefixes[1],
+        vocabulary);
     prevent_subsequent_newline = true;
   }
-  chat_traj.tokenize_append(s, vocabulary);
 }
 
   std::tuple<struct llama_model*, struct llama_context*>

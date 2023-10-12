@@ -106,7 +106,6 @@ int main(int argc, char** argv)
     chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
     chat_traj.transcript_out_ = open_transcript_outfile(
         exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
-    chat_traj.line_prefix_index() = 1;
   }
 
   // Tokenize the prompt.
@@ -116,6 +115,8 @@ int main(int argc, char** argv)
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
     chat_traj.tokenize_append(opt.rolling_prompt, vocabulary);
+    chat_traj.tokenize_append_message_prefix(
+        1, opt.chat_prefixes[1], vocabulary);
     print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
@@ -190,31 +191,28 @@ int main(int argc, char** argv)
       }
     }
     else if (rendezllama::eom_token_check(vocabulary, chat_traj.token(), opt, chat_traj)) {
-      bool adding_next_prefix = true;
       if (matched_antiprompt != "\n") {
         chat_traj.push_back(vocabulary.newline_token_id());
-        chat_disp.show_new(chat_traj, vocabulary);
         matched_antiprompt = "\n";
       }
-      if (chat_traj.line_prefix_index() >= opt.chat_prefixes.size()-1) {
+      if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
+        chat_traj.tokenize_append_message_prefix(
+            chat_traj.message_prefix_id_ + 1,
+            opt.chat_prefixes[chat_traj.message_prefix_id_ + 1],
+            vocabulary);
+      }
+      else if (opt.given_chat_prefixes.size() > 0) {
+        chat_traj.tokenize_append_message_prefix(
+            0, opt.chat_prefixes[0], vocabulary);
         inputting = true;
-        adding_next_prefix = (opt.given_chat_prefixes.size() > 0);
-        if (adding_next_prefix) {
-          chat_traj.line_prefix_index() = 0;
-          matched_antiprompt = opt.chat_prefixes[0];
-        }
+        matched_antiprompt = opt.chat_prefixes[0];
       }
       else {
-        chat_traj.line_prefix_index() += 1;
+        inputting = true;
       }
-      if (adding_next_prefix) {
-        chat_traj.tokenize_append(
-            opt.chat_prefixes[chat_traj.line_prefix_index()],
-            vocabulary);
-        chat_disp.show_new(chat_traj, vocabulary);
-        sentence_count = 0;
-        sentence_token_count = 0;
-      }
+      chat_disp.show_new(chat_traj, vocabulary);
+      sentence_count = 0;
+      sentence_token_count = 0;
     }
     else if (!matched_antiprompt.empty()) {
       if (sentence_count + 1 == opt.sentence_limit) {
@@ -273,26 +271,6 @@ int main(int argc, char** argv)
         }
         else if (skipstr_FildeshX(&slice, "opt")) {
           rendezllama::print_options(eout, opt);
-        }
-        else if (slice.off + 1 == slice.size && skipstr_FildeshX(&slice, "r")) {
-          if (!buffer.empty()) {
-            fildesh_log_warning("Pending input ignored by command.");
-          }
-          buffer.clear();
-          preventing_newline = true;
-          matched_antiprompt.clear();  // For clarity.
-          size_t offset = rendezllama::prev_newline_start_index(
-              vocabulary, chat_tokens, chat_tokens.size());
-          for (size_t i = offset; i < chat_tokens.size(); ++i) {
-            if (vocabulary.last_char_of(chat_tokens[i]) == ':') {
-              offset = i+1;
-              break;
-            }
-          }
-          if (offset >= chat_traj.priming_token_count_) {
-            chat_traj.erase_all_at(offset);
-          }
-          break;
         }
         else if (skipstr_FildeshX(&slice, "dropless")) {
           extra_penalized_tokens.clear();
@@ -378,11 +356,11 @@ int main(int argc, char** argv)
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
           line += '\n';
           chat_traj.tokenize_append(line, vocabulary);
-          if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
-            chat_traj.line_prefix_index() += 1;
+          if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
+            chat_traj.message_prefix_id_ += 1;
           }
-          else if (chat_traj.line_prefix_index() == opt.chat_prefixes.size()-1) {
-            chat_traj.line_prefix_index() = 0;
+          else if (chat_traj.message_prefix_id_ == opt.chat_prefixes.size()-1) {
+            chat_traj.message_prefix_id_ = 0;
           }
           matched_antiprompt = '\n';
           // Might as well process now.
@@ -409,7 +387,7 @@ int main(int argc, char** argv)
           }
           skipchrs_FildeshX(&slice, " ");
           // Set this index so token generation stops after 1 line.
-          chat_traj.line_prefix_index() = opt.chat_prefixes.size();
+          chat_traj.message_prefix_id_ = opt.chat_prefixes.size();
           // Prefix with user text.
           std::string line;
           line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
@@ -418,27 +396,21 @@ int main(int argc, char** argv)
           chat_traj.display_token_count_ = chat_traj.token_count();
           break;
         }
-        else if (skipstr_FildeshX(&slice, "d")) {
-          if (slice.off != slice.size) {
-            fildesh_log_warning("Ignoring extra characters after \"d\".");
-          }
+        else if (rendezllama::maybe_do_delete_command(&slice, chat_traj, opt)) {
           if (!buffer.empty()) {
             fildesh_log_warning("Pending input ignored by command.");
           }
           buffer.clear();
-          size_t offset = rendezllama::prev_newline_start_index(
-              vocabulary, chat_tokens, chat_tokens.size());
-          if (offset <= chat_traj.priming_token_count_) {
-            offset = chat_traj.priming_token_count_;
+          matched_antiprompt = '\n';
+        }
+        else if (rendezllama::maybe_do_regen_command(&slice, chat_traj, opt)) {
+          if (!buffer.empty()) {
+            fildesh_log_warning("Pending input ignored by command.");
           }
-          else {
-            offset -= 1;
-          }
-          chat_traj.erase_all_at(offset);
-          matched_antiprompt.clear();
-          if (chat_traj.token_count() == chat_traj.priming_token_count_) {
-            matched_antiprompt = '\n';
-          }
+          buffer.clear();
+          preventing_newline = true;
+          matched_antiprompt.clear();  // For clarity.
+          break;
         }
         else if (rendezllama::maybe_parse_yield_command(buffer, &slice, opt)) {
           break;
