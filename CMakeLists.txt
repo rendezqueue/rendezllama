@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.14)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 project(Rendezllama LANGUAGES "C" "CXX")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 
 option(LLAMA_OPENBLAS "llama: use OpenBLAS" OFF)

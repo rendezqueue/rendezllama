@@ -27,7 +27,7 @@ class Vocabulary {
   void detokenize_to(std::ostream& out, Token_id token_id) const;
   void detokenize_to(std::string& out, Token_id token_id) const;
 
-  void tokenize_to(std::vector<Token_id>& tokens, const std::string& text) const;
+  void tokenize_to(std::vector<Token_id>& tokens, std::string_view text) const;
 
  private:
   const llama_context* ctx_;

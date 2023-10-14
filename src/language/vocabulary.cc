@@ -82,16 +82,16 @@ void Vocabulary::detokenize_to(std::string& out, Token_id token_id) const {
   void
 Vocabulary::tokenize_to(
     std::vector<Token_id>& tokens,
-    const std::string& text) const
+    std::string_view text) const
 {
   std::string s = "\n";
-  s.append(text);
+  s += text;
   tokens.resize(1 + s.size());
   const llama_model* model = llama_get_model(ctx_);
   int n = llama_tokenize(
       model,
-      &s[0], s.size(),
-      &tokens[0], tokens.size(),
+      s.data(), s.size(),
+      tokens.data(), tokens.size(),
       false);
   assert(n >= 1);
   tokens.resize((size_t)n);

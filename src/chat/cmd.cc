@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cstring>
 
+#include <fildesh/string.hh>
+
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/tokenize/tokenize.hh"
@@ -71,12 +73,7 @@ rendezllama::maybe_do_back_command(
     }
   }
   unsigned n = 1;
-  {
-    int tmp_n = -1;
-    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
-      n = tmp_n;
-    }
-  }
+  parse_unsigned_FildeshX(in, &n);
   bool skipping_contiguous_space = space_delim_on;
   std::string s;
   while (n > 0) {
@@ -134,12 +131,7 @@ rendezllama::maybe_do_head_command(
     return false;
   }
   unsigned n = 10;
-  {
-    int tmp_n = 0;
-    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
-      n = tmp_n;
-    }
-  }
+  parse_unsigned_FildeshX(in, &n);
   for (size_t i = chat_traj.priming_token_count_; i < chat_traj.token_count(); ++i) {
     vocabulary.detokenize_to(out, chat_traj.token_at(i));
     if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
@@ -179,12 +171,7 @@ rendezllama::maybe_do_tail_command(
     return false;
   }
   unsigned n = 10;
-  {
-    int tmp_n = 0;
-    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
-      n = tmp_n;
-    }
-  }
+  parse_unsigned_FildeshX(in, &n);
   print_tail_lines(out, vocabulary, chat_traj, n);
   return true;
 }
@@ -201,7 +188,7 @@ rendezllama::maybe_parse_yield_command(
   }
   s = '\n';
   if (in->off < in->size) {
-    s.insert(s.end(), &in->at[in->off], &in->at[in->size]);
+    s += fildesh::make_string_view(*in);
   }
   else {
     s += opt.confidant + ':';

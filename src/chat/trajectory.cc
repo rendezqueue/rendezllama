@@ -94,7 +94,7 @@ ChatTrajectory::rollforget(size_type end, const Vocabulary& vocabulary)
 
   void
 ChatTrajectory::tokenize_append(
-    const std::string& s,
+    std::string_view s,
     const Vocabulary& vocabulary)
 {
   std::vector<llama_token> tmp;
@@ -105,7 +105,7 @@ ChatTrajectory::tokenize_append(
   void
 ChatTrajectory::tokenize_append_message_prefix(
     unsigned id,
-    const std::string& s,
+    std::string_view s,
     const Vocabulary& vocabulary)
 {
   std::vector<llama_token> tmp;

@@ -6,6 +6,7 @@
 
 #include <fildesh/fildesh.h>
 #include <fildesh/ofstream.hh>
+#include <fildesh/string.hh>
 #include <fildesh/sxproto.h>
 
 using rendezllama::ChatOptions;
@@ -113,16 +114,14 @@ parse_rolling_prompt(FildeshX* in, rendezllama::ChatOptions& opt)
   for (slice = sliceline_FildeshX(in); slice.at;
        slice = sliceline_FildeshX(in))
   {
-    opt.rolling_prompt.insert(
-        opt.rolling_prompt.end(),
-        &slice.at[0], &slice.at[slice.size]);
+    opt.rolling_prompt += fildesh::make_string_view(slice);
     opt.rolling_prompt += '\n';
 
     slice = until_char_FildeshX(&slice, ':');
     if (slice.at) {
       skipchrs_FildeshX(&slice, " ");
       std::string name;
-      name.insert(name.end(), &slice.at[slice.off], &slice.at[slice.size]);
+      name += fildesh::make_string_view(slice);
       if (name != names.back()) {
         names.front() = names.back();
         names.back() = name;
@@ -190,7 +189,7 @@ ensure_linespace(std::string& s, bool startspace_on, bool linespace_on)
       if (linespace_on && peek_char_FildeshX(&slice, ' ')) {
         slice.off += 1;
       }
-      s.insert(s.end(), &slice.at[slice.off], &slice.at[slice.size]);
+      s += fildesh::make_string_view(slice);
       s += '\n';
       if (linespace_on) {
         s += ' ';

@@ -1,6 +1,7 @@
 #include <cassert>
 
 #include <fildesh/ofstream.hh>
+#include <fildesh/string.hh>
 
 #include "src/chat/chat.hh"
 #include "src/chat/display.hh"
@@ -253,7 +254,7 @@ int main(int argc, char** argv)
           if (slice.at[slice.size-1] == '\\') {
             // Overwrite the continue character.
             slice.at[slice.size-1] = '\n';
-            buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
+            buffer += fildesh::make_string_view(slice);
             continue;
           }
           if (slice.at[0] == ' ' && buffer.empty() && matched_antiprompt == "\n") {
@@ -261,9 +262,14 @@ int main(int argc, char** argv)
             chat_traj.erase_all_at(chat_traj.token_count()-1);
             matched_antiprompt.clear();
           }
-          buffer.insert(buffer.end(), slice.at, &slice.at[slice.size]);
+          buffer += fildesh::make_string_view(slice);
           break;
         }
+
+        if (!buffer.empty()) {
+          fildesh_log_warning("Pending input cleared. Cannot mix with commands.");
+        }
+        buffer.clear();
 
         slice.off += 1;
         if (peek_char_FildeshX(&slice, '(')) {
@@ -279,11 +285,8 @@ int main(int argc, char** argv)
           if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
               slice.off < slice.size)
           {
-            std::string line;
-            line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-
             std::vector<llama_token> tmp;
-            vocabulary.tokenize_to(tmp, line);
+            vocabulary.tokenize_to(tmp, fildesh::make_string_view(slice));
             extra_penalized_tokens.insert(
                 extra_penalized_tokens.end(),
                 tmp.begin(), tmp.end());
@@ -336,9 +339,6 @@ int main(int argc, char** argv)
         else if (rendezllama::maybe_do_back_command(
                 chat_traj, &slice, eout, vocabulary, opt))
         {
-          if (!buffer.empty()) {
-            fildesh_log_warning("Pending input ignored by command.");
-          }
           vocabulary.detokenize_to(matched_antiprompt, chat_tokens.back());
           matched_antiprompt = rendezllama::antiprompt_suffix(
               matched_antiprompt,
@@ -348,14 +348,9 @@ int main(int argc, char** argv)
                  (slice.off + 4 == slice.size &&
                   skipstr_FildeshX(&slice, "puts")))
         {
-          if (!buffer.empty()) {
-            fildesh_log_warning("Pending input ignored by command.");
-          }
-          buffer.clear();
-          std::string line;
-          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-          line += '\n';
-          chat_traj.tokenize_append(line, vocabulary);
+          chat_traj.tokenize_append(
+              fildesh::make_string(slice) + '\n',
+              vocabulary);
           if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
             chat_traj.message_prefix_id_ += 1;
           }
@@ -374,10 +369,6 @@ int main(int argc, char** argv)
                  (slice.off + 4 == slice.size &&
                   skipstr_FildeshX(&slice, "gets")))
         {
-          if (!buffer.empty()) {
-            fildesh_log_warning("Pending input ignored by command.");
-          }
-          buffer.clear();
           preventing_newline = true;
           matched_antiprompt.clear();  // For clarity.
           line_byte_limit = 0;
@@ -386,28 +377,20 @@ int main(int argc, char** argv)
             line_byte_limit = (unsigned)tmp_n;
           }
           skipchrs_FildeshX(&slice, " ");
+          // Prefix with user text.
+          chat_traj.tokenize_append(
+              fildesh::make_string_view(slice),
+              vocabulary);
           // Set this index so token generation stops after 1 line.
           chat_traj.message_prefix_id_ = opt.chat_prefixes.size();
-          // Prefix with user text.
-          std::string line;
-          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-          chat_traj.tokenize_append(line, vocabulary);
           // Not printing any inserted text.
           chat_traj.display_token_count_ = chat_traj.token_count();
           break;
         }
         else if (rendezllama::maybe_do_delete_command(&slice, chat_traj, opt)) {
-          if (!buffer.empty()) {
-            fildesh_log_warning("Pending input ignored by command.");
-          }
-          buffer.clear();
           matched_antiprompt = '\n';
         }
         else if (rendezllama::maybe_do_regen_command(&slice, chat_traj, opt)) {
-          if (!buffer.empty()) {
-            fildesh_log_warning("Pending input ignored by command.");
-          }
-          buffer.clear();
           preventing_newline = true;
           matched_antiprompt.clear();  // For clarity.
           break;
@@ -416,9 +399,8 @@ int main(int argc, char** argv)
           break;
         }
         else {
-          std::string line;
-          line.insert(line.end(), &slice.at[slice.off], &slice.at[slice.size]);
-          eout << "Unknown command: " << line << '\n';
+          eout << "Unknown command: "
+            << fildesh::make_string_view(slice) << '\n';
           eout.flush();
         }
       }
