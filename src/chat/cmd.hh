@@ -26,6 +26,12 @@ maybe_do_delete_command(
     ChatTrajectory& chat_traj,
     const ChatOptions& opt);
 bool
+maybe_do_delete_inline_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const Vocabulary& vocabulary,
+    const ChatOptions& opt);
+bool
 maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
@@ -34,6 +40,11 @@ maybe_do_head_command(
     const rendezllama::ChatOptions& opt);
 bool
 maybe_do_regen_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt);
+bool
+maybe_do_regen_inline_command(
     FildeshX* in,
     ChatTrajectory& chat_traj,
     const ChatOptions& opt);

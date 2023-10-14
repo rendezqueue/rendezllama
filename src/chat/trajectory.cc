@@ -175,3 +175,15 @@ ChatTrajectory::last_message_prefix_id_at(size_type i) const
   i = rfind_last_message_prefix_end_at(i);
   return message_prefix_ids_[i-1];
 }
+
+  void
+ChatTrajectory::assign_range_message_prefix_id(
+    message_prefix_id id,
+    size_type beg, size_type end)
+{
+  for (size_type i = beg; i < end; ++i) {
+    message_prefix_ids_[i] = id;
+  }
+  message_prefix_id_ = last_message_prefix_id_at(this->token_count());
+}
+

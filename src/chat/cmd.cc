@@ -120,6 +120,33 @@ rendezllama::maybe_do_delete_command(
 }
 
   bool
+rendezllama::maybe_do_delete_inline_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const Vocabulary& vocabulary,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "D", opt)) {
+    return false;
+  }
+  unsigned n = 0;
+  parse_unsigned_FildeshX(in, &n);
+  auto offset = chat_traj.token_count();
+  while (offset > chat_traj.priming_token_count_) {
+    offset -= 1;
+    if (chat_traj.token_at(offset) == vocabulary.newline_token_id()) {
+      if (n == 0) {
+        offset += 1;
+        break;
+      }
+      n -= 1;
+    }
+  }
+  chat_traj.erase_all_at(offset);
+  return true;
+}
+
+  bool
 rendezllama::maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
@@ -156,6 +183,23 @@ rendezllama::maybe_do_regen_command(
   }
   size_t offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count()-1);
   chat_traj.erase_all_at(offset);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_regen_inline_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "R", opt)) {
+    return false;
+  }
+  auto offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count());
+  chat_traj.assign_range_message_prefix_id(
+      chat_traj.message_prefix_id_,
+      offset,
+      chat_traj.token_count());
   return true;
 }
 

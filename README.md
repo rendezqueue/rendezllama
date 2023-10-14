@@ -59,8 +59,10 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/yield` or `/y` adds a new line dialogue for the confidant.
   - `/yield Char:` or `/y Char:` adds a new line starting with `Char:`.
   - `/gets 64 Char:` is like `/yield` but generates slightly over a max of 64 bytes. Only prints the newly-generated text. Always includes a newline at the end.
-  - `/r` regenerates the current line of dialogue.
-  - `/d` deletes current line.
+  - `/r` regenerates the last line of dialogue.
+  - `/R` generates text from the current position. Subsequent `/r` commands will only replace the generated text, nothing before it on the line.
+  - `/d` deletes up to and including the last chat prefix.
+  - `/D` or `/D 0` deletes all text on the current line without consuming a newline. Positive integers delete that many earlier lines in full.
   - `/b` or `/b 1` deletes the last token.
   - `/B` or `/B 1` deletes the last word.
 - Repeat penalty.

@@ -390,7 +390,17 @@ int main(int argc, char** argv)
         else if (rendezllama::maybe_do_delete_command(&slice, chat_traj, opt)) {
           matched_antiprompt = '\n';
         }
+        else if (rendezllama::maybe_do_delete_inline_command(
+                &slice, chat_traj, vocabulary, opt)) {
+          matched_antiprompt = '\n';
+        }
         else if (rendezllama::maybe_do_regen_command(&slice, chat_traj, opt)) {
+          preventing_newline = true;
+          matched_antiprompt.clear();  // For clarity.
+          break;
+        }
+        else if (rendezllama::maybe_do_regen_inline_command(
+                &slice, chat_traj, opt)) {
           preventing_newline = true;
           matched_antiprompt.clear();  // For clarity.
           break;

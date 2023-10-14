@@ -33,6 +33,9 @@ class ChatTrajectory {
   size_type rfind_last_message_prefix_end_at(size_type i) const;
   size_type rfind_last_message_prefix_begin_at(size_type i) const;
   message_prefix_id last_message_prefix_id_at(size_type i) const;
+  void assign_range_message_prefix_id(
+      message_prefix_id id,
+      size_type beg, size_type end);
 
   Token_id token() const {return token_values_.back();}
   const Token_id& token_at(size_type i) const {return token_values_[i];}
