@@ -9,7 +9,6 @@
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
-#include "src/tokenize/tokenize.hh"
 
 static
   void

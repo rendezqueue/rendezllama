@@ -7,7 +7,6 @@
 
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
-#include "src/tokenize/tokenize.hh"
 
 using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
@@ -47,11 +46,11 @@ print_tail_lines(std::ostream& out,
                  unsigned n)
 {
   unsigned i = chat_traj.token_count();
-  while (n > 0) {
-    i = rendezllama::prev_newline_start_index(
-        vocabulary, chat_traj.tokens(), i);
-    n -= 1;
+  while (i > 0 && n > 0) {
+    i = chat_traj.rfind_token_at(i-1, vocabulary.newline_token_id());
+    n = (i < chat_traj.token_count() ? n-1 : 0);
   }
+  i = (i < chat_traj.token_count() ? i+1 : 0);
   for (; i < chat_traj.token_count(); ++i) {
     vocabulary.detokenize_to(out, chat_traj.token_at(i));
   }

@@ -12,8 +12,6 @@ add_executable(chat
   "trajectory.hh"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
-  "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
-  "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )
 target_link_libraries(chat PRIVATE
   ${FildeshSxproto_LIBRARIES}

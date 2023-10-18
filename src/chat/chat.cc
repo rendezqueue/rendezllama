@@ -10,7 +10,6 @@
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
-#include "src/tokenize/tokenize.hh"
 
 using rendezllama::ChatDisplay;
 using rendezllama::ChatOptions;
@@ -370,7 +369,7 @@ rendezllama::commit_to_context(
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
 
     llama_batch batch = llama_batch_get_one(
-        (int*)&chat_traj.token_at(chat_traj.context_token_count_),
+        const_cast<int*>(&chat_traj.tokens()[chat_traj.context_token_count_]),
         n,
         chat_traj.context_token_count_,
         0);
