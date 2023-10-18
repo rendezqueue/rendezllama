@@ -122,8 +122,11 @@ int main(int argc, char** argv)
 
   if (exstatus == 0) {
     assert((int)opt.context_token_limit == llama_n_ctx(ctx));
-    if (chat_tokens.size() > opt.context_token_limit - 4) {
-      fildesh_log_error("Prompt is longer than context_token_limit - 4.");
+    // It's convenient to save a long transcript and reload it later,
+    // so we allow the full prompt to exceed context limit with the expectation
+    // that the earlier part of the rolling prompt won't even be evaluated.
+    if (chat_traj.priming_token_count_ + 2 > opt.context_token_limit) {
+      fildesh_log_error("Priming prompt is longer than context_token_limit - 2.");
       exstatus = 1;
     }
   }
