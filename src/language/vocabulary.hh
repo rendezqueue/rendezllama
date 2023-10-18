@@ -25,7 +25,6 @@ class Vocabulary {
 
   void detokenize_to(FildeshO* out, Token_id token_id) const;
   void detokenize_to(std::ostream& out, Token_id token_id) const;
-  void detokenize_to(std::string& out, Token_id token_id) const;
 
   void tokenize_to(std::vector<Token_id>& tokens, std::string_view text) const;
 

@@ -4,7 +4,8 @@
 #include <cassert>
 #include <cstring>
 
-#include <fildesh/fildesh.h>
+#include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 
 #include "llama.h"
 
@@ -34,8 +35,9 @@ unsigned Vocabulary::cardinality() const {
 }
 
 char Vocabulary::last_char_of(Token_id token_id) const {
-  std::string s;
-  this->detokenize_to(s, token_id);
+  fildesh::ostringstream oss;
+  this->detokenize_to(oss.c_struct(), token_id);
+  const std::string_view s = oss.view();
   if (!s.empty()) {
     return s[s.size()-1];
   }
@@ -43,7 +45,7 @@ char Vocabulary::last_char_of(Token_id token_id) const {
 }
 
 void Vocabulary::detokenize_to(FildeshO* out, Token_id token_id) const {
-  const size_t attempt_size = 8;
+  const size_t attempt_size = allocated_size_of_FildeshO(out) - out->size;
   char* s = grow_FildeshO(out, attempt_size);
 
   const llama_model* model = llama_get_model(ctx_);
@@ -59,23 +61,14 @@ void Vocabulary::detokenize_to(FildeshO* out, Token_id token_id) const {
 }
 
 void Vocabulary::detokenize_to(std::ostream& out, Token_id token_id) const {
-  std::string s;
-  this->detokenize_to(s, token_id);
-  out << s;
-}
-
-void Vocabulary::detokenize_to(std::string& out, Token_id token_id) const {
-  const size_t attempt_size = 8;
-  out.resize(attempt_size);
-
-  const llama_model* model = llama_get_model(ctx_);
-  int n = llama_token_to_piece(model, token_id, &out[0], attempt_size);
-  if (n >= 0) {
-    out.resize(n);
-  } else {
-    n = -n;
-    out.resize(n);
-    n = llama_token_to_piece(model, token_id, &out[0], n);
+  fildesh::ostreambuf* outbuf = dynamic_cast<fildesh::ostreambuf*>(out.rdbuf());
+  if (outbuf) {
+    this->detokenize_to(outbuf->c_struct(), token_id);
+  }
+  else {
+    fildesh::ostringstream oss;
+    this->detokenize_to(oss.c_struct(), token_id);
+    out << oss.view();
   }
 }
 

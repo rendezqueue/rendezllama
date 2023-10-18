@@ -1,6 +1,6 @@
 #include <cassert>
 
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
 
 #include "src/chat/chat.hh"
@@ -146,6 +146,7 @@ int main(int argc, char** argv)
   bool preventing_newline = false;
   // Skip straight to user input when in coprocess mode.
   bool token_generation_on = !opt.coprocess_mode_on;
+  fildesh::ostringstream oss;
 
   in = open_FildeshXF("/dev/stdin");
   while (exstatus == 0) {
@@ -174,8 +175,9 @@ int main(int argc, char** argv)
 
       chat_disp.show_new(chat_traj, vocabulary);
 
-      std::string s;
-      chat_disp.displaystring_to(s, chat_traj.token(), vocabulary);
+      oss.truncate();
+      chat_disp.displaystring_to(oss.c_struct(), chat_traj.token(), vocabulary);
+      const std::string_view s = oss.view();
       line_byte_count += s.size();
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
@@ -338,9 +340,10 @@ int main(int argc, char** argv)
         else if (rendezllama::maybe_do_back_command(
                 chat_traj, &slice, eout, vocabulary, opt))
         {
-          vocabulary.detokenize_to(matched_antiprompt, chat_tokens.back());
+          oss.truncate();
+          vocabulary.detokenize_to(oss, chat_tokens.back());
           matched_antiprompt = rendezllama::antiprompt_suffix(
-              matched_antiprompt,
+              oss.view(),
               opt.antiprompts);
         }
         else if (skipstr_FildeshX(&slice, "puts ") ||

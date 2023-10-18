@@ -74,7 +74,7 @@ rendezllama::maybe_do_back_command(
   unsigned n = 1;
   parse_unsigned_FildeshX(in, &n);
   bool skipping_contiguous_space = space_delim_on;
-  std::string s;
+  fildesh::ostringstream oss;
   while (n > 0) {
     if (chat_traj.token_count() <= chat_traj.priming_token_count_) {
       break;
@@ -82,7 +82,9 @@ rendezllama::maybe_do_back_command(
     const Vocabulary::Token_id token_id = chat_traj.token();
     chat_traj.erase_all_at(chat_traj.token_count()-1);
     if (space_delim_on) {
-      vocabulary.detokenize_to(s, token_id);
+      oss.truncate();
+      vocabulary.detokenize_to(oss, token_id);
+      const std::string_view s = oss.view();
       if (!s.empty() && (s[0] == ' ' || s[0] == '\n')) {
         if (!skipping_contiguous_space || s.size() != 1) {
           n -= 1;

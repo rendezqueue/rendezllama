@@ -4,8 +4,7 @@
 #include <cstring>
 #include <ctime>
 
-#include <fildesh/fildesh.h>
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
 #include <fildesh/sxproto.h>
 

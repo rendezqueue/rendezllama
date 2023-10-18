@@ -2,8 +2,7 @@
 #include <cstring>
 #include <iostream>
 
-#include <fildesh/fildesh.h>
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
 
 #include "src/chat/opt.hh"
 

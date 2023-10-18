@@ -35,12 +35,11 @@ static void tokenize_test(const char* model_filename)
   assert(tokens.back() == vocabulary.newline_token_id());
   assert(vocabulary.last_char_of(tokens.back()) == '\n');
 
-  FildeshO oslice[1] = {DEFAULT_FildeshO};
+  fildesh::ostringstream oss;
   for (auto token_id : tokens) {
-    vocabulary.detokenize_to(oslice, token_id);
+    vocabulary.detokenize_to(oss, token_id);
   }
-  assert(fildesh::make_string_view(*oslice) == s);
-  close_FildeshO(oslice);
+  assert(oss.view() == s);
 
   llama_free(ctx);
   llama_free_model(model);

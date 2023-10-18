@@ -1,4 +1,4 @@
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
 
 #include "llama.h"
 

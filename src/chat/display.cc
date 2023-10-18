@@ -14,14 +14,11 @@ ChatDisplay::~ChatDisplay() {
 
   void
 ChatDisplay::displaystring_to(
-    std::string& out,
+    FildeshO* out,
     ChatTrajectory::Token_id token_id,
     const Vocabulary& vocabulary) const
 {
-  if (token_id == vocabulary.eos_token_id()) {
-    out.clear();
-  }
-  else {
+  if (token_id != vocabulary.eos_token_id()) {
     vocabulary.detokenize_to(out, token_id);
   }
 }
@@ -33,7 +30,6 @@ ChatDisplay::show_new(
     const Vocabulary& vocabulary)
 {
   assert(end <= chat_traj.token_count());
-  std::string buf;
   while (chat_traj.display_token_count_ < end) {
     const ChatTrajectory::size_type i = chat_traj.display_token_count_;
     chat_traj.display_token_count_ += 1;
@@ -43,8 +39,7 @@ ChatDisplay::show_new(
     {
       continue;
     }
-    this->displaystring_to(buf, chat_traj.token_at(i), vocabulary);
-    puts_FildeshO(out_, buf.c_str());
+    this->displaystring_to(out_, chat_traj.token_at(i), vocabulary);
   }
   flush_FildeshO(out_);
 }
