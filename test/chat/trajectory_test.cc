@@ -136,7 +136,7 @@ rollforget_test(const char* model_filename)
   traj.tokenize_append(" wtf\n", vocabulary);
 
   const unsigned old_token_count = traj.token_count();
-  traj.rollforget(traj.priming_token_count_ + expect_forget_count, vocabulary);
+  traj.maybe_rollforget_within_limit(traj.token_count() - 1, vocabulary);
   assert(traj.token_count() < old_token_count);
   assert(traj.token_count() == old_token_count - expect_forget_count);
 

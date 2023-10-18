@@ -336,25 +336,7 @@ rendezllama::commit_to_context(
     return true;
   }
 
-  if (chat_traj.token_count() > opt.context_token_limit) {
-    // Drop some of the rolling prompt while keeping the priming prompt
-    // to avoid exceeding our context token limit.
-    const unsigned rolling_token_count =
-      (opt.context_token_limit - chat_traj.priming_token_count_) / 2;
-    for (unsigned i = chat_traj.token_count() - rolling_token_count;
-         i < chat_traj.token_count();
-         ++i)
-    {
-      if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
-        chat_traj.rollforget(i+1, vocabulary);
-        break;
-      }
-    }
-    if (chat_traj.token_count() >= opt.context_token_limit) {
-      chat_traj.rollforget(chat_traj.token_count() - rolling_token_count, vocabulary);
-    }
-    assert(chat_traj.token_count() < opt.context_token_limit);
-  }
+  chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary);
 
   // Reset thread count just in case the user reconfigured it.
   llama_set_n_threads(ctx, opt.thread_count, opt.thread_count);

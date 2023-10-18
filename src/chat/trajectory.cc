@@ -101,6 +101,43 @@ ChatTrajectory::rollforget(size_type end, const Vocabulary& vocabulary)
   this->erase_range(beg, end);
 }
 
+/** Drop oldest lines in the rolling prompt while keeping the priming prompt.
+ **/
+  void
+ChatTrajectory::maybe_rollforget_within_limit(
+    size_type token_limit,
+    const Vocabulary& vocabulary)
+{
+  if (this->token_count() < token_limit) {
+    return;
+  }
+  const size_type ideal_rollforget_end = (
+      this->token_count() - (token_limit - priming_token_count_) / 2);
+  assert(ideal_rollforget_end > priming_token_count_);
+
+  size_type end = ideal_rollforget_end;
+  for (end = rfind_message_prefix_begin_at(end);
+       end > priming_token_count_;
+       end = rfind_message_prefix_begin_at(end-1))
+  {
+    if (message_prefix_ids_[end] == 0) {
+      break;
+    }
+  }
+
+  // If a good rollforget point wasn't found by looking before the ideal point,
+  // then choose to roll past next newline.
+  if (end == priming_token_count_) {
+    end = this->find_token_at(
+        ideal_rollforget_end - 1,
+        vocabulary.newline_token_id());
+    end = (end < this->token_count() ? end+1 : end);
+  }
+
+  this->rollforget(end, vocabulary);
+  assert(this->token_count() <= token_limit);
+}
+
   ChatTrajectory::size_type
 ChatTrajectory::find_token_at(size_type i, Token_id id) const
 {

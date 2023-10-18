@@ -25,6 +25,8 @@ class ChatTrajectory {
   void erase_range(size_type beg, size_type end);
   void erase_all_at(size_type beg) {this->erase_range(beg, this->token_count());}
   void rollforget(size_type end, const Vocabulary& vocabulary);
+  void maybe_rollforget_within_limit(
+      size_type token_limit, const Vocabulary& vocabulary);
 
   Token_id token() const {return token_ids_.back();}
   Token_id token_at(size_type i) const {return token_ids_[i];}
