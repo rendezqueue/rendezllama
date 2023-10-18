@@ -64,7 +64,7 @@ open_transcript_outfile(
 
 int main(int argc, char** argv)
 {
-  llama_backend_init(/*numa=*/false);
+  rendezllama::GlobalScope rendezllama_global_scope;
   fildesh::ofstream eout("/dev/stderr");
   FildeshX* in = NULL;
   int exstatus = 0;

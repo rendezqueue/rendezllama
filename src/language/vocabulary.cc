@@ -101,3 +101,11 @@ Vocabulary::tokenize_to(
   assert(it != tokens.end());
   tokens.erase(tokens.begin(), it+1);
 }
+
+rendezllama::GlobalScope::GlobalScope() {
+  llama_backend_init(/*numa=*/false);
+}
+
+rendezllama::GlobalScope::~GlobalScope() {
+  llama_backend_free();
+}

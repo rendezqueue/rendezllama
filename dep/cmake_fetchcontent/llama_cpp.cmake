@@ -4,6 +4,7 @@ FetchContent_Declare(
   GIT_TAG "f72f8f22c9cb60465b2e79df2767e4ba9604e576"
 )
 FetchContent_MakeAvailable(LlamaCpp)
+set(LlamaCpp_SOURCE_DIR "${llamacpp_SOURCE_DIR}" PARENT_SCOPE)
 set(LlamaCpp_INCLUDE_DIRS "${llamacpp_SOURCE_DIR}" PARENT_SCOPE)
 set(LlamaCpp_LIBRARIES "$<TARGET_NAME:llama>" PARENT_SCOPE)
 

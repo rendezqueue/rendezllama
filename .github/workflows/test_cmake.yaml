@@ -77,7 +77,7 @@ jobs:
       uses: imciner2/run-lcov@v1
       with:
         input_directory: "${{runner.workspace}}/bld/"
-        exclude: '"/usr/include/*" "${{runner.workspace}}/bld/_deps/*"'
+        exclude: '"/usr/*" "${{runner.workspace}}/bld/_deps/*"'
         output_file: "${{runner.workspace}}/bld/coverage_report.info"
 
     - name: Coveralls

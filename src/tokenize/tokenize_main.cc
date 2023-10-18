@@ -9,7 +9,7 @@
 
 int main(int argc, char** argv)
 {
-  llama_backend_init(/*numa=*/false);
+  rendezllama::GlobalScope rendezllama_global_scope;
   const char* count_filename = NULL;
   const char* model_filename = NULL;
   const char* prompt_filename = "-";

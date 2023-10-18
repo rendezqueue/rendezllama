@@ -33,6 +33,12 @@ class Vocabulary {
   const llama_context* ctx_;
 };
 
+class GlobalScope {
+ public:
+  GlobalScope();
+  ~GlobalScope();
+};
+
 }  // namespace rendezllama
 #endif
 
