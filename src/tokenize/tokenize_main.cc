@@ -4,6 +4,8 @@
 
 #include "src/language/vocabulary.hh"
 
+using rendezllama::Vocabulary;
+
 int main(int argc, char** argv)
 {
   rendezllama::GlobalScope rendezllama_global_scope;
@@ -63,11 +65,8 @@ int main(int argc, char** argv)
   model_params.vocab_only = true;
   llama_model* model = llama_load_model_from_file(model_filename, model_params);
 
-  llama_context_params ctx_params = llama_context_default_params();
-  llama_context* ctx = llama_new_context_with_model(model, ctx_params);
-
   std::vector<llama_token> tokens;
-  const rendezllama::Vocabulary vocabulary(ctx);
+  Vocabulary vocabulary(model);
   tokens.push_back(vocabulary.bos_token_id());
   vocabulary.tokenize_to(tokens, prompt);
 

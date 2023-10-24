@@ -262,9 +262,9 @@ rendezllama::generate_next_token(
     struct llama_context* ctx,
     bool preventing_newline,
     const std::vector<llama_token>& extra_penalized_tokens,
-    const rendezllama::ChatOptions& opt)
+    const Vocabulary& vocabulary,
+    const ChatOptions& opt)
 {
-  const Vocabulary vocabulary(ctx);
   float* logits = llama_get_logits(ctx);
   if (preventing_newline) {
     // Zero probability for message-ending tokens when requested.
@@ -296,14 +296,12 @@ rendezllama::generate_next_token(
     candidates.data(), candidates.size(), false,
   }};
 
-  llama_sample_repetition_penalty(
+  llama_sample_repetition_penalties(
       ctx, candidates_data,
       penalized_tokens.data(), penalized_tokens.size(),
-      opt.repeat_penalty);
-  llama_sample_frequency_and_presence_penalties(
-      ctx, candidates_data,
-      penalized_tokens.data(), penalized_tokens.size(),
-      opt.frequency_penalty, opt.presence_penalty);
+      opt.repeat_penalty,
+      opt.frequency_penalty,
+      opt.presence_penalty);
 
   if (opt.mirostat_sampling == 1) {
     mirostat1_sample(candidates_data, chat_traj, ctx, opt);
@@ -327,9 +325,9 @@ rendezllama::commit_to_context(
     struct llama_context* ctx,
     ChatDisplay& chat_disp,
     ChatTrajectory& chat_traj,
+    const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
-  const Vocabulary vocabulary(ctx);
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {

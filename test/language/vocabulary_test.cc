@@ -20,11 +20,8 @@ static void tokenize_test(const char* model_filename)
   model_params.vocab_only = true;
   llama_model* model = llama_load_model_from_file(model_filename, model_params);
   assert(model);
-  llama_context_params ctx_params = llama_context_default_params();
-  llama_context* ctx = llama_new_context_with_model(model, ctx_params);
-  assert(ctx);
 
-  const rendezllama::Vocabulary vocabulary(ctx);
+  rendezllama::Vocabulary vocabulary(model);
   // Should have a large vocabulary. Many more than 64 different tokens.
   assert(vocabulary.cardinality() > 64);
 
@@ -41,7 +38,6 @@ static void tokenize_test(const char* model_filename)
   }
   assert(oss.view() == s);
 
-  llama_free(ctx);
   llama_free_model(model);
 }
 

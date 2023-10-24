@@ -98,11 +98,8 @@ rollforget_test(const char* model_filename)
   model_params.vocab_only = true;
   llama_model* model = llama_load_model_from_file(model_filename, model_params);
   assert(model);
-  llama_context_params ctx_params = llama_context_default_params();
-  llama_context* ctx = llama_new_context_with_model(model, ctx_params);
-  assert(ctx);
 
-  const rendezllama::Vocabulary vocabulary(ctx);
+  const rendezllama::Vocabulary vocabulary(model);
   ChatTrajectory traj(vocabulary.bos_token_id());
 
   FildeshO transcript_out[1] = {DEFAULT_FildeshO};
@@ -142,7 +139,6 @@ rollforget_test(const char* model_filename)
 
   assert(traj.transcript_out_->size > 0);
 
-  llama_free(ctx);
   llama_free_model(model);
 }
 

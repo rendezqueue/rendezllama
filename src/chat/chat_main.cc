@@ -90,7 +90,7 @@ int main(int argc, char** argv)
     if (istat != 0) {exstatus = 1;}
   }
 
-  const rendezllama::Vocabulary vocabulary(ctx);
+  rendezllama::Vocabulary vocabulary(model);
   rendezllama::ChatDisplay chat_disp;
   if (exstatus == 0) {
     chat_disp.out_ = open_FildeshOF("/dev/stdout");
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
       chat_traj.display_token_count_ = chat_traj.token_count();
     }
     chat_disp.maybe_insert_answer_prompt(chat_traj, vocabulary);
-    if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+    if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, vocabulary, opt)) {
       exstatus = 1;
       break;
     }
@@ -173,7 +173,8 @@ int main(int argc, char** argv)
     else {
       rendezllama::generate_next_token(
           chat_traj, ctx,
-          preventing_newline, extra_penalized_tokens, opt);
+          preventing_newline, extra_penalized_tokens,
+          vocabulary, opt);
       preventing_newline = false;
 
       chat_disp.show_new(chat_traj, vocabulary);
@@ -329,7 +330,10 @@ int main(int argc, char** argv)
               }
             }
           }
-          if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+          if (!rendezllama::commit_to_context(
+                  ctx, chat_disp, chat_traj,
+                  vocabulary, opt))
+          {
             exstatus = 1;
             break;
           }
@@ -365,7 +369,9 @@ int main(int argc, char** argv)
           matched_antiprompt = '\n';
           // Might as well process now.
           chat_traj.display_token_count_ = chat_traj.token_count();
-          if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+          if (!rendezllama::commit_to_context(
+                  ctx, chat_disp, chat_traj, vocabulary, opt))
+          {
             exstatus = 1;
             break;
           }
