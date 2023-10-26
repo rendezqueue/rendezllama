@@ -14,7 +14,15 @@ typedef Vocabulary::Token_id Token_id;
 
 Vocabulary::Vocabulary(const llama_model* model)
   : model_(model)
-{}
+{
+  if (!model_) {return;}
+
+  int n = llama_tokenize(
+      model_, "\n", 1, &newline_token_id_, 1,
+      /*add_bos=*/false,
+      /*special=*/true);
+  assert(n == 1 && "need a unique newline token");
+}
 
 Token_id Vocabulary::bos_token_id() const {
   if (!model_) {return 0;}
@@ -26,7 +34,7 @@ Token_id Vocabulary::eos_token_id() const {
 }
 Token_id Vocabulary::newline_token_id() const {
   if (!model_) {return 0;}
-  return llama_token_nl(model_);
+  return newline_token_id_;
 }
 
 unsigned Vocabulary::cardinality() const {

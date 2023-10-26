@@ -38,6 +38,7 @@ class Vocabulary {
 
  private:
   const llama_model* model_;
+  Token_id newline_token_id_;
 };
 
 class GlobalScope {
