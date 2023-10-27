@@ -38,6 +38,20 @@ static void tokenize_test(const char* model_filename)
   }
   assert(oss.view() == s);
 
+  // ChatML doesn't (usually) use BOS and EOS tokens.
+  vocabulary.assign_substitution("<|im_start|>", vocabulary.bos_token_id());
+  vocabulary.assign_substitution("<|im_end|>", vocabulary.eos_token_id());
+  s = "a<|im_start|>b<|im_end|>cdefg<|im_end|>";
+  vocabulary.tokenize_to(tokens, s);
+  assert(tokens[1] == vocabulary.bos_token_id());
+  assert(tokens[3] == vocabulary.eos_token_id());
+  assert(tokens.back() == vocabulary.eos_token_id());
+  oss.truncate();
+  for (auto token_id : tokens) {
+    vocabulary.detokenize_to(oss, token_id);
+  }
+  assert(oss.view() == s);
+
   llama_free_model(model);
 }
 

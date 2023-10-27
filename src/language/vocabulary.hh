@@ -34,11 +34,25 @@ class Vocabulary {
     this->detokenize_to(out, &token_id, 1);
   }
 
+  Token_id tokenize_special(std::string_view s) const;
   void tokenize_to(std::vector<Token_id>& tokens, std::string_view text) const;
+
+  void assign_substitution(std::string_view alias, Token_id token_id);
+  std::string_view bos_token_alias() const {
+    return bos_token_alias_;
+  }
+  std::string_view eos_token_alias() const {
+    return eos_token_alias_;
+  }
 
  private:
   const llama_model* model_;
   Token_id newline_token_id_;
+
+  std::string bos_token_alias_;
+  std::string eos_token_alias_;
+  struct SubstitutionRule { std::string alias; Token_id token_id; };
+  std::vector<SubstitutionRule> special_tokens_;
 };
 
 class GlobalScope {

@@ -9,9 +9,10 @@ using rendezllama::Vocabulary;
 int main(int argc, char** argv)
 {
   rendezllama::GlobalScope rendezllama_global_scope;
-  const char* count_filename = NULL;
+  const char* count_filename = "/dev/null";
   const char* model_filename = NULL;
   const char* prompt_filename = "-";
+  const char* token_filename = "/dev/null";
   int exstatus = 0;
   int argi;
   for (argi = 1; exstatus == 0 && argi < argc; ++argi) {
@@ -30,6 +31,10 @@ int main(int argc, char** argv)
       argi += 1;
       count_filename = argv[argi];
     }
+    else if (0 == strcmp("-o", argv[argi])) {
+      argi += 1;
+      token_filename = argv[argi];
+    }
     else {
       exstatus = 64;
     }
@@ -37,10 +42,6 @@ int main(int argc, char** argv)
 
   if (exstatus == 0 && !model_filename) {
     fildesh_log_error("Please provide a model file with --model.");
-    exstatus = 64;
-  }
-  if (exstatus == 0 && !count_filename) {
-    fildesh_log_error("Please provide a count output file --o-count.");
     exstatus = 64;
   }
   if (exstatus != 0) {
@@ -65,17 +66,32 @@ int main(int argc, char** argv)
   model_params.vocab_only = true;
   llama_model* model = llama_load_model_from_file(model_filename, model_params);
 
-  std::vector<llama_token> tokens;
+  std::vector<Vocabulary::Token_id> tokens;
   Vocabulary vocabulary(model);
+  vocabulary.assign_substitution("<s>", vocabulary.bos_token_id());
+  vocabulary.assign_substitution("</s>", vocabulary.eos_token_id());
   tokens.push_back(vocabulary.bos_token_id());
   vocabulary.tokenize_to(tokens, prompt);
 
-  fildesh::ofstream out(count_filename);
-  if (tokens.size() > 0) {
+  if (tokens.size() == 0) {
+    exstatus = 1;
+  }
+
+  if (exstatus == 0) {
+    fildesh::ofstream out(count_filename);
     out << tokens.size() << '\n';
   }
-  else {
-    exstatus = 1;
+  if (exstatus == 0) {
+    fildesh::ofstream out(token_filename);
+    for (auto token_id : tokens) {
+      if (token_id == vocabulary.newline_token_id()) {
+        out << "\\n";
+      }
+      else {
+        vocabulary.detokenize_to(out, token_id);
+      }
+      out << '\n';
+    }
   }
   return exstatus;
 }

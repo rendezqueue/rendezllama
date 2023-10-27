@@ -529,6 +529,17 @@ rendezllama::parse_sxpb_options(
     FildeshSxpbIT sub_it;
     lone_subfield_at_FildeshSxpb_to_cc_string(&opt.protagonist_alias, sxpb, it, "protagonist_alias");
     lone_subfield_at_FildeshSxpb_to_cc_string(&opt.confidant_alias, sxpb, it, "confidant_alias");
+    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.bos_token_alias, sxpb, it, "bos_token_alias");
+    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.eos_token_alias, sxpb, it, "eos_token_alias");
+    sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "special_tokens");
+    if (!nullish_FildeshSxpbIT(sub_it)) {
+      for (sub_it = first_at_FildeshSxpb(sxpb, sub_it); !nullish_FildeshSxpbIT(sub_it);
+           sub_it = next_at_FildeshSxpb(sxpb, sub_it)) {
+        if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, sub_it, "name")) {
+          opt.special_token_names.push_back(s);
+        }
+      }
+    }
   }
 
   it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "chat_prefixes");

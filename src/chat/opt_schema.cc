@@ -11,9 +11,15 @@ static const FildeshSxprotoField chat_prefixes_manyof[] = {
   {"", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
   {"m", FILL_FildeshSxprotoField_MESSAGE(chat_prefixes_m_message)},
 };
+static const FildeshSxprotoField special_token_message[] = {
+  {"name", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
+};
 static const FildeshSxprotoField substitution_message[] = {
+  {"bos_token_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
   {"confidant_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
+  {"eos_token_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
   {"protagonist_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
+  {"special_tokens", FILL_FildeshSxprotoField_MESSAGES(special_token_message)},
 };
 
   const FildeshSxprotoField*

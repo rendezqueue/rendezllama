@@ -16,6 +16,9 @@ struct ChatOptions {
   std::string confidant;
   std::string protagonist_alias;
   std::string confidant_alias;
+  std::string bos_token_alias;
+  std::string eos_token_alias;
+  std::vector<std::string> special_token_names;
   std::vector<std::string> chat_prefixes;
   std::vector<std::string> given_chat_prefixes;
   std::string model_filename;

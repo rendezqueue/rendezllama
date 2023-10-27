@@ -10,11 +10,13 @@
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
 
+using rendezllama::Vocabulary;
+
 static
   void
 print_initialization(
     std::ostream& out,
-    const rendezllama::Vocabulary& vocabulary,
+    const Vocabulary& vocabulary,
     const rendezllama::ChatOptions& opt,
     const rendezllama::ChatTrajectory& chat_traj)
 {
@@ -90,9 +92,27 @@ int main(int argc, char** argv)
     if (istat != 0) {exstatus = 1;}
   }
 
-  rendezllama::Vocabulary vocabulary(model);
+  Vocabulary vocabulary(model);
   rendezllama::ChatDisplay chat_disp;
   if (exstatus == 0) {
+    if (!opt.bos_token_alias.empty()) {
+      vocabulary.assign_substitution(
+          opt.bos_token_alias, vocabulary.bos_token_id());
+    }
+    if (!opt.eos_token_alias.empty()) {
+      vocabulary.assign_substitution(
+          opt.eos_token_alias, vocabulary.eos_token_id());
+    }
+    for (const auto& name : opt.special_token_names) {
+      Vocabulary::Token_id token_id = vocabulary.tokenize_special(name);
+      if (token_id < static_cast<Vocabulary::Token_id>(vocabulary.cardinality())) {
+        vocabulary.assign_substitution(name, token_id);
+      }
+      else {
+        exstatus = 65;
+        fildesh_log_errorf("Unknown special token: %s", name.c_str());
+      }
+    }
     chat_disp.out_ = open_FildeshOF("/dev/stdout");
     if (!opt.answer_prompt.empty()) {
       vocabulary.tokenize_to(

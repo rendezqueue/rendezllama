@@ -55,6 +55,12 @@ char Vocabulary::last_char_of(Token_id token_id) const {
   void
 Vocabulary::detokenize_to(FildeshO* out, Token_id token_id) const
 {
+  for (const auto& sr : special_tokens_) {
+    if (sr.token_id == token_id) {
+      *out << sr.alias;
+      return;
+    }
+  }
   const size_t attempt_size = allocated_size_of_FildeshO(out) - out->size;
   char* s = grow_FildeshO(out, attempt_size);
 
@@ -83,27 +89,117 @@ Vocabulary::detokenize_to(std::ostream& out, const Token_id* ids, size_t n) cons
   }
 }
 
+  Token_id
+Vocabulary::tokenize_special(std::string_view s) const
+{
+  for (auto& sr : special_tokens_) {
+    if (sr.alias == s) {
+      return sr.token_id;
+    }
+  }
+  Token_id token_id = 0;
+  int n = llama_tokenize(
+      model_,
+      s.data(), s.size(),
+      &token_id, 1,
+      /*add_bos=*/false,
+      /*special=*/true);
+  if (n != 1) {
+    token_id = this->cardinality();
+  }
+  return token_id;
+}
+
+static
+  void
+tokenize_append(
+    std::vector<Token_id>& tokens,
+    std::string_view text,
+    const llama_model* model,
+    Token_id newline_token_id,
+    std::string& tmp_s)
+{
+  if (text.empty()) {return;}
+  tmp_s = '\n';
+  tmp_s += text;
+  size_t offset = tokens.size();
+  tokens.resize(offset + tmp_s.size() + 1);
+  int n = llama_tokenize(
+      model,
+      tmp_s.data(), tmp_s.size(),
+      tokens.data()+offset, tokens.size()-offset,
+      /*add_bos=*/false,
+      /*special=*/false);
+  assert(n >= 1);
+  tokens.resize(offset + (size_t)n);
+  std::vector<Token_id>::iterator it = std::find(
+      tokens.begin()+offset, tokens.end(),
+      newline_token_id);
+  assert(it != tokens.end());
+  tokens.erase(tokens.begin()+offset, it+1);
+}
+
   void
 Vocabulary::tokenize_to(
     std::vector<Token_id>& tokens,
     std::string_view text) const
 {
-  std::string s = "\n";
-  s += text;
-  tokens.resize(1 + s.size());
-  int n = llama_tokenize(
-      model_,
-      s.data(), s.size(),
-      tokens.data(), tokens.size(),
-      /*add_bos=*/false,
-      /*special=*/false);
-  assert(n >= 1);
-  tokens.resize((size_t)n);
-  std::vector<Token_id>::iterator it = std::find(
-      tokens.begin(), tokens.end(),
-      this->newline_token_id());
-  assert(it != tokens.end());
-  tokens.erase(tokens.begin(), it+1);
+  tokens.clear();
+  std::string_view::size_type end = std::string_view::npos;
+  std::vector<size_t> next_indices(special_tokens_.size(), end);
+  for (size_t i = 0; i < next_indices.size(); ++i) {
+    next_indices[i] = text.find(special_tokens_[i].alias);
+    if (next_indices[i] < end) {
+      end = next_indices[i];
+    }
+  }
+  std::string tmp_s;
+  std::string_view::size_type beg = 0;
+  while (end != std::string_view::npos) {
+    tokenize_append(tokens, text.substr(beg, end-beg), model_,
+                    this->newline_token_id(), tmp_s);
+    beg = end;
+    end = std::string_view::npos;
+    for (size_t i = 0; i < next_indices.size(); ++i) {
+      if (beg == next_indices[i]) {
+        tokens.push_back(special_tokens_[i].token_id);
+        beg += special_tokens_[i].alias.size();
+        break;
+      }
+    }
+    for (size_t i = 0; i < next_indices.size(); ++i) {
+      if (next_indices[i] < beg) {
+        next_indices[i] = text.find(special_tokens_[i].alias, beg);
+      }
+      if (next_indices[i] < end) {
+        end = next_indices[i];
+      }
+    }
+  }
+  tokenize_append(tokens, text.substr(beg), model_,
+                  this->newline_token_id(), tmp_s);
+}
+
+  void
+Vocabulary::assign_substitution(std::string_view alias, Token_id token_id)
+{
+  assert(!alias.empty());
+  if (token_id == this->bos_token_id()) {
+    bos_token_alias_ = alias;
+  }
+  if (token_id == this->eos_token_id()) {
+    eos_token_alias_ = alias;
+  }
+  for (auto& sr : special_tokens_) {
+    if (sr.alias == alias) {
+      sr.token_id = token_id;
+      return;
+    }
+  }
+  SubstitutionRule sr;
+  sr.alias = alias;
+  sr.token_id = token_id;
+  special_tokens_.push_back(sr);
 }
 
 rendezllama::GlobalScope::GlobalScope() {
