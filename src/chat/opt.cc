@@ -1,6 +1,7 @@
 #include "opt.hh"
 
 #include <array>
+#include <cassert>
 #include <cstring>
 #include <ctime>
 
@@ -8,100 +9,9 @@
 #include <fildesh/string.hh>
 #include <fildesh/sxproto.h>
 
+#include "src/chat/opt_schema.hh"
+
 using rendezllama::ChatOptions;
-
-  const FildeshSxprotoField*
-rendezllama::dynamic_options_sxproto_schema()
-{
-  static const FildeshSxprotoField chat_prefixes_manyof[] = {
-    {"", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-  };
-  static const FildeshSxprotoField toplevel_fields[] = {
-    {"chat_prefixes", FILL_FildeshSxprotoField_MANYOF(chat_prefixes_manyof)},
-    {"confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"frequency_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"mirostat", FILL_FildeshSxprotoField_INT(0, 2)},
-    {"mirostat_eta", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"mirostat_tau", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"presence_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"protagonist", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"repeat_last_count", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"repeat_last_n", FILL_FildeshSxprotoField_ALIAS("repeat_last_count")},
-    {"repeat_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"repeat_window", FILL_FildeshSxprotoField_ALIAS("repeat_last_count")},
-    {"sentence_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"sentence_terminals", FILL_DEFAULT_FildeshSxprotoField_STRINGS},
-    {"sentence_token_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"temp", FILL_FildeshSxprotoField_ALIAS("temperature")},
-    {"temperature", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"template_confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"template_protagonist", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"tfs_z", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"thread_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"top_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-  };
-  static const FildeshSxprotoField toplevel_message = {
-    "", FILL_FildeshSxprotoField_MESSAGE(toplevel_fields)
-  };
-  return &toplevel_message;
-}
-
-  const FildeshSxprotoField*
-rendezllama::options_sxproto_schema()
-{
-  static const FildeshSxprotoField chat_prefixes_manyof[] = {
-    {"", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-  };
-  static const FildeshSxprotoField toplevel_fields[] = {
-    {"batch_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"chat_prefixes", FILL_FildeshSxprotoField_MANYOF(chat_prefixes_manyof)},
-    {"confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"context_token_limit", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"coprocess_mode_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
-    {"frequency_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"linespace_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
-    {"lora_base", FILL_FildeshSxprotoField_ALIAS("lora_base_model")},
-    {"lora_base_model", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"lora", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"mirostat", FILL_FildeshSxprotoField_INT(0, 2)},
-    {"mirostat_eta", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"mirostat_tau", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"mlock_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
-    {"mmap_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
-    {"model", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"model_token_limit", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"o_rolling", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"presence_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"protagonist", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"repeat_last_count", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"repeat_last_n", FILL_FildeshSxprotoField_ALIAS("repeat_last_count")},
-    {"repeat_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"repeat_window", FILL_FildeshSxprotoField_ALIAS("repeat_last_count")},
-    {"seed", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"sentence_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"sentence_terminals", FILL_DEFAULT_FildeshSxprotoField_STRINGS},
-    {"sentence_token_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    {"startspace_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
-    {"temp", FILL_FildeshSxprotoField_ALIAS("temperature")},
-    {"temperature", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"template_confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"template_protagonist", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-    {"tfs_z", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"thread_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"top_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"x_answer", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"x_priming", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"x_rolling", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-  };
-  static const FildeshSxprotoField toplevel_message = {
-    "", FILL_FildeshSxprotoField_MESSAGE(toplevel_fields)
-  };
-  return &toplevel_message;
-}
 
 static
   void
@@ -232,11 +142,11 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
 static void reinitialize_chat_prefixes(ChatOptions& opt) {
   opt.chat_prefixes = opt.given_chat_prefixes;
   for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
-    if (!opt.template_protagonist.empty()) {
-      string_replace(opt.chat_prefixes[i], opt.template_protagonist, opt.protagonist);
+    if (!opt.protagonist_alias.empty()) {
+      string_replace(opt.chat_prefixes[i], opt.protagonist_alias, opt.protagonist);
     }
-    if (!opt.template_confidant.empty()) {
-      string_replace(opt.chat_prefixes[i], opt.template_confidant, opt.confidant);
+    if (!opt.confidant_alias.empty()) {
+      string_replace(opt.chat_prefixes[i], opt.confidant_alias, opt.confidant);
     }
   }
   if (opt.chat_prefixes.size() < 2) {
@@ -275,11 +185,11 @@ static int initialize_options(ChatOptions& opt) {
     exstatus = 64;
   }
   if (exstatus == 0) {
-    if (!opt.template_protagonist.empty()) {
-      replace_in_prompts(opt, opt.template_protagonist, opt.protagonist);
+    if (!opt.protagonist_alias.empty()) {
+      replace_in_prompts(opt, opt.protagonist_alias, opt.protagonist);
     }
-    if (!opt.template_confidant.empty()) {
-      replace_in_prompts(opt, opt.template_confidant, opt.confidant);
+    if (!opt.confidant_alias.empty()) {
+      replace_in_prompts(opt, opt.confidant_alias, opt.confidant);
     }
     ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
     ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
@@ -343,14 +253,6 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     else if (0 == strcmp("--confidant", argv[argi])) {
       argi += 1;
       opt.confidant = argv[argi];
-    }
-    else if (0 == strcmp("--template_protagonist", argv[argi])) {
-      argi += 1;
-      opt.template_protagonist = argv[argi];
-    }
-    else if (0 == strcmp("--template_confidant", argv[argi])) {
-      argi += 1;
-      opt.template_confidant = argv[argi];
     }
     else if (0 == strcmp("--model", argv[argi])) {
       argi += 1;
@@ -621,16 +523,29 @@ rendezllama::parse_sxpb_options(
       reinitialize_chat_prefixes(opt);
     }
   }
-  lone_subfield_at_FildeshSxpb_to_cc_string(&opt.template_protagonist, sxpb, top_it, "template_protagonist");
-  lone_subfield_at_FildeshSxpb_to_cc_string(&opt.template_confidant, sxpb, top_it, "template_confidant");
+
+  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "substitution");
+  if (!nullish_FildeshSxpbIT(it)) {
+    FildeshSxpbIT sub_it;
+    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.protagonist_alias, sxpb, it, "protagonist_alias");
+    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.confidant_alias, sxpb, it, "confidant_alias");
+  }
 
   it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "chat_prefixes");
   if (!nullish_FildeshSxpbIT(it)) {
     opt.given_chat_prefixes.clear();
     for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
          it = next_at_FildeshSxpb(sxpb, it)) {
-      opt.given_chat_prefixes.push_back(
-          str_value_at_FildeshSxpb(sxpb, it));
+      std::string given_prefix;
+      if (!name_at_FildeshSxpb(sxpb, it)) {
+        given_prefix = str_value_at_FildeshSxpb(sxpb, it);
+      }
+      else {
+        assert(0 == strcmp(name_at_FildeshSxpb(sxpb, it), "m"));
+        lone_subfield_at_FildeshSxpb_to_cc_string(
+            &given_prefix, sxpb, it, "prefix");
+      }
+      opt.given_chat_prefixes.push_back(given_prefix);
     }
     if (filename.empty()) {
       reinitialize_chat_prefixes(opt);

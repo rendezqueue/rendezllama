@@ -3,6 +3,8 @@ add_executable(example_prompt_parse_test
   "parse_test.cc"
   "${PROJECT_SOURCE_DIR}/src/chat/opt.cc"
   "${PROJECT_SOURCE_DIR}/src/chat/opt.hh"
+  "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.cc"
+  "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.hh"
 )
 target_link_libraries(example_prompt_parse_test
   ${FildeshSxproto_LIBRARIES}

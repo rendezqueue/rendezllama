@@ -1,10 +1,12 @@
+#include "src/chat/opt.hh"
+
 #include <cassert>
 #include <cstring>
 #include <iostream>
 
 #include <fildesh/ostream.hh>
 
-#include "src/chat/opt.hh"
+#include "src/chat/opt_schema.hh"
 
 static
   void
@@ -22,8 +24,8 @@ chat_prefixes_parse_test()
   assert(opt.given_chat_prefixes.size() == 5);
   assert(opt.chat_prefixes.size() == 0);
   opt.protagonist = "User";
-  opt.template_protagonist = "{{user}}";
-  opt.template_confidant = "{{char}}";
+  opt.protagonist_alias = "{{user}}";
+  opt.confidant_alias = "{{char}}";
 
   in->off = 0;
   in->size = 0;
