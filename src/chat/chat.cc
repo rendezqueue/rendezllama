@@ -50,7 +50,7 @@ eom_newline_check(
     const ChatOptions& opt,
     const ChatTrajectory& chat_traj)
 {
-  if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
+  if (chat_traj.message_prefix_id_ < opt.message_opts.size()-1) {
     return true;
   }
   return !opt.multiline_confidant_on;
@@ -83,7 +83,7 @@ rendezllama::augment_tokenize_chat_input(
     const ChatOptions& opt)
 {
   const char* const maybe_space_prefix = (
-      opt.chat_prefixes[0].back() == '\n'
+      opt.message_opts[0].prefix.back() == '\n'
       ? "" : " ");
   prevent_subsequent_newline = false;
   if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
@@ -96,8 +96,8 @@ rendezllama::augment_tokenize_chat_input(
       maybe_space = ' ';
     }
     chat_traj.tokenize_append_message_prefix(
-        opt.chat_prefixes.size()-1,
-        opt.chat_prefixes.back(),
+        opt.message_opts.size()-1,
+        opt.message_opts.back().prefix,
         vocabulary);
 
     prevent_subsequent_newline = maybe_trim_endspace(s);
@@ -124,12 +124,12 @@ rendezllama::augment_tokenize_chat_input(
   else if (s.back() == '[' || s.back() == ':') {
     chat_traj.tokenize_append(s, vocabulary);
   }
-  else if (matched_antiprompt == opt.chat_prefixes[0]) {
+  else if (matched_antiprompt == opt.message_opts[0].prefix) {
     chat_traj.tokenize_append(maybe_space_prefix + s + '\n', vocabulary);
     chat_traj.display_token_count_ = chat_traj.token_count();
     chat_traj.tokenize_append_message_prefix(
         1,
-        opt.chat_prefixes[1],
+        opt.message_opts[1].prefix,
         vocabulary);
     prevent_subsequent_newline = true;
   }
@@ -139,14 +139,14 @@ rendezllama::augment_tokenize_chat_input(
     }
     chat_traj.tokenize_append_message_prefix(
         0,
-        opt.chat_prefixes[0],
+        opt.message_opts[0].prefix,
         vocabulary);
     chat_traj.tokenize_append(
         maybe_space_prefix + s + '\n',
         vocabulary);
     chat_traj.tokenize_append_message_prefix(
         1,
-        opt.chat_prefixes[1],
+        opt.message_opts[1].prefix,
         vocabulary);
     prevent_subsequent_newline = true;
   }
@@ -216,12 +216,14 @@ temperature_based_sample(
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
+  const auto temperature = opt.temperature_of_message_prefix_at(
+      chat_traj.message_prefix_id_);
   const unsigned keep_one = 1;
   llama_sample_top_k(ctx, candidates_data, opt.top_k, keep_one);
   llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
   llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
   llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
-  llama_sample_temp(ctx, candidates_data, opt.temperature);
+  llama_sample_temp(ctx, candidates_data, temperature);
   chat_traj.push_back(llama_sample_token(ctx, candidates_data));
 }
 
@@ -233,9 +235,11 @@ mirostat1_sample(
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
+  const auto temperature = opt.temperature_of_message_prefix_at(
+      chat_traj.message_prefix_id_);
   float mirostat_mu = chat_traj.mirostat_mu();
   const int mirostat_m = 100;
-  llama_sample_temp(ctx, candidates_data, opt.temperature);
+  llama_sample_temp(ctx, candidates_data, temperature);
   chat_traj.push_back(llama_sample_token_mirostat(
           ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;
@@ -249,8 +253,10 @@ mirostat2_sample(
     struct llama_context* ctx,
     const rendezllama::ChatOptions& opt)
 {
+  const auto temperature = opt.temperature_of_message_prefix_at(
+      chat_traj.message_prefix_id_);
   float mirostat_mu = chat_traj.mirostat_mu();
-  llama_sample_temp(ctx, candidates_data, opt.temperature);
+  llama_sample_temp(ctx, candidates_data, temperature);
   chat_traj.push_back(llama_sample_token_mirostat_v2(
           ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
   chat_traj.mirostat_mu() = mirostat_mu;

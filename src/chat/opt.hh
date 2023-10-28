@@ -10,6 +10,12 @@ struct FildeshSxprotoField;
 
 namespace rendezllama {
 
+struct ChatMessageOpt {
+  std::string prefix;
+  std::string given_prefix;
+  float temperature = -1.0;
+};
+
 struct ChatOptions {
 
   std::string protagonist;
@@ -19,8 +25,7 @@ struct ChatOptions {
   std::string bos_token_alias;
   std::string eos_token_alias;
   std::vector<std::string> special_token_names;
-  std::vector<std::string> chat_prefixes;
-  std::vector<std::string> given_chat_prefixes;
+  std::vector<ChatMessageOpt> message_opts;
   std::string model_filename;
   std::string lora_filename;
   std::string lora_base_model_filename;
@@ -67,6 +72,12 @@ struct ChatOptions {
   bool multiline_confidant_on = false;
   // Can't set these yet.
   bool verbose_prompt = false;
+
+  float temperature_of_message_prefix_at(unsigned id) const {
+    if (id >= message_opts.size()) {return temperature;}
+    if (message_opts[id].temperature < 0) {return temperature;}
+    return message_opts[id].temperature;
+  }
 };
 
 void

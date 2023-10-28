@@ -136,7 +136,7 @@ int main(int argc, char** argv)
     chat_traj.priming_token_count_ = chat_traj.token_count();
     chat_traj.tokenize_append(opt.rolling_prompt, vocabulary);
     chat_traj.tokenize_append_message_prefix(
-        1, opt.chat_prefixes[1], vocabulary);
+        1, opt.message_opts[1].prefix, vocabulary);
     print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
@@ -221,17 +221,17 @@ int main(int argc, char** argv)
         chat_traj.push_back(vocabulary.newline_token_id());
         matched_antiprompt = "\n";
       }
-      if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
+      if (chat_traj.message_prefix_id_ < opt.message_opts.size()-1) {
         chat_traj.tokenize_append_message_prefix(
             chat_traj.message_prefix_id_ + 1,
-            opt.chat_prefixes[chat_traj.message_prefix_id_ + 1],
+            opt.message_opts[chat_traj.message_prefix_id_ + 1].prefix,
             vocabulary);
       }
-      else if (opt.given_chat_prefixes.size() > 0) {
+      else if (!opt.message_opts[0].given_prefix.empty()) {
         chat_traj.tokenize_append_message_prefix(
-            0, opt.chat_prefixes[0], vocabulary);
+            0, opt.message_opts[0].prefix, vocabulary);
         inputting = true;
-        matched_antiprompt = opt.chat_prefixes[0];
+        matched_antiprompt = opt.message_opts[0].prefix;
       }
       else {
         inputting = true;
@@ -380,10 +380,10 @@ int main(int argc, char** argv)
           chat_traj.tokenize_append(
               fildesh::make_string(slice) + '\n',
               vocabulary);
-          if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
+          if (chat_traj.message_prefix_id_ < opt.message_opts.size()-1) {
             chat_traj.message_prefix_id_ += 1;
           }
-          else if (chat_traj.message_prefix_id_ == opt.chat_prefixes.size()-1) {
+          else if (chat_traj.message_prefix_id_ == opt.message_opts.size()-1) {
             chat_traj.message_prefix_id_ = 0;
           }
           matched_antiprompt = '\n';
@@ -413,7 +413,7 @@ int main(int argc, char** argv)
               fildesh::make_string_view(slice),
               vocabulary);
           // Set this index so token generation stops after 1 line.
-          chat_traj.message_prefix_id_ = opt.chat_prefixes.size();
+          chat_traj.message_prefix_id_ = opt.message_opts.size();
           // Not printing any inserted text.
           chat_traj.display_token_count_ = chat_traj.token_count();
           break;
