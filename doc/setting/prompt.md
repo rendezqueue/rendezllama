@@ -24,10 +24,12 @@ By default, there are only 2 characters: the protagonist (your input) and the co
 ; Confidant's name.  Can be changed later via the `/confidant Bot` command.
 (confidant "Bot")
 
-; Replace "{{user}}" in the input prompts with the protagonist name.
-(template_protagonist "{{user}}")
-; Replace "{{char}}" in the input prompts with the confidant name.
-(template_confidant "{{char}}")
+(substitution
+  ; Replace "{{user}}" in the input prompts with the protagonist name.
+  (protagonist_alias "{{user}}")
+  ; Replace "{{char}}" in the input prompts with the confidant name.
+  (confidant_alias "{{char}}")
+)
 ```
 
 You can also add more chat prefixes to help frame how the token generation.

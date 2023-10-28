@@ -15,8 +15,9 @@ class ChatTrajectory;
 class Vocabulary;
 
 const std::string&
-antiprompt_suffix(const std::string& text,
-                  const std::vector<std::string>& antiprompts);
+antiprompt_suffix(
+    std::string_view text,
+    const std::vector<std::string>& antiprompts);
 bool
 eom_token_check(
     const Vocabulary& vocabulary,
@@ -41,11 +42,13 @@ generate_next_token(
     struct llama_context* ctx,
     bool preventing_newline,
     const std::vector<llama_token>& extra_penalized_tokens,
+    const Vocabulary& vocabulary,
     const ChatOptions& opt);
 bool
 commit_to_context(struct llama_context* ctx,
                   ChatDisplay& chat_disp,
                   ChatTrajectory& chat_traj,
+                  const Vocabulary& vocabulary,
                   const ChatOptions& opt);
 
 }  // namespace rendezllama

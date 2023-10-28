@@ -14,8 +14,11 @@ struct ChatOptions {
 
   std::string protagonist;
   std::string confidant;
-  std::string template_protagonist;
-  std::string template_confidant;
+  std::string protagonist_alias;
+  std::string confidant_alias;
+  std::string bos_token_alias;
+  std::string eos_token_alias;
+  std::vector<std::string> special_token_names;
   std::vector<std::string> chat_prefixes;
   std::vector<std::string> given_chat_prefixes;
   std::string model_filename;
@@ -66,10 +69,6 @@ struct ChatOptions {
   bool verbose_prompt = false;
 };
 
-const FildeshSxprotoField*
-dynamic_options_sxproto_schema();
-const FildeshSxprotoField*
-options_sxproto_schema();
 void
 print_options(std::ostream& out, const ChatOptions& opt);
 int

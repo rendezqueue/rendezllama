@@ -8,12 +8,12 @@ add_executable(chat
   "display.hh"
   "opt.cc"
   "opt.hh"
+  "opt_schema.cc"
+  "opt_schema.hh"
   "trajectory.cc"
   "trajectory.hh"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
-  "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
-  "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )
 target_link_libraries(chat PRIVATE
   ${FildeshSxproto_LIBRARIES}

@@ -10,7 +10,6 @@
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
-#include "src/tokenize/tokenize.hh"
 
 using rendezllama::ChatDisplay;
 using rendezllama::ChatOptions;
@@ -20,7 +19,7 @@ using rendezllama::Vocabulary;
 
   const std::string&
 rendezllama::antiprompt_suffix(
-    const std::string& text,
+    std::string_view text,
     const std::vector<std::string>& antiprompts)
 {
   static const std::string empty_string;
@@ -101,9 +100,15 @@ rendezllama::augment_tokenize_chat_input(
     if (s.empty() || s[0] != ' ') {
       maybe_space = ' ';
     }
-    chat_traj.line_prefix_index() = opt.chat_prefixes.size()-1;
-    s = opt.chat_prefixes[chat_traj.line_prefix_index()] + maybe_space + s;
+    chat_traj.tokenize_append_message_prefix(
+        opt.chat_prefixes.size()-1,
+        opt.chat_prefixes.back(),
+        vocabulary);
+
     prevent_subsequent_newline = maybe_trim_endspace(s);
+    chat_traj.tokenize_append(
+        maybe_space + s,
+        vocabulary);
   }
   else if (s.front() == '\n') {
     s.erase(0, 1);
@@ -112,34 +117,44 @@ rendezllama::augment_tokenize_chat_input(
       chat_traj.push_back(vocabulary.newline_token_id());
     }
     if (opt.linespace_on) {s = ' ' + s;}
-    chat_traj.line_prefix_index() = opt.chat_prefixes.size();
+    chat_traj.tokenize_append_message_prefix(
+        chat_traj.unknown_message_prefix_id(),
+        s,
+        vocabulary);
   }
   else if (s.front() == ' ') {
     prevent_subsequent_newline = maybe_trim_endspace(s);
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else if (s.back() == '[' || s.back() == ':') {
-    // Nothing.
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else if (matched_antiprompt == opt.chat_prefixes[0]) {
     chat_traj.tokenize_append(maybe_space_prefix + s + '\n', vocabulary);
     chat_traj.display_token_count_ = chat_traj.token_count();
-    chat_traj.line_prefix_index() = 1;
-    s = opt.chat_prefixes[1];
+    chat_traj.tokenize_append_message_prefix(
+        1,
+        opt.chat_prefixes[1],
+        vocabulary);
     prevent_subsequent_newline = true;
   }
   else {
     if (matched_antiprompt != "\n") {
       chat_traj.push_back(vocabulary.newline_token_id());
     }
-    chat_traj.line_prefix_index() = 0;
-    chat_traj.tokenize_append(
-        opt.chat_prefixes[0] + maybe_space_prefix + s + '\n',
+    chat_traj.tokenize_append_message_prefix(
+        0,
+        opt.chat_prefixes[0],
         vocabulary);
-    chat_traj.line_prefix_index() = 1;
-    s = opt.chat_prefixes[1];
+    chat_traj.tokenize_append(
+        maybe_space_prefix + s + '\n',
+        vocabulary);
+    chat_traj.tokenize_append_message_prefix(
+        1,
+        opt.chat_prefixes[1],
+        vocabulary);
     prevent_subsequent_newline = true;
   }
-  chat_traj.tokenize_append(s, vocabulary);
 }
 
   std::tuple<struct llama_model*, struct llama_context*>
@@ -170,7 +185,7 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
   ctx_params.n_ctx = opt.context_token_limit;
   ctx_params.seed = opt.seed;
   ctx_params.f16_kv = true;
-  ctx_params.rope_freq_scale = 1.0;
+  ctx_params.rope_freq_scale = llama_rope_freq_scale_train(model);
   ctx_params.n_threads = opt.thread_count;
   ctx_params.n_batch = opt.batch_count;
   while (
@@ -252,9 +267,9 @@ rendezllama::generate_next_token(
     struct llama_context* ctx,
     bool preventing_newline,
     const std::vector<llama_token>& extra_penalized_tokens,
-    const rendezllama::ChatOptions& opt)
+    const Vocabulary& vocabulary,
+    const ChatOptions& opt)
 {
-  const Vocabulary vocabulary(ctx);
   float* logits = llama_get_logits(ctx);
   if (preventing_newline) {
     // Zero probability for message-ending tokens when requested.
@@ -286,14 +301,12 @@ rendezllama::generate_next_token(
     candidates.data(), candidates.size(), false,
   }};
 
-  llama_sample_repetition_penalty(
+  llama_sample_repetition_penalties(
       ctx, candidates_data,
       penalized_tokens.data(), penalized_tokens.size(),
-      opt.repeat_penalty);
-  llama_sample_frequency_and_presence_penalties(
-      ctx, candidates_data,
-      penalized_tokens.data(), penalized_tokens.size(),
-      opt.frequency_penalty, opt.presence_penalty);
+      opt.repeat_penalty,
+      opt.frequency_penalty,
+      opt.presence_penalty);
 
   if (opt.mirostat_sampling == 1) {
     mirostat1_sample(candidates_data, chat_traj, ctx, opt);
@@ -317,34 +330,16 @@ rendezllama::commit_to_context(
     struct llama_context* ctx,
     ChatDisplay& chat_disp,
     ChatTrajectory& chat_traj,
+    const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
-  const Vocabulary vocabulary(ctx);
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {
     return true;
   }
 
-  if (chat_traj.token_count() > opt.context_token_limit) {
-    // Drop some of the rolling prompt while keeping the priming prompt
-    // to avoid exceeding our context token limit.
-    const unsigned rolling_token_count =
-      (opt.context_token_limit - chat_traj.priming_token_count_) / 2;
-    for (unsigned i = chat_traj.token_count() - rolling_token_count;
-         i < chat_traj.token_count();
-         ++i)
-    {
-      if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
-        chat_traj.rollforget(i+1, vocabulary);
-        break;
-      }
-    }
-    if (chat_traj.token_count() >= opt.context_token_limit) {
-      chat_traj.rollforget(chat_traj.token_count() - rolling_token_count, vocabulary);
-    }
-    assert(chat_traj.token_count() < opt.context_token_limit);
-  }
+  chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary);
 
   // Reset thread count just in case the user reconfigured it.
   llama_set_n_threads(ctx, opt.thread_count, opt.thread_count);
@@ -359,7 +354,7 @@ rendezllama::commit_to_context(
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
 
     llama_batch batch = llama_batch_get_one(
-        (int*)&chat_traj.token_at(chat_traj.context_token_count_),
+        const_cast<int*>(&chat_traj.tokens()[chat_traj.context_token_count_]),
         n,
         chat_traj.context_token_count_,
         0);
