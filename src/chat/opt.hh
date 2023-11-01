@@ -72,21 +72,16 @@ struct ChatOptions {
 void
 print_options(std::ostream& out, const ChatOptions& opt);
 int
-parse_initialize_options_sxproto(
-    rendezllama::ChatOptions& opt,
-    const std::string& filename);
-int
 parse_options(ChatOptions& opt, int argc, char** argv);
 bool
-parse_sxpb_options(
-    rendezllama::ChatOptions& opt,
+slurp_sxpb_initialize_options_close_FildeshX(
     FildeshX* in,
-    const FildeshSxprotoField* schema,
+    rendezllama::ChatOptions& opt,
     const std::string& filename);
 bool
-parse_dynamic_sxpb_options(
-    rendezllama::ChatOptions& opt,
-    FildeshX* in);
+slurp_sxpb_dynamic_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt);
 
 }  // namespace rendezllama
 #endif

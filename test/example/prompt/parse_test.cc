@@ -6,10 +6,14 @@
 
 int main(int argc, char** argv)
 {
+  bool good = true;
   assert(argc == 2);
   const char* filename = argv[1];
   rendezllama::ChatOptions opt;
-  int exstatus = rendezllama::parse_initialize_options_sxproto(opt, filename);
-  assert(exstatus == 0);
-  return 0;
+  FildeshX* in = open_FildeshXF(filename);
+  assert(in);
+  good = rendezllama::slurp_sxpb_initialize_options_close_FildeshX(
+      in, opt, filename);
+  assert(good);
+  return (good ? 0 : 1);
 }

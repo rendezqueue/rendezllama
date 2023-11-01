@@ -11,6 +11,7 @@ namespace rendezllama {
 
 struct ChatOptions;
 class ChatDisplay;
+class ChatGuide;
 class ChatTrajectory;
 class Vocabulary;
 
@@ -18,18 +19,12 @@ const std::string&
 antiprompt_suffix(
     std::string_view text,
     const std::vector<std::string>& antiprompts);
-bool
-eom_token_check(
-    const Vocabulary& vocabulary,
-    llama_token token_id,
-    const ChatOptions& opt,
-    const ChatTrajectory& chat_traj);
 void
 augment_tokenize_chat_input(
+    ChatGuide& chat_guide,
     ChatTrajectory& chat_traj,
     bool& prevent_subsequent_newline,
     std::string s,
-    const std::string& matched_antiprompt,
     const Vocabulary& vocabulary,
     const ChatOptions& opt);
 

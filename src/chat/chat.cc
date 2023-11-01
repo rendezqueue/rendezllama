@@ -7,11 +7,13 @@
 #include <fildesh/fildesh.h>
 
 #include "src/chat/display.hh"
+#include "src/chat/guide.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
 
 using rendezllama::ChatDisplay;
+using rendezllama::ChatGuide;
 using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
 using rendezllama::Vocabulary;
@@ -44,110 +46,47 @@ static bool maybe_trim_endspace(std::string& s)
   return result;
 }
 
-static
-  bool
-eom_newline_check(
-    const ChatOptions& opt,
-    const ChatTrajectory& chat_traj)
-{
-  if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
-    return true;
-  }
-  return !opt.multiline_confidant_on;
-}
-
-  bool
-rendezllama::eom_token_check(
-    const Vocabulary& vocabulary,
-    llama_token token_id,
-    const ChatOptions& opt,
-    const ChatTrajectory& chat_traj)
-
-{
-  if (token_id == vocabulary.eos_token_id()) {
-    return true;
-  }
-  if (eom_newline_check(opt, chat_traj)) {
-    return token_id == vocabulary.newline_token_id();
-  }
-  return false;
-}
-
   void
 rendezllama::augment_tokenize_chat_input(
+    ChatGuide& chat_guide,
     ChatTrajectory& chat_traj,
     bool& prevent_subsequent_newline,
     std::string s,
-    const std::string& matched_antiprompt,
     const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
-  const char* const maybe_space_prefix = (
-      opt.chat_prefixes[0].back() == '\n'
-      ? "" : " ");
   prevent_subsequent_newline = false;
   if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
+    chat_guide.end_turn();
+    chat_guide.begin_turn(opt.chat_prefixes.size()-1);
     s.erase(0, 2);
-    std::string maybe_space;
-    if (matched_antiprompt != "\n") {
-      chat_traj.push_back(vocabulary.newline_token_id());
-    }
-    if (s.empty() || s[0] != ' ') {
-      maybe_space = ' ';
-    }
-    chat_traj.tokenize_append_message_prefix(
-        opt.chat_prefixes.size()-1,
-        opt.chat_prefixes.back(),
-        vocabulary);
-
     prevent_subsequent_newline = maybe_trim_endspace(s);
-    chat_traj.tokenize_append(
-        maybe_space + s,
-        vocabulary);
+    if (opt.chat_prefixes.back().back() != '\n' || opt.linespace_on) {
+      if (!s.empty() && s.front() != ' ') {
+        s.insert(0, " ");
+      }
+    }
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else if (s.front() == '\n') {
-    s.erase(0, 1);
     // This is from /yield.
-    if (matched_antiprompt != "\n") {
-      chat_traj.push_back(vocabulary.newline_token_id());
-    }
-    if (opt.linespace_on) {s = ' ' + s;}
-    chat_traj.tokenize_append_message_prefix(
-        chat_traj.unknown_message_prefix_id(),
-        s,
-        vocabulary);
+    chat_guide.yield_turn(s.substr(1));
   }
   else if (s.front() == ' ') {
     prevent_subsequent_newline = maybe_trim_endspace(s);
     chat_traj.tokenize_append(s, vocabulary);
   }
-  else if (s.back() == '[' || s.back() == ':') {
-    chat_traj.tokenize_append(s, vocabulary);
-  }
-  else if (matched_antiprompt == opt.chat_prefixes[0]) {
-    chat_traj.tokenize_append(maybe_space_prefix + s + '\n', vocabulary);
-    chat_traj.display_token_count_ = chat_traj.token_count();
-    chat_traj.tokenize_append_message_prefix(
-        1,
-        opt.chat_prefixes[1],
-        vocabulary);
-    prevent_subsequent_newline = true;
-  }
   else {
-    if (matched_antiprompt != "\n") {
-      chat_traj.push_back(vocabulary.newline_token_id());
+    chat_guide.yield_turn(0);
+    if (opt.chat_prefixes[0].back() != '\n' || opt.linespace_on) {
+      if (!s.empty() && s.front() != ' ') {
+        s.insert(0, " ");
+      }
     }
-    chat_traj.tokenize_append_message_prefix(
-        0,
-        opt.chat_prefixes[0],
-        vocabulary);
-    chat_traj.tokenize_append(
-        maybe_space_prefix + s + '\n',
-        vocabulary);
-    chat_traj.tokenize_append_message_prefix(
-        1,
-        opt.chat_prefixes[1],
-        vocabulary);
+    chat_traj.tokenize_append(s, vocabulary);
+    chat_guide.yield_turn();
+    chat_traj.display_token_count_ = chat_traj.rfind_message_prefix_begin_at(
+        chat_traj.token_count()-1);
     prevent_subsequent_newline = true;
   }
 }
@@ -311,12 +250,6 @@ rendezllama::generate_next_token(
   }
   else {
     temperature_based_sample(candidates_data, chat_traj, ctx, opt);
-  }
-
-  // Interpret end-of-stream (technically "end-of-sentence" as a newline token.
-  if (chat_traj.token() == vocabulary.eos_token_id() && eom_newline_check(opt, chat_traj)) {
-    chat_traj.push_back(vocabulary.newline_token_id());
-    chat_traj.erase_range(chat_traj.token_count()-2, chat_traj.token_count()-1);
   }
 }
 

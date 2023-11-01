@@ -18,7 +18,10 @@ ChatDisplay::displaystring_to(
     ChatTrajectory::Token_id token_id,
     const Vocabulary& vocabulary) const
 {
-  if (token_id != vocabulary.eos_token_id()) {
+  if (token_id == vocabulary.eos_token_id()) {
+    putc_FildeshO(out, '\n');
+  }
+  else {
     vocabulary.detokenize_to(out, token_id);
   }
 }

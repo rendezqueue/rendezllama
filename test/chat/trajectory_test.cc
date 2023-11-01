@@ -17,8 +17,35 @@ static
 basic_test()
 {
   ChatTrajectory traj(0);
+  assert(traj.token_count() == 1);
   assert(traj.mirostat_mu() == 0.0f);
   assert(traj.last_message_prefix_id_at(0) == traj.not_a_message_prefix_id());
+
+  assert(traj.priming_token_count_ == 1);
+  assert(traj.rfind_message_prefix_at(0) == 0);
+  assert(traj.rfind_message_prefix_begin_at(0) == 0);
+  assert(traj.rfind_last_message_prefix_end_at(0) == 1);
+  assert(traj.rfind_last_message_prefix_end_at(1) == 1);
+
+  traj.push_back(1);
+  assert(traj.token_count() == 2);
+  assert(traj.rfind_message_prefix_at(1) == 0);
+  assert(traj.rfind_message_prefix_begin_at(1) == 0);
+  assert(traj.rfind_last_message_prefix_end_at(0) == 1);
+  assert(traj.rfind_last_message_prefix_end_at(1) == 1);
+  assert(traj.rfind_last_message_prefix_end_at(2) == 1);
+  assert(traj.last_message_prefix_id_at(2) == traj.not_a_message_prefix_id());
+
+  traj.assign_range_message_prefix_id(7, 1, 2);
+  assert(traj.message_prefix_id_ == 7);
+  assert(traj.rfind_message_prefix_at(1) == 1);
+  assert(traj.rfind_message_prefix_begin_at(1) == 1);
+  assert(traj.rfind_last_message_prefix_end_at(0) == 1);
+  assert(traj.rfind_last_message_prefix_end_at(1) == 1);
+  assert(traj.rfind_last_message_prefix_end_at(2) == 2);
+  assert(traj.last_message_prefix_id_at(2) == 7);
+
+  traj.erase_all_at(1);
   for (unsigned i = 1; i < 100; ++i) {
     traj.push_back(i);
     assert(traj.mirostat_mu_at(i) == traj.mirostat_mu());
@@ -26,16 +53,7 @@ basic_test()
     traj.mirostat_mu_at(i) = i;
     assert(traj.mirostat_mu() == i);
   }
-  for (unsigned i = 1; i < 10; ++i) {
-    traj.assign_range_message_prefix_id(i, 10*i, 11*i+1);
-    assert(traj.message_prefix_id_ == i);
-  }
-
-  traj.assign_range_message_prefix_id(0, 0, 1);
-  assert(traj.last_message_prefix_id_at(0) == 0);
-  assert(traj.message_prefix_id_ == 9);
   assert(traj.token_count() == 100);
-
   assert(traj.find_token_at(0, 1) == 1);
   assert(traj.find_token_at(1, 1) == 1);
   assert(traj.find_token_at(2, 1) == 100);
@@ -45,6 +63,11 @@ basic_test()
   assert(traj.rfind_token_at(100, 1) == 1);
   assert(traj.rfind_token_at(0, 0) == 0);
 
+  for (unsigned i = 1; i < 10; ++i) {
+    traj.assign_range_message_prefix_id(i, 10*i, 11*i+1);
+    assert(traj.message_prefix_id_ == i);
+  }
+  assert(traj.message_prefix_id_ == 9);
   assert(traj.rfind_message_prefix_at(49) == 44);
   assert(traj.rfind_message_prefix_begin_at(49) == 40);
   assert(traj.rfind_last_message_prefix_end_at(49) == 45);
@@ -92,14 +115,9 @@ basic_test()
 
 static
   void
-rollforget_test(const char* model_filename)
+rollforget_test(llama_model* model)
 {
-  llama_model_params model_params = llama_model_default_params();
-  model_params.vocab_only = true;
-  llama_model* model = llama_load_model_from_file(model_filename, model_params);
-  assert(model);
-
-  const rendezllama::Vocabulary vocabulary(model);
+  const Vocabulary vocabulary(model);
   ChatTrajectory traj(vocabulary.bos_token_id());
 
   FildeshO transcript_out[1] = {DEFAULT_FildeshO};
@@ -114,23 +132,29 @@ rollforget_test(const char* model_filename)
   traj.priming_token_count_ = traj.token_count();
 
   traj.tokenize_append_message_prefix(0, "User:", vocabulary);
-  traj.tokenize_append(" Tell me all your bugs!\n", vocabulary);
+  traj.tokenize_append(" Tell me all your bugs!", vocabulary);
+  traj.tokenize_append_message_suffix("", vocabulary);
   traj.tokenize_append_message_prefix(1, "Code:", vocabulary);
-  traj.tokenize_append(" I cannot.\n", vocabulary);
+  traj.tokenize_append(" I cannot.", vocabulary);
+  traj.tokenize_append_message_suffix("", vocabulary);
+
   const unsigned expect_forget_count = (
       traj.token_count() - traj.priming_token_count_);
   traj.tokenize_append_message_prefix(0, "User:", vocabulary);
-  traj.tokenize_append(" Why not?\n", vocabulary);
+  traj.tokenize_append(" Why not?", vocabulary);
+  traj.tokenize_append_message_suffix("", vocabulary);
   traj.tokenize_append_message_prefix(1, "Code:", vocabulary);
   traj.tokenize_append(
       " They are not enumerable, but I can give a sample."
       " (1) Infinite loop on line 20."
       " (2) Off-by-one on line 21."
       " (3) Off-by-two on line 21."
-      " (4) Segmentation fault\n",
+      " (4) Segmentation fault",
       vocabulary);
+  traj.tokenize_append_message_suffix("", vocabulary);
   traj.tokenize_append_message_prefix(0, "User:", vocabulary);
-  traj.tokenize_append(" wtf\n", vocabulary);
+  traj.tokenize_append(" wtf", vocabulary);
+  traj.tokenize_append_message_suffix("", vocabulary);
 
   const unsigned old_token_count = traj.token_count();
   traj.maybe_rollforget_within_limit(traj.token_count() - 1, vocabulary);
@@ -138,16 +162,51 @@ rollforget_test(const char* model_filename)
   assert(traj.token_count() == old_token_count - expect_forget_count);
 
   assert(traj.transcript_out_->size > 0);
+}
 
-  llama_free_model(model);
+
+static
+  void
+suffix_test(llama_model* model)
+{
+  Vocabulary vocabulary(model);
+  ChatTrajectory traj(vocabulary.bos_token_id());
+
+  traj.tokenize_append_message_prefix(0, "User:", vocabulary);
+  traj.tokenize_append(" blah blah blah\n\nEOS EOS\n \n ", vocabulary);
+  assert(!traj.endswith_nonempty("EOS\n", vocabulary));
+
+  const auto old_token_count = traj.token_count();
+  traj.display_token_count_ = traj.token_count();
+  vocabulary.assign_substitution("EOS", vocabulary.eos_token_id());
+  traj.tokenize_append_message_suffix("EOS\n", vocabulary);
+  assert(traj.token_count() < old_token_count);
+  assert(traj.display_token_count_ == traj.token_count());
+
+  assert(traj.token_at(traj.token_count()-1) == vocabulary.newline_token_id());
+  assert(traj.token_at(traj.token_count()-2) == vocabulary.eos_token_id());
+  for (auto i = traj.priming_token_count_; i < traj.token_count()-2; ++i) {
+    assert(traj.token_at(i) != vocabulary.newline_token_id());
+    assert(traj.token_at(i) != vocabulary.eos_token_id());
+  }
+  assert(traj.endswith_nonempty("EOS\n", vocabulary));
 }
 
 
 int main(int argc, char** argv)
 {
   assert(argc == 2 && "need model filename");
-  basic_test();
+
   rendezllama::GlobalScope rendezllama_global_scope;
-  rollforget_test(argv[1]);
+  llama_model_params model_params = llama_model_default_params();
+  model_params.vocab_only = true;
+  llama_model* model = llama_load_model_from_file(argv[1], model_params);
+  assert(model);
+
+  basic_test();
+  rollforget_test(model);
+  suffix_test(model);
+
+  llama_free_model(model);
   return 0;
 }

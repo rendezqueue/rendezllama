@@ -160,6 +160,11 @@ static void reinitialize_chat_prefixes(ChatOptions& opt) {
     opt.chat_prefixes[0] += opt.protagonist + ':';
     opt.chat_prefixes[1] += opt.confidant + ':';
   }
+  if (opt.coprocess_mode_on) {
+    for (auto& s : opt.chat_prefixes) {
+      s = "";
+    }
+  }
 }
 
 static int initialize_options(ChatOptions& opt) {
@@ -201,32 +206,23 @@ static int initialize_options(ChatOptions& opt) {
 
 static
   bool
-parse_options_sxproto(ChatOptions& opt, const std::string& filename)
+slurp_sxpb_options_close_FildeshX(
+    FildeshX* in,
+    ChatOptions& opt,
+    const FildeshSxprotoField* schema,
+    const std::string& filename);
+
+static
+  bool
+parse_sxpb_file_options(ChatOptions& opt, const char* filename)
 {
-  bool all_good = true;
-  FildeshX* in = open_FildeshXF(filename.c_str());
+  FildeshX* in = open_FildeshXF(filename);
   if (!in) {
-    fildesh_log_errorf("Cannot open %s.", filename.c_str());
+    fildesh_log_errorf("Cannot open %s.", filename);
     return false;
   }
-  all_good = rendezllama::parse_sxpb_options(
-      opt, in, rendezllama::options_sxproto_schema(), filename);
-  return all_good;
-}
-
-  int
-rendezllama::parse_initialize_options_sxproto(
-    rendezllama::ChatOptions& opt,
-    const std::string& filename)
-{
-  int exstatus = 0;
-  if (!parse_options_sxproto(opt, filename)) {
-    exstatus = 1;
-  }
-  if (exstatus == 0) {
-    exstatus = initialize_options(opt);
-  }
-  return exstatus;
+  return slurp_sxpb_options_close_FildeshX(
+      in, opt, rendezllama::options_sxproto_schema(), filename);
 }
 
   int
@@ -271,7 +267,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     }
     else if (0 == strcmp("--x_setting", argv[argi])) {
       argi += 1;
-      if (!parse_options_sxproto(opt, argv[argi])) {
+      if (!parse_sxpb_file_options(opt, argv[argi])) {
         exstatus = 1;
       }
     }
@@ -421,11 +417,10 @@ lone_subfield_at_FildeshSxpb_to_cc_string(
   return false;
 }
 
-/** Closes `in`.**/
   bool
-rendezllama::parse_sxpb_options(
-    ChatOptions& opt,
+slurp_sxpb_options_close_FildeshX(
     FildeshX* in,
+    ChatOptions& opt,
     const FildeshSxprotoField* schema,
     const std::string& filename)
 {
@@ -614,12 +609,25 @@ rendezllama::parse_sxpb_options(
   return all_good;
 }
 
+  bool
+rendezllama::slurp_sxpb_initialize_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt,
+    const std::string& filename)
+{
+  bool all_good = slurp_sxpb_options_close_FildeshX(
+      in, opt, rendezllama::options_sxproto_schema(), filename);
+  if (all_good) {
+    initialize_options(opt);
+  }
+  return all_good;
+}
 
   bool
-rendezllama::parse_dynamic_sxpb_options(
-    rendezllama::ChatOptions& opt,
-    FildeshX* in)
+rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt)
 {
-  return rendezllama::parse_sxpb_options(
-      opt, in, dynamic_options_sxproto_schema(), "");
+  return slurp_sxpb_options_close_FildeshX(
+      in, opt, dynamic_options_sxproto_schema(), "");
 }
