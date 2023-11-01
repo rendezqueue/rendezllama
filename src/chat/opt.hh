@@ -50,6 +50,7 @@ struct ChatOptions {
   unsigned sentence_token_limit = 0;
   unsigned top_k = 1000;
   float top_p = 0.95;
+  float min_p = 0.05;
   float temperature = 0.7;
   float tfs_z = 1.0;
   float typical_p = 1.0;

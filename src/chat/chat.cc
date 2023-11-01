@@ -160,6 +160,7 @@ temperature_based_sample(
   llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
   llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
   llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
+  llama_sample_min_p(ctx, candidates_data, opt.min_p, keep_one);
   llama_sample_temp(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token(ctx, candidates_data));
 }
@@ -272,7 +273,7 @@ rendezllama::commit_to_context(
   // Reset thread count just in case the user reconfigured it.
   llama_set_n_threads(ctx, opt.thread_count, opt.thread_count);
   // Clear KV cache past current position just in case the user deleted tokens.
-  llama_kv_cache_tokens_rm(ctx, chat_traj.context_token_count_, -1);
+  llama_kv_cache_seq_rm(ctx, -1, chat_traj.context_token_count_, -1);
 
   while (chat_traj.context_token_count_ < chat_traj.token_count()) {
     const unsigned n = std::min(

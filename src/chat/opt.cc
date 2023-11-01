@@ -127,6 +127,7 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
     << "Sampling: temperature=" << opt.temperature
     << ", top_k=" << opt.top_k
     << ", top_p=" << opt.top_p
+    << ", min_p=" << opt.min_p
     << ", repeat_window=" << opt.repeat_last_count
     << ", repeat_penalty=" << opt.repeat_penalty
     << '\n'
@@ -577,6 +578,7 @@ slurp_sxpb_options_close_FildeshX(
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.repeat_last_count, sxpb, top_it, "repeat_last_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.top_k, sxpb, top_it, "top_k");
   lone_subfield_at_FildeshSxpb_to_float(&opt.top_p, sxpb, top_it, "top_p");
+  lone_subfield_at_FildeshSxpb_to_float(&opt.min_p, sxpb, top_it, "min_p");
   lone_subfield_at_FildeshSxpb_to_float(&opt.tfs_z, sxpb, top_it, "tfs_z");
   lone_subfield_at_FildeshSxpb_to_float(&opt.typical_p, sxpb, top_it, "typical_p");
   lone_subfield_at_FildeshSxpb_to_float(&opt.temperature, sxpb, top_it, "temperature");
