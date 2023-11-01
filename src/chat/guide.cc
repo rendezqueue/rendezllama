@@ -41,6 +41,10 @@ ChatGuide::maybe_erase_trailing_message_prefix()
 ChatGuide::maybe_erase_trailing_message_suffix()
 {
   std::string_view suffix;  // Empty is treated as newline.
+  auto turn_index = traj_.last_message_prefix_id_at(traj_.token_count());
+  if (turn_index < opt_.message_opts.size()) {
+    suffix = opt_.message_opts[turn_index].suffix;
+  }
   const auto n = traj_.token_count();
   traj_.trim_message_suffix(suffix, vocab_);
   return (n != traj_.token_count());
@@ -50,7 +54,7 @@ ChatGuide::maybe_erase_trailing_message_suffix()
 ChatGuide::begin_turn(unsigned turn_index)
 {
   this->maybe_erase_trailing_message_prefix();
-  std::string_view prefix = opt_.chat_prefixes[turn_index];
+  std::string_view prefix = opt_.message_opts[turn_index].prefix;
   traj_.tokenize_append_message_prefix(turn_index, prefix, vocab_);
 }
 
@@ -58,6 +62,10 @@ ChatGuide::begin_turn(unsigned turn_index)
 ChatGuide::end_turn()
 {
   std::string_view suffix;  // Empty is treated as newline.
+  const auto turn_index = traj_.message_prefix_id_;
+  if (turn_index < opt_.message_opts.size()) {
+    suffix = opt_.message_opts[turn_index].suffix;
+  }
   traj_.tokenize_append_message_suffix(suffix, vocab_);
 }
 
@@ -77,8 +85,8 @@ ChatGuide::yield_turn(std::string_view prefix)
     this->end_turn();
   }
   auto turn_index = traj_.unknown_message_prefix_id();
-  for (size_t i = 0; i < opt_.chat_prefixes.size(); ++i) {
-    std::string_view s = opt_.chat_prefixes[i];
+  for (size_t i = 0; i < opt_.message_opts.size(); ++i) {
+    std::string_view s = opt_.message_opts[i].prefix;
     if (prefix.substr(0, s.size()) == s) {
       turn_index = i;
       break;
@@ -91,7 +99,7 @@ ChatGuide::yield_turn(std::string_view prefix)
 ChatGuide::yield_turn()
 {
   this->yield_turn(
-      next_turn_index(traj_.message_prefix_id_, opt_.chat_prefixes.size()));
+      next_turn_index(traj_.message_prefix_id_, opt_.message_opts.size()));
 }
 
   bool
@@ -102,18 +110,13 @@ ChatGuide::maybe_yield_turn()
   if (token_id == vocab_.eos_token_id()) {
     // True.
   }
-  else if (turn_index >= opt_.chat_prefixes.size()) {
+  else if (turn_index >= opt_.message_opts.size()) {
     if (token_id != vocab_.newline_token_id()) {
       return false;
     }
   }
   else {
-    if (opt_.multiline_confidant_on) {
-      if (turn_index == opt_.chat_prefixes.size()-1) {
-        return false;  // Needed EOS token.
-      }
-    }
-    std::string_view suffix = "\n";
+    std::string_view suffix = opt_.message_opts[turn_index].suffix;
     if (!traj_.endswith_nonempty(suffix, vocab_)) {
       return false;
     }

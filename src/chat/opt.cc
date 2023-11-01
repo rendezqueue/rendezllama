@@ -119,8 +119,8 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
     << ", confidant=" << opt.confidant
     << '\n';
   out << "Chat lines start with...\n";
-  for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
-    out << opt.chat_prefixes[i] << '\n';
+  for (unsigned i = 0; i < opt.message_opts.size(); ++i) {
+    out << opt.message_opts[i].prefix << '\n';
   }
   out << '\n';
   out
@@ -140,29 +140,36 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
 }
 
 static void reinitialize_chat_prefixes(ChatOptions& opt) {
-  opt.chat_prefixes = opt.given_chat_prefixes;
-  for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
-    if (!opt.protagonist_alias.empty()) {
-      string_replace(opt.chat_prefixes[i], opt.protagonist_alias, opt.protagonist);
-    }
-    if (!opt.confidant_alias.empty()) {
-      string_replace(opt.chat_prefixes[i], opt.confidant_alias, opt.confidant);
-    }
-  }
-  if (opt.chat_prefixes.size() < 2) {
-    opt.given_chat_prefixes.clear();
-    opt.chat_prefixes.clear();
-    opt.chat_prefixes.resize(2);
+  if (opt.message_opts.size() < 2) {
+    opt.message_opts.clear();
+    opt.message_opts.resize(2);
     if (opt.linespace_on) {
-      opt.chat_prefixes[0] += ' ';
-      opt.chat_prefixes[1] += ' ';
+      opt.message_opts[0].prefix += ' ';
+      opt.message_opts[1].prefix += ' ';
     }
-    opt.chat_prefixes[0] += opt.protagonist + ':';
-    opt.chat_prefixes[1] += opt.confidant + ':';
+    opt.message_opts[0].prefix += opt.protagonist + ':';
+    opt.message_opts[1].prefix += opt.confidant + ':';
+  }
+  for (auto& message_opt : opt.message_opts) {
+    if (!message_opt.given_prefix.empty()) {
+      message_opt.prefix = message_opt.given_prefix;
+      if (!opt.protagonist_alias.empty()) {
+        string_replace(message_opt.prefix, opt.protagonist_alias, opt.protagonist);
+      }
+      if (!opt.confidant_alias.empty()) {
+        string_replace(message_opt.prefix, opt.confidant_alias, opt.confidant);
+      }
+    }
+    if (!message_opt.given_suffix.empty()) {
+      message_opt.suffix = message_opt.given_suffix;
+    }
+    else {
+      message_opt.suffix = '\n';
+    }
   }
   if (opt.coprocess_mode_on) {
-    for (auto& s : opt.chat_prefixes) {
-      s = "";
+    for (auto& message_opt : opt.message_opts) {
+      message_opt.prefix = "";
     }
   }
 }
@@ -173,7 +180,7 @@ static int initialize_options(ChatOptions& opt) {
     opt.context_token_limit = opt.model_token_limit;
   }
   if (exstatus == 0 &&
-      opt.given_chat_prefixes.size() < 2 &&
+      opt.message_opts.size() < 2 &&
       !opt.coprocess_mode_on)
   {
     if (opt.protagonist.empty()) {
@@ -184,10 +191,6 @@ static int initialize_options(ChatOptions& opt) {
       fildesh_log_error("Please provide a --confidant name.");
       exstatus = 64;
     }
-  }
-  if (exstatus == 0 && opt.priming_prompt.empty()) {
-    fildesh_log_error("Please provide a priming prompt with --x_priming.");
-    exstatus = 64;
   }
   if (exstatus == 0) {
     if (!opt.protagonist_alias.empty()) {
@@ -539,19 +542,21 @@ slurp_sxpb_options_close_FildeshX(
 
   it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "chat_prefixes");
   if (!nullish_FildeshSxpbIT(it)) {
-    opt.given_chat_prefixes.clear();
+    opt.message_opts.clear();
     for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
          it = next_at_FildeshSxpb(sxpb, it)) {
-      std::string given_prefix;
+      rendezllama::ChatMessageOpt message_opt;
       if (!name_at_FildeshSxpb(sxpb, it)) {
-        given_prefix = str_value_at_FildeshSxpb(sxpb, it);
+        message_opt.given_prefix = str_value_at_FildeshSxpb(sxpb, it);
       }
       else {
         assert(0 == strcmp(name_at_FildeshSxpb(sxpb, it), "m"));
         lone_subfield_at_FildeshSxpb_to_cc_string(
-            &given_prefix, sxpb, it, "prefix");
+            &message_opt.given_prefix, sxpb, it, "prefix");
+        lone_subfield_at_FildeshSxpb_to_cc_string(
+            &message_opt.given_suffix, sxpb, it, "suffix");
       }
-      opt.given_chat_prefixes.push_back(given_prefix);
+      opt.message_opts.push_back(message_opt);
     }
     if (filename.empty()) {
       reinitialize_chat_prefixes(opt);
@@ -596,7 +601,6 @@ slurp_sxpb_options_close_FildeshX(
       if (s[0] == '\n' && s[1] == '\0') {found = true;}
     }
 
-    opt.multiline_confidant_on = found;
     opt.antiprompts = opt.sentence_terminals;
     if (!found) {
       opt.antiprompts.push_back("\n");

@@ -26,8 +26,11 @@ chat_prefixes_parse_test()
       )");
   all_good = rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(in, opt);
   assert(all_good);
-  assert(opt.given_chat_prefixes.size() == 5);
-  assert(opt.chat_prefixes.size() == 5);
+  assert(opt.message_opts.size() == 5);
+  for (const auto& message_opt : opt.message_opts) {
+    assert(!message_opt.given_prefix.empty());
+    assert(!message_opt.prefix.empty());
+  }
   opt.protagonist = "User";
   opt.protagonist_alias = "{{user}}";
   opt.confidant_alias = "{{char}}";
@@ -37,12 +40,12 @@ chat_prefixes_parse_test()
   *in = FildeshX_of_strlit("(confidant \"Char\")");
   all_good = rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(in, opt);
   assert(all_good);
-  assert(opt.chat_prefixes.size() == 5);
-  assert(opt.chat_prefixes[0] == "User:");
-  assert(opt.chat_prefixes[1] == "Char feels:");
-  assert(opt.chat_prefixes[2] == "Char wants:");
-  assert(opt.chat_prefixes[3] == "Char plans:");
-  assert(opt.chat_prefixes[4] == "Char:");
+  assert(opt.message_opts.size() == 5);
+  assert(opt.message_opts[0].prefix == "User:");
+  assert(opt.message_opts[1].prefix == "Char feels:");
+  assert(opt.message_opts[2].prefix == "Char wants:");
+  assert(opt.message_opts[3].prefix == "Char plans:");
+  assert(opt.message_opts[4].prefix == "Char:");
 }
 
 static

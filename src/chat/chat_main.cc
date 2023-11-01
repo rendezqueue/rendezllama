@@ -396,7 +396,7 @@ int main(int argc, char** argv)
               fildesh::make_string_view(slice),
               vocabulary);
           // Set this index so token generation stops after 1 line.
-          chat_traj.message_prefix_id_ = opt.chat_prefixes.size();
+          chat_traj.message_prefix_id_ = opt.message_opts.size();
           // Not printing any inserted text.
           chat_traj.display_token_count_ = chat_traj.token_count();
           break;

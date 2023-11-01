@@ -10,6 +10,13 @@ struct FildeshSxprotoField;
 
 namespace rendezllama {
 
+struct ChatMessageOpt {
+  std::string prefix;
+  std::string given_prefix;
+  std::string suffix;
+  std::string given_suffix;
+};
+
 struct ChatOptions {
 
   std::string protagonist;
@@ -19,8 +26,7 @@ struct ChatOptions {
   std::string bos_token_alias;
   std::string eos_token_alias;
   std::vector<std::string> special_token_names;
-  std::vector<std::string> chat_prefixes;
-  std::vector<std::string> given_chat_prefixes;
+  std::vector<ChatMessageOpt> message_opts;
   std::string model_filename;
   std::string lora_filename;
   std::string lora_base_model_filename;
@@ -63,8 +69,6 @@ struct ChatOptions {
   bool coprocess_mode_on = false;
   std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
-  // Derived.
-  bool multiline_confidant_on = false;
   // Can't set these yet.
   bool verbose_prompt = false;
 };

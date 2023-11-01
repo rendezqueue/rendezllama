@@ -6,6 +6,7 @@
 
 static const FildeshSxprotoField chat_prefixes_m_message[] = {
   {"prefix", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
+  {"suffix", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
 };
 static const FildeshSxprotoField chat_prefixes_manyof[] = {
   {"", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},

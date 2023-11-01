@@ -46,19 +46,21 @@ the_test(llama_model* model)
   // Again for good measure.
   assert(guide.maybe_erase_trailing_message_prefix());
 
-  *in = FildeshX_of_strlit(
-      "(((chat_prefixes))\n\
-      (m (prefix \"A:\"))\n\
-      (m (prefix \"B:\"))\n\
-      (m (prefix \"C:\"))\n\
-      (m (prefix \"D:\"))\n\
-      )");
-  good = rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(in, opt);
+  *in = FildeshX_of_strlit("\
+    (((chat_prefixes))\n\
+     (m (prefix \"A:\") (suffix \"</s>\\n###\\n\"))\n\
+     (m (prefix \"B:\"))\n\
+     (m (prefix \"C:\"))\n\
+     (m (prefix \"D:\") (suffix \"</s>\\n\"))\n\
+    )\n\
+    (substitution\n\
+      (eos_token_alias \"</s>\")\n\
+    )\n\
+    ");
+  good = rendezllama::slurp_sxpb_initialize_options_close_FildeshX(in, opt, "");
   assert(good);
-  *in = FildeshX_of_strlit("((sentence_terminals) \"\\n\")");
-  good = rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(in, opt);
-  assert(good);
-  assert(opt.multiline_confidant_on);
+  assert(opt.eos_token_alias == "</s>");
+  vocab.assign_substitution(opt.eos_token_alias, vocab.eos_token_id());
 
   guide.yield_turn();
   truncate_detokenize_rolling_to(oss, traj, vocab);
@@ -74,29 +76,26 @@ the_test(llama_model* model)
   assert(oss.view() == "C: Yo.\nD: Sup?");
 
   assert(!guide.maybe_yield_turn());
-  traj.tokenize_append("\nOh hi A.\nSup?\n", vocab);
+  traj.tokenize_append("\nOh hi A.\n", vocab);
   assert(!guide.maybe_yield_turn());
-  truncate_detokenize_rolling_to(oss, traj, vocab);
-  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?\n");
-
-  traj.push_back(vocab.eos_token_id());
+  traj.tokenize_append("Sup?</s>", vocab);
   assert(guide.maybe_yield_turn());
   truncate_detokenize_rolling_to(oss, traj, vocab);
-  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?\nA:");
+  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?</s>\nA:");
 
   assert(!guide.maybe_yield_turn());
-  traj.tokenize_append(" Oi!\n", vocab);
+  traj.tokenize_append(" Oi!\n</s>", vocab);
   assert(guide.maybe_yield_turn());
   truncate_detokenize_rolling_to(oss, traj, vocab);
-  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?\nA: Oi!\nB:");
+  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?</s>\nA: Oi!</s>\n###\nB:");
 
   assert(guide.maybe_erase_trailing_message_prefix());
   truncate_detokenize_rolling_to(oss, traj, vocab);
-  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?\nA: Oi!\n");
+  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?</s>\nA: Oi!</s>\n###\n");
 
   assert(guide.maybe_erase_trailing_message_suffix());
   truncate_detokenize_rolling_to(oss, traj, vocab);
-  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?\nA: Oi!");
+  assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?</s>\nA: Oi!");
 }
 
 

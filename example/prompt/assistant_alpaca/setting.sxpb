@@ -1,6 +1,17 @@
-(((chat_prefixes)) "\n### Instruction:\n" "\n### Response:\n")
+(((chat_prefixes))
+ (m
+   (prefix "### Instruction:\n")
+   (suffix "\n\n"))
+ (m
+   (prefix "### Response:\n")
+   ; Model must be fine-tuned to end the response with EOS token.
+   (suffix "</s>\n\n")
+ )
+)
+(substitution
+  (eos_token_alias "</s>")
+)
 ; Lines are considered as sentences.
-; Model must be fine-tuned to end the response with EOS token.
 ((sentence_terminals) "\n")
 ; Max 10 lines at a time.
 (sentence_limit 10)
