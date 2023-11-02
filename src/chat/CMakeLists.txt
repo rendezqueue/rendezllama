@@ -6,6 +6,8 @@ add_executable(chat
   "cmd.hh"
   "display.cc"
   "display.hh"
+  "guide.cc"
+  "guide.hh"
   "opt.cc"
   "opt.hh"
   "opt_schema.cc"

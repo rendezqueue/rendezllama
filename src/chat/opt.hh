@@ -10,6 +10,13 @@ struct FildeshSxprotoField;
 
 namespace rendezllama {
 
+struct ChatMessageOpt {
+  std::string prefix;
+  std::string given_prefix;
+  std::string suffix;
+  std::string given_suffix;
+};
+
 struct ChatOptions {
 
   std::string protagonist;
@@ -19,8 +26,7 @@ struct ChatOptions {
   std::string bos_token_alias;
   std::string eos_token_alias;
   std::vector<std::string> special_token_names;
-  std::vector<std::string> chat_prefixes;
-  std::vector<std::string> given_chat_prefixes;
+  std::vector<ChatMessageOpt> message_opts;
   std::string model_filename;
   std::string lora_filename;
   std::string lora_base_model_filename;
@@ -44,6 +50,7 @@ struct ChatOptions {
   unsigned sentence_token_limit = 0;
   unsigned top_k = 1000;
   float top_p = 0.95;
+  float min_p = 0.05;
   float temperature = 0.7;
   float tfs_z = 1.0;
   float typical_p = 1.0;
@@ -63,8 +70,6 @@ struct ChatOptions {
   bool coprocess_mode_on = false;
   std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
-  // Derived.
-  bool multiline_confidant_on = false;
   // Can't set these yet.
   bool verbose_prompt = false;
 };
@@ -72,21 +77,16 @@ struct ChatOptions {
 void
 print_options(std::ostream& out, const ChatOptions& opt);
 int
-parse_initialize_options_sxproto(
-    rendezllama::ChatOptions& opt,
-    const std::string& filename);
-int
 parse_options(ChatOptions& opt, int argc, char** argv);
 bool
-parse_sxpb_options(
-    rendezllama::ChatOptions& opt,
+slurp_sxpb_initialize_options_close_FildeshX(
     FildeshX* in,
-    const FildeshSxprotoField* schema,
+    rendezllama::ChatOptions& opt,
     const std::string& filename);
 bool
-parse_dynamic_sxpb_options(
-    rendezllama::ChatOptions& opt,
-    FildeshX* in);
+slurp_sxpb_dynamic_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt);
 
 }  // namespace rendezllama
 #endif

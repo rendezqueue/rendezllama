@@ -6,6 +6,7 @@
 
 static const FildeshSxprotoField chat_prefixes_m_message[] = {
   {"prefix", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
+  {"suffix", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
 };
 static const FildeshSxprotoField chat_prefixes_manyof[] = {
   {"", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
@@ -36,6 +37,7 @@ rendezllama::options_sxproto_schema()
     {"lora_base", FILL_FildeshSxprotoField_ALIAS("lora_base_model")},
     {"lora_base_model", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
     {"lora", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
+    {"min_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"mirostat", FILL_FildeshSxprotoField_INT(0, 2)},
     {"mirostat_eta", FILL_FildeshSxprotoField_FLOAT(0, 10)},
     {"mirostat_tau", FILL_FildeshSxprotoField_FLOAT(0, 10)},
@@ -80,6 +82,7 @@ rendezllama::dynamic_options_sxproto_schema()
     {"chat_prefixes", FILL_FildeshSxprotoField_MANYOF(chat_prefixes_manyof)},
     {"confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
     {"frequency_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+    {"min_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"mirostat", FILL_FildeshSxprotoField_INT(0, 2)},
     {"mirostat_eta", FILL_FildeshSxprotoField_FLOAT(0, 10)},
     {"mirostat_tau", FILL_FildeshSxprotoField_FLOAT(0, 10)},

@@ -119,14 +119,15 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
     << ", confidant=" << opt.confidant
     << '\n';
   out << "Chat lines start with...\n";
-  for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
-    out << opt.chat_prefixes[i] << '\n';
+  for (unsigned i = 0; i < opt.message_opts.size(); ++i) {
+    out << opt.message_opts[i].prefix << '\n';
   }
   out << '\n';
   out
     << "Sampling: temperature=" << opt.temperature
     << ", top_k=" << opt.top_k
     << ", top_p=" << opt.top_p
+    << ", min_p=" << opt.min_p
     << ", repeat_window=" << opt.repeat_last_count
     << ", repeat_penalty=" << opt.repeat_penalty
     << '\n'
@@ -140,25 +141,37 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
 }
 
 static void reinitialize_chat_prefixes(ChatOptions& opt) {
-  opt.chat_prefixes = opt.given_chat_prefixes;
-  for (unsigned i = 0; i < opt.chat_prefixes.size(); ++i) {
-    if (!opt.protagonist_alias.empty()) {
-      string_replace(opt.chat_prefixes[i], opt.protagonist_alias, opt.protagonist);
+  if (opt.message_opts.size() < 2) {
+    opt.message_opts.clear();
+    opt.message_opts.resize(2);
+    if (opt.linespace_on) {
+      opt.message_opts[0].prefix += ' ';
+      opt.message_opts[1].prefix += ' ';
     }
-    if (!opt.confidant_alias.empty()) {
-      string_replace(opt.chat_prefixes[i], opt.confidant_alias, opt.confidant);
+    opt.message_opts[0].prefix += opt.protagonist + ':';
+    opt.message_opts[1].prefix += opt.confidant + ':';
+  }
+  for (auto& message_opt : opt.message_opts) {
+    if (!message_opt.given_prefix.empty()) {
+      message_opt.prefix = message_opt.given_prefix;
+      if (!opt.protagonist_alias.empty()) {
+        string_replace(message_opt.prefix, opt.protagonist_alias, opt.protagonist);
+      }
+      if (!opt.confidant_alias.empty()) {
+        string_replace(message_opt.prefix, opt.confidant_alias, opt.confidant);
+      }
+    }
+    if (!message_opt.given_suffix.empty()) {
+      message_opt.suffix = message_opt.given_suffix;
+    }
+    else {
+      message_opt.suffix = '\n';
     }
   }
-  if (opt.chat_prefixes.size() < 2) {
-    opt.given_chat_prefixes.clear();
-    opt.chat_prefixes.clear();
-    opt.chat_prefixes.resize(2);
-    if (opt.linespace_on) {
-      opt.chat_prefixes[0] += ' ';
-      opt.chat_prefixes[1] += ' ';
+  if (opt.coprocess_mode_on) {
+    for (auto& message_opt : opt.message_opts) {
+      message_opt.prefix = "";
     }
-    opt.chat_prefixes[0] += opt.protagonist + ':';
-    opt.chat_prefixes[1] += opt.confidant + ':';
   }
 }
 
@@ -168,7 +181,7 @@ static int initialize_options(ChatOptions& opt) {
     opt.context_token_limit = opt.model_token_limit;
   }
   if (exstatus == 0 &&
-      opt.given_chat_prefixes.size() < 2 &&
+      opt.message_opts.size() < 2 &&
       !opt.coprocess_mode_on)
   {
     if (opt.protagonist.empty()) {
@@ -179,10 +192,6 @@ static int initialize_options(ChatOptions& opt) {
       fildesh_log_error("Please provide a --confidant name.");
       exstatus = 64;
     }
-  }
-  if (exstatus == 0 && opt.priming_prompt.empty()) {
-    fildesh_log_error("Please provide a priming prompt with --x_priming.");
-    exstatus = 64;
   }
   if (exstatus == 0) {
     if (!opt.protagonist_alias.empty()) {
@@ -201,32 +210,23 @@ static int initialize_options(ChatOptions& opt) {
 
 static
   bool
-parse_options_sxproto(ChatOptions& opt, const std::string& filename)
+slurp_sxpb_options_close_FildeshX(
+    FildeshX* in,
+    ChatOptions& opt,
+    const FildeshSxprotoField* schema,
+    const std::string& filename);
+
+static
+  bool
+parse_sxpb_file_options(ChatOptions& opt, const char* filename)
 {
-  bool all_good = true;
-  FildeshX* in = open_FildeshXF(filename.c_str());
+  FildeshX* in = open_FildeshXF(filename);
   if (!in) {
-    fildesh_log_errorf("Cannot open %s.", filename.c_str());
+    fildesh_log_errorf("Cannot open %s.", filename);
     return false;
   }
-  all_good = rendezllama::parse_sxpb_options(
-      opt, in, rendezllama::options_sxproto_schema(), filename);
-  return all_good;
-}
-
-  int
-rendezllama::parse_initialize_options_sxproto(
-    rendezllama::ChatOptions& opt,
-    const std::string& filename)
-{
-  int exstatus = 0;
-  if (!parse_options_sxproto(opt, filename)) {
-    exstatus = 1;
-  }
-  if (exstatus == 0) {
-    exstatus = initialize_options(opt);
-  }
-  return exstatus;
+  return slurp_sxpb_options_close_FildeshX(
+      in, opt, rendezllama::options_sxproto_schema(), filename);
 }
 
   int
@@ -271,7 +271,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     }
     else if (0 == strcmp("--x_setting", argv[argi])) {
       argi += 1;
-      if (!parse_options_sxproto(opt, argv[argi])) {
+      if (!parse_sxpb_file_options(opt, argv[argi])) {
         exstatus = 1;
       }
     }
@@ -421,11 +421,10 @@ lone_subfield_at_FildeshSxpb_to_cc_string(
   return false;
 }
 
-/** Closes `in`.**/
   bool
-rendezllama::parse_sxpb_options(
-    ChatOptions& opt,
+slurp_sxpb_options_close_FildeshX(
     FildeshX* in,
+    ChatOptions& opt,
     const FildeshSxprotoField* schema,
     const std::string& filename)
 {
@@ -544,19 +543,21 @@ rendezllama::parse_sxpb_options(
 
   it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "chat_prefixes");
   if (!nullish_FildeshSxpbIT(it)) {
-    opt.given_chat_prefixes.clear();
+    opt.message_opts.clear();
     for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
          it = next_at_FildeshSxpb(sxpb, it)) {
-      std::string given_prefix;
+      rendezllama::ChatMessageOpt message_opt;
       if (!name_at_FildeshSxpb(sxpb, it)) {
-        given_prefix = str_value_at_FildeshSxpb(sxpb, it);
+        message_opt.given_prefix = str_value_at_FildeshSxpb(sxpb, it);
       }
       else {
         assert(0 == strcmp(name_at_FildeshSxpb(sxpb, it), "m"));
         lone_subfield_at_FildeshSxpb_to_cc_string(
-            &given_prefix, sxpb, it, "prefix");
+            &message_opt.given_prefix, sxpb, it, "prefix");
+        lone_subfield_at_FildeshSxpb_to_cc_string(
+            &message_opt.given_suffix, sxpb, it, "suffix");
       }
-      opt.given_chat_prefixes.push_back(given_prefix);
+      opt.message_opts.push_back(message_opt);
     }
     if (filename.empty()) {
       reinitialize_chat_prefixes(opt);
@@ -577,6 +578,7 @@ rendezllama::parse_sxpb_options(
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.repeat_last_count, sxpb, top_it, "repeat_last_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.top_k, sxpb, top_it, "top_k");
   lone_subfield_at_FildeshSxpb_to_float(&opt.top_p, sxpb, top_it, "top_p");
+  lone_subfield_at_FildeshSxpb_to_float(&opt.min_p, sxpb, top_it, "min_p");
   lone_subfield_at_FildeshSxpb_to_float(&opt.tfs_z, sxpb, top_it, "tfs_z");
   lone_subfield_at_FildeshSxpb_to_float(&opt.typical_p, sxpb, top_it, "typical_p");
   lone_subfield_at_FildeshSxpb_to_float(&opt.temperature, sxpb, top_it, "temperature");
@@ -601,7 +603,6 @@ rendezllama::parse_sxpb_options(
       if (s[0] == '\n' && s[1] == '\0') {found = true;}
     }
 
-    opt.multiline_confidant_on = found;
     opt.antiprompts = opt.sentence_terminals;
     if (!found) {
       opt.antiprompts.push_back("\n");
@@ -614,12 +615,25 @@ rendezllama::parse_sxpb_options(
   return all_good;
 }
 
+  bool
+rendezllama::slurp_sxpb_initialize_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt,
+    const std::string& filename)
+{
+  bool all_good = slurp_sxpb_options_close_FildeshX(
+      in, opt, rendezllama::options_sxproto_schema(), filename);
+  if (all_good) {
+    initialize_options(opt);
+  }
+  return all_good;
+}
 
   bool
-rendezllama::parse_dynamic_sxpb_options(
-    rendezllama::ChatOptions& opt,
-    FildeshX* in)
+rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt)
 {
-  return rendezllama::parse_sxpb_options(
-      opt, in, dynamic_options_sxproto_schema(), "");
+  return slurp_sxpb_options_close_FildeshX(
+      in, opt, dynamic_options_sxproto_schema(), "");
 }

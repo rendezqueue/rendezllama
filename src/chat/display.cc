@@ -19,13 +19,12 @@ ChatDisplay::displaystring_to(
     const Vocabulary& vocabulary) const
 {
   if (token_id == vocabulary.eos_token_id()) {
-    // TODO(#30): remove hack.
     *out << "\n";
-    //out = "";
   }
   else if (token_id == vocabulary.newline_token_id()) {
     // TODO(#30): remove hack.
     *out << " / ";
+    //putc_FildeshO(out, '\n');
   }
   else {
     vocabulary.detokenize_to(out, token_id);

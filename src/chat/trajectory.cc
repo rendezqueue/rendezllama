@@ -4,7 +4,7 @@
 #include <cassert>
 #include <climits>
 
-#include <fildesh/fildesh.h>
+#include <fildesh/string.hh>
 
 using rendezllama::ChatTrajectory;
 using rendezllama::Vocabulary;
@@ -175,16 +175,127 @@ ChatTrajectory::tokenize_append_message_prefix(
   message_prefix_id_ = id;
 }
 
+  bool
+ChatTrajectory::endswith_nonempty(
+    std::string_view suffix,
+    const Vocabulary& vocabulary)
+{
+  assert(!suffix.empty());
+  fildesh::ostringstream oss;
+  std::string carry;
+  size_type token_index = this->token_count();
+  while (token_index > priming_token_count_ && carry.size() < suffix.size()) {
+    token_index -= 1;
+    vocabulary.detokenize_to(oss.c_struct(), this->token_at(token_index));
+    carry.insert(0, oss.view());
+    oss.truncate();
+  }
+  if (carry.size() >= suffix.size()) {
+    if (carry.substr(carry.size()-suffix.size()) == suffix) {
+      return true;
+    }
+  }
+  return false;
+}
+
+  void
+ChatTrajectory::trim_message_suffix(
+    std::string_view suffix,
+    const Vocabulary& vocabulary)
+{
+  auto pos = suffix.find_last_not_of(" \n");
+  if (pos != std::string_view::npos) {
+    suffix = suffix.substr(0, pos+1);
+  }
+
+  fildesh::ostringstream oss;
+  while (this->token_count() > priming_token_count_) {
+    size_type token_index = this->token_count()-1;
+    if (oss.view().empty()) {
+      Token_id token_id = this->token_at(token_index);
+      if (token_id == vocabulary.newline_token_id() ||
+          token_id == vocabulary.eos_token_id()) {
+        this->erase_all_at(token_index);
+        continue;
+      }
+      vocabulary.detokenize_to(oss.c_struct(), token_id);
+    }
+    else {
+      token_index = this->token_count();
+    }
+
+    auto pos = oss.view().find_last_not_of(" \n");
+    if (pos == std::string_view::npos) {
+      oss.truncate();
+      this->erase_all_at(token_index);
+      continue;
+    }
+
+    std::string carry;
+    if (pos+1 == oss.view().size() && token_index < this->token_count()) {
+      token_index += 1;
+    }
+    else {
+      carry = oss.view().substr(0, pos+1);
+      this->erase_all_at(token_index);
+    }
+    oss.truncate();
+    const size_t carry_rindex = carry.size();
+
+    assert(token_index <= this->token_count());
+    while (token_index > priming_token_count_ && carry.size() < suffix.size()) {
+      token_index -= 1;
+      vocabulary.detokenize_to(oss.c_struct(), this->token_at(token_index));
+      carry.insert(0, oss.view());
+      oss.truncate();
+    }
+    if (!suffix.empty() &&
+        carry.size() >= suffix.size())
+    {
+      size_t lhs_size = carry.size()-suffix.size();
+      if (carry.substr(lhs_size) == suffix) {
+        this->erase_all_at(token_index);
+        oss << carry.substr(0, lhs_size);
+        continue;
+      }
+    }
+    oss << carry.substr(carry.size()-carry_rindex);
+    break;
+  }
+  this->tokenize_append(oss.view(), vocabulary);
+}
+
+  void
+ChatTrajectory::tokenize_append_message_suffix(
+    std::string_view suffix,
+    const Vocabulary& vocabulary)
+{
+  if (suffix.empty()) {
+    suffix = "\n";
+  }
+  const size_type old_display_token_count = display_token_count_;
+  this->trim_message_suffix(suffix, vocabulary);
+  const bool display_move_on = (
+      old_display_token_count > this->token_count());
+  this->tokenize_append(suffix, vocabulary);
+  if (display_move_on) {
+    display_token_count_ = this->token_count();
+  }
+}
+
   ChatTrajectory::size_type
 ChatTrajectory::rfind_message_prefix_at(size_type i) const
 {
-  while (i > priming_token_count_) {
+  assert(i < this->token_count());
+  assert(0 < priming_token_count_);
+  while (i >= priming_token_count_) {
     if (message_prefix_ids_[i] != this->not_a_message_prefix_id()) {
-      break;
+      return i;
     }
     i -= 1;
   }
-  return i;
+  assert(i == priming_token_count_-1);
+  return priming_token_count_-1;
 }
 
   ChatTrajectory::size_type
@@ -193,11 +304,17 @@ ChatTrajectory::rfind_message_prefix_begin_at(size_type i) const
   i = this->rfind_message_prefix_at(i);
   while (i > priming_token_count_) {
     if (message_prefix_ids_[i-1] != message_prefix_ids_[i]) {
-      break;
+      return i;
     }
     i -= 1;
   }
-  return i;
+  if (i == priming_token_count_) {
+    if (message_prefix_ids_[i] != this->not_a_message_prefix_id()) {
+      return priming_token_count_;
+    }
+  }
+  assert(i == priming_token_count_-1);
+  return priming_token_count_-1;;
 }
 
   ChatTrajectory::size_type
@@ -216,13 +333,11 @@ ChatTrajectory::rfind_last_message_prefix_end_at(size_type i) const
   }
   else {
     i = rfind_message_prefix_begin_at(i);
-    if (i > priming_token_count_) {
+    if (i >= priming_token_count_) {
       i = rfind_message_prefix_at(i-1);
     }
   }
-  if (message_prefix_ids_[i] == this->not_a_message_prefix_id()) {
-    return i;
-  }
+  assert(i + 1 >= priming_token_count_);
   return i + 1;
 }
 

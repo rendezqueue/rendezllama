@@ -6,6 +6,7 @@
 #include "src/chat/chat.hh"
 #include "src/chat/display.hh"
 #include "src/chat/cmd.hh"
+#include "src/chat/guide.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
@@ -128,6 +129,7 @@ int main(int argc, char** argv)
         exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
   }
 
+  rendezllama::ChatGuide chat_guide(vocabulary, chat_traj, opt);
   // Tokenize the prompt.
   const std::vector<llama_token>& chat_tokens = chat_traj.tokens();
   if (exstatus == 0) {
@@ -135,8 +137,7 @@ int main(int argc, char** argv)
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
     chat_traj.tokenize_append(opt.rolling_prompt, vocabulary);
-    chat_traj.tokenize_append_message_prefix(
-        1, opt.chat_prefixes[1], vocabulary);
+    chat_guide.begin_turn(1);
     print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
@@ -211,31 +212,16 @@ int main(int argc, char** argv)
 
     if (line_byte_limit > 0 && line_byte_count >= line_byte_limit) {
       inputting = true;
+      chat_guide.end_turn();
       if (matched_antiprompt != "\n") {
-        // TODO(#30): remove hack.
-        chat_traj.push_back(vocabulary.eos_token_id());
-        //chat_traj.push_back(vocabulary.newline_token_id());
         chat_disp.show_new(chat_traj, vocabulary);
       }
     }
-    else if (rendezllama::eom_token_check(vocabulary, chat_traj.token(), opt, chat_traj)) {
+    else if (chat_guide.maybe_yield_turn()) {
       if (matched_antiprompt != "\n") {
-        chat_traj.push_back(vocabulary.newline_token_id());
         matched_antiprompt = "\n";
       }
-      if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
-        chat_traj.tokenize_append_message_prefix(
-            chat_traj.message_prefix_id_ + 1,
-            opt.chat_prefixes[chat_traj.message_prefix_id_ + 1],
-            vocabulary);
-      }
-      else if (opt.given_chat_prefixes.size() > 0) {
-        chat_traj.tokenize_append_message_prefix(
-            0, opt.chat_prefixes[0], vocabulary);
-        inputting = true;
-        matched_antiprompt = opt.chat_prefixes[0];
-      }
-      else {
+      if (chat_traj.message_prefix_id_ == 0) {
         inputting = true;
       }
       chat_disp.show_new(chat_traj, vocabulary);
@@ -285,8 +271,9 @@ int main(int argc, char** argv)
             continue;
           }
           if (slice.at[0] == ' ' && buffer.empty() && matched_antiprompt == "\n") {
-            // Remove preceeding newline
-            chat_traj.erase_all_at(chat_traj.token_count()-1);
+            // Prepare to append to the previous message.
+            chat_guide.maybe_erase_trailing_message_prefix();
+            chat_guide.maybe_erase_trailing_message_suffix();
             matched_antiprompt.clear();
           }
           buffer += fildesh::make_string_view(slice);
@@ -300,7 +287,7 @@ int main(int argc, char** argv)
 
         slice.off += 1;
         if (peek_char_FildeshX(&slice, '(')) {
-          rendezllama::parse_dynamic_sxpb_options(opt, &slice);
+          rendezllama::slurp_sxpb_dynamic_options_close_FildeshX(&slice, opt);
         }
         else if (skipstr_FildeshX(&slice, "opt")) {
           rendezllama::print_options(eout, opt);
@@ -380,12 +367,6 @@ int main(int argc, char** argv)
           chat_traj.tokenize_append(
               fildesh::make_string(slice) + '\n',
               vocabulary);
-          if (chat_traj.message_prefix_id_ < opt.chat_prefixes.size()-1) {
-            chat_traj.message_prefix_id_ += 1;
-          }
-          else if (chat_traj.message_prefix_id_ == opt.chat_prefixes.size()-1) {
-            chat_traj.message_prefix_id_ = 0;
-          }
           matched_antiprompt = '\n';
           // Might as well process now.
           chat_traj.display_token_count_ = chat_traj.token_count();
@@ -413,7 +394,7 @@ int main(int argc, char** argv)
               fildesh::make_string_view(slice),
               vocabulary);
           // Set this index so token generation stops after 1 line.
-          chat_traj.message_prefix_id_ = opt.chat_prefixes.size();
+          chat_traj.message_prefix_id_ = opt.message_opts.size();
           // Not printing any inserted text.
           chat_traj.display_token_count_ = chat_traj.token_count();
           break;
@@ -450,10 +431,10 @@ int main(int argc, char** argv)
 
       if (buffer.length() > 0) {
         rendezllama::augment_tokenize_chat_input(
+            chat_guide,
             chat_traj,
             preventing_newline,
             buffer,
-            matched_antiprompt,
             vocabulary,
             opt);
       }

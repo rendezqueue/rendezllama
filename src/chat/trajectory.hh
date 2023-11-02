@@ -42,6 +42,15 @@ class ChatTrajectory {
       message_prefix_id id,
       std::string_view s,
       const Vocabulary& vocabulary);
+  bool endswith_nonempty(
+      std::string_view suffix,
+      const Vocabulary& vocabulary);
+  void trim_message_suffix(
+      std::string_view suffix,
+      const Vocabulary& vocabulary);
+  void tokenize_append_message_suffix(
+      std::string_view suffix,
+      const Vocabulary& vocabulary);
   static message_prefix_id unknown_message_prefix_id() {
     return std::numeric_limits<message_prefix_id>::max()-1;
   }
@@ -56,6 +65,7 @@ class ChatTrajectory {
       message_prefix_id id,
       size_type beg, size_type end);
 
+  size_type priming_token_count() const {return priming_token_count_;}
   const std::vector<Token_id>& tokens() const {return token_ids_;}
 
  private:
@@ -66,7 +76,7 @@ class ChatTrajectory {
   FildeshO* transcript_out_ = nullptr;
   size_type display_token_count_ = 0;
   size_type context_token_count_ = 0;
-  size_type priming_token_count_ = 0;
+  size_type priming_token_count_ = 1;
   message_prefix_id message_prefix_id_ = ChatTrajectory::unknown_message_prefix_id();
   bool erased_since_eval_ = false;
 };
