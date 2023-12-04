@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <thread>
 
 #include <fildesh/fildesh.h>
 
@@ -271,7 +272,16 @@ rendezllama::commit_to_context(
   chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary);
 
   // Reset thread count just in case the user reconfigured it.
-  llama_set_n_threads(ctx, opt.thread_count, opt.thread_count);
+  const unsigned thread_count = opt.thread_count;
+  unsigned batch_thread_count = opt.batch_thread_count;
+  if (batch_thread_count == 0) {
+    batch_thread_count = std::thread::hardware_concurrency();
+  }
+  if (batch_thread_count == 0) {
+    batch_thread_count = thread_count;
+  }
+  llama_set_n_threads(ctx, thread_count, batch_thread_count);
+
   // Clear KV cache past current position just in case the user deleted tokens.
   llama_kv_cache_seq_rm(ctx, -1, chat_traj.context_token_count_, -1);
 
@@ -280,6 +290,14 @@ rendezllama::commit_to_context(
         opt.batch_count,
         chat_traj.token_count() - chat_traj.context_token_count_);
 
+#if LLAMA_OPENBLAS_ON
+    if (n < 32) {
+      llama_set_n_threads(ctx, thread_count, batch_thread_count);
+    }
+    else {
+      llama_set_n_threads(ctx, thread_count, 1);
+    }
+#endif
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
 
     llama_batch batch = llama_batch_get_one(

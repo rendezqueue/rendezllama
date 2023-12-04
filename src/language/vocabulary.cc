@@ -17,11 +17,13 @@ Vocabulary::Vocabulary(const llama_model* model)
 {
   if (!model_) {return;}
 
+  Token_id ids[2];
   int n = llama_tokenize(
-      model_, "\n", 1, &newline_token_id_, 1,
+      model_, "\n", 1, &ids[0], 2,
       /*add_bos=*/false,
-      /*special=*/true);
-  assert(n == 1 && "need a unique newline token");
+      /*special=*/false);
+  assert(n == 2 && "need a unique newline token");
+  newline_token_id_ = ids[1];
 }
 
 Token_id Vocabulary::bos_token_id() const {

@@ -17,6 +17,9 @@ add_executable(chat
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
 )
+if (LLAMA_OPENBLAS_ON)
+  target_compile_definitions(chat PRIVATE "LLAMA_OPENBLAS_ON=1")
+endif()
 target_link_libraries(chat PRIVATE
   ${FildeshSxproto_LIBRARIES}
   ${LlamaCpp_LIBRARIES}
