@@ -15,7 +15,7 @@ static FildeshSxprotoField chat_prefixes_manyof[] = {
 static FildeshSxprotoField special_token_message[] = {
   {"name", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
 };
-static FildeshSxprotoField substitution_message[] = {
+static FildeshSxprotoField substitute_message[] = {
   {"protagonist_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
   {"confidant_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
   {"bos_token_alias", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
@@ -57,12 +57,14 @@ rendezllama::options_sxproto_schema()
     {"sentence_terminals", FILL_DEFAULT_FildeshSxprotoField_STRINGS},
     {"sentence_token_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
     {"startspace_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
-    {"substitution", FILL_FildeshSxprotoField_MESSAGE(substitution_message)},
+    {"substitute", FILL_FildeshSxprotoField_MESSAGE(substitute_message)},
+    {"substitution", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
     {"temperature", FILL_FildeshSxprotoField_FLOAT(0, 10)},
     {"temp", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
     {"tfs_z", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"thread_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"batch_thread_count", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
+    // {"sampling", FILL_FildeshSxprotoField_MESSAGE(sampling_message)},
     {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"top_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
