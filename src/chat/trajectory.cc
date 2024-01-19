@@ -276,7 +276,7 @@ ChatTrajectory::tokenize_append_message_suffix(
   const size_type old_display_token_count = display_token_count_;
   this->trim_message_suffix(suffix, vocabulary);
   const bool display_move_on = (
-      old_display_token_count > this->token_count());
+      old_display_token_count >= this->token_count());
   this->tokenize_append(suffix, vocabulary);
   if (display_move_on) {
     display_token_count_ = this->token_count();
