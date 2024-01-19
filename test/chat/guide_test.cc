@@ -96,6 +96,20 @@ the_test(llama_model* model)
   assert(guide.maybe_erase_trailing_message_suffix());
   truncate_detokenize_rolling_to(oss, traj, vocab);
   assert(oss.view() == "C: Yo.\nD: Sup?\nOh hi A.\nSup?</s>\nA: Oi!");
+
+  // Reset and test that a poorly-tokenized EOS gets detected and fixed,
+  // even when EOS isn't part of the message suffix.
+  traj.erase_all_at(1);
+  guide.begin_turn(1);
+  traj.tokenize_append(" Hello there!", vocab);
+  auto expect_suffix_index = traj.token_count();
+  traj.tokenize_append("</", vocab);
+  traj.tokenize_append("s", vocab);
+  traj.tokenize_append(">\n", vocab);
+  assert(guide.maybe_yield_turn());
+  assert(traj.token_at(expect_suffix_index) == vocab.newline_token_id());
+  truncate_detokenize_rolling_to(oss, traj, vocab);
+  assert(oss.view() == "B: Hello there!\nC:");
 }
 
 

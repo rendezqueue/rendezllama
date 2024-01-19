@@ -243,11 +243,24 @@ ChatTrajectory::trim_message_suffix(
     const size_t carry_rindex = carry.size();
 
     assert(token_index <= this->token_count());
-    while (token_index > priming_token_count_ && carry.size() < suffix.size()) {
+    size_t sufficient_size = suffix.size();
+    const std::string_view eos_token_alias = vocabulary.eos_token_alias();
+    if (sufficient_size < eos_token_alias.size()) {
+      sufficient_size = eos_token_alias.size();
+    }
+    while (token_index > priming_token_count_ && carry.size() < sufficient_size) {
       token_index -= 1;
       vocabulary.detokenize_to(oss.c_struct(), this->token_at(token_index));
       carry.insert(0, oss.view());
       oss.truncate();
+    }
+    if (!eos_token_alias.empty() && carry.size() >= eos_token_alias.size()) {
+      size_t lhs_size = carry.size()-eos_token_alias.size();
+      if (carry.substr(lhs_size) == eos_token_alias) {
+        this->erase_all_at(token_index);
+        oss << carry.substr(0, lhs_size);
+        continue;
+      }
     }
     if (!suffix.empty() &&
         carry.size() >= suffix.size())
