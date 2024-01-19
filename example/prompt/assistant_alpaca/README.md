@@ -29,5 +29,21 @@ Hello!
 
 ```
 
-The response sections all end with an EOS token, which is preserved in the context but is otherwise invisible.
+The response sections all end with an EOS token. which is preserved in the context but is otherwise invisible.
+Relevant lines of `setting.sxpb` are:
+```lisp
+(((chat_prefixes))
+ (m
+   (prefix "### Instruction:\n")
+   (suffix "\n\n"))
+ (m
+   (prefix "### Response:\n")
+   ; Model must be fine-tuned to end the response with EOS token.
+   (suffix "</s>\n\n")
+ )
+)
+(substitution
+  (eos_token_alias "</s>")
+)
+```
 

@@ -10,14 +10,23 @@ struct FildeshSxprotoField;
 
 namespace rendezllama {
 
+struct ChatMessageOpt {
+  std::string prefix;
+  std::string given_prefix;
+  std::string suffix;
+  std::string given_suffix;
+};
+
 struct ChatOptions {
 
   std::string protagonist;
   std::string confidant;
-  std::string template_protagonist;
-  std::string template_confidant;
-  std::vector<std::string> chat_prefixes;
-  std::vector<std::string> given_chat_prefixes;
+  std::string protagonist_alias;
+  std::string confidant_alias;
+  std::string bos_token_alias;
+  std::string eos_token_alias;
+  std::vector<std::string> special_token_names;
+  std::vector<ChatMessageOpt> message_opts;
   std::string model_filename;
   std::string lora_filename;
   std::string lora_base_model_filename;
@@ -37,10 +46,12 @@ struct ChatOptions {
   const char command_delim_chars[5] = ":=! ";
 
   unsigned thread_count = 1;
+  unsigned batch_thread_count = 0;
   unsigned sentence_limit = 0;
   unsigned sentence_token_limit = 0;
   unsigned top_k = 1000;
   float top_p = 0.95;
+  float min_p = 0.05;
   float temperature = 0.7;
   float tfs_z = 1.0;
   float typical_p = 1.0;
@@ -60,34 +71,23 @@ struct ChatOptions {
   bool coprocess_mode_on = false;
   std::vector<std::string> sentence_terminals = {"!", ".", "?", "…"};
   std::vector<std::string> antiprompts;
-  // Derived.
-  bool multiline_confidant_on = false;
   // Can't set these yet.
   bool verbose_prompt = false;
 };
 
-const FildeshSxprotoField*
-dynamic_options_sxproto_schema();
-const FildeshSxprotoField*
-options_sxproto_schema();
 void
 print_options(std::ostream& out, const ChatOptions& opt);
 int
-parse_initialize_options_sxproto(
-    rendezllama::ChatOptions& opt,
-    const std::string& filename);
-int
 parse_options(ChatOptions& opt, int argc, char** argv);
 bool
-parse_sxpb_options(
-    rendezllama::ChatOptions& opt,
+slurp_sxpb_initialize_options_close_FildeshX(
     FildeshX* in,
-    const FildeshSxprotoField* schema,
+    rendezllama::ChatOptions& opt,
     const std::string& filename);
 bool
-parse_dynamic_sxpb_options(
-    rendezllama::ChatOptions& opt,
-    FildeshX* in);
+slurp_sxpb_dynamic_options_close_FildeshX(
+    FildeshX* in,
+    rendezllama::ChatOptions& opt);
 
 }  // namespace rendezllama
 #endif

@@ -3,10 +3,13 @@
 #include <cassert>
 #include <cstring>
 
+#include <fildesh/string.hh>
+
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
-#include "src/tokenize/tokenize.hh"
 
+using rendezllama::ChatOptions;
+using rendezllama::ChatTrajectory;
 using rendezllama::Vocabulary;
 
 static
@@ -43,11 +46,11 @@ print_tail_lines(std::ostream& out,
                  unsigned n)
 {
   unsigned i = chat_traj.token_count();
-  while (n > 0) {
-    i = rendezllama::prev_newline_start_index(
-        vocabulary, chat_traj.tokens(), i);
-    n -= 1;
+  while (i > 0 && n > 0) {
+    i = chat_traj.rfind_token_at(i-1, vocabulary.newline_token_id());
+    n = (i < chat_traj.token_count() ? n-1 : 0);
   }
+  i = (i < chat_traj.token_count() ? i+1 : 0);
   for (; i < chat_traj.token_count(); ++i) {
     vocabulary.detokenize_to(out, chat_traj.token_at(i));
   }
@@ -69,14 +72,9 @@ rendezllama::maybe_do_back_command(
     }
   }
   unsigned n = 1;
-  {
-    int tmp_n = -1;
-    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
-      n = tmp_n;
-    }
-  }
+  parse_unsigned_FildeshX(in, &n);
   bool skipping_contiguous_space = space_delim_on;
-  std::string s;
+  fildesh::ostringstream oss;
   while (n > 0) {
     if (chat_traj.token_count() <= chat_traj.priming_token_count_) {
       break;
@@ -84,7 +82,9 @@ rendezllama::maybe_do_back_command(
     const Vocabulary::Token_id token_id = chat_traj.token();
     chat_traj.erase_all_at(chat_traj.token_count()-1);
     if (space_delim_on) {
-      vocabulary.detokenize_to(s, token_id);
+      oss.truncate();
+      vocabulary.detokenize_to(oss, token_id);
+      const std::string_view s = oss.view();
       if (!s.empty() && (s[0] == ' ' || s[0] == '\n')) {
         if (!skipping_contiguous_space || s.size() != 1) {
           n -= 1;
@@ -104,6 +104,50 @@ rendezllama::maybe_do_back_command(
 }
 
   bool
+rendezllama::maybe_do_delete_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "d", opt)) {
+    return false;
+  }
+  size_t offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count()-1);
+  if (offset > chat_traj.priming_token_count_) {
+    offset = chat_traj.rfind_message_prefix_begin_at(offset-1);
+  }
+  chat_traj.erase_all_at(offset);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_delete_inline_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const Vocabulary& vocabulary,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "D", opt)) {
+    return false;
+  }
+  unsigned n = 0;
+  parse_unsigned_FildeshX(in, &n);
+  auto offset = chat_traj.token_count();
+  while (offset > chat_traj.priming_token_count_) {
+    offset -= 1;
+    if (chat_traj.token_at(offset) == vocabulary.newline_token_id()) {
+      if (n == 0) {
+        offset += 1;
+        break;
+      }
+      n -= 1;
+    }
+  }
+  chat_traj.erase_all_at(offset);
+  return true;
+}
+
+  bool
 rendezllama::maybe_do_head_command(
     FildeshX* in,
     std::ostream& out,
@@ -115,12 +159,7 @@ rendezllama::maybe_do_head_command(
     return false;
   }
   unsigned n = 10;
-  {
-    int tmp_n = 0;
-    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
-      n = tmp_n;
-    }
-  }
+  parse_unsigned_FildeshX(in, &n);
   for (size_t i = chat_traj.priming_token_count_; i < chat_traj.token_count(); ++i) {
     vocabulary.detokenize_to(out, chat_traj.token_at(i));
     if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
@@ -131,6 +170,37 @@ rendezllama::maybe_do_head_command(
     }
   }
   out.flush();
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_regen_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "r", opt)) {
+    return false;
+  }
+  size_t offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count()-1);
+  chat_traj.erase_all_at(offset);
+  return true;
+}
+
+  bool
+rendezllama::maybe_do_regen_inline_command(
+    FildeshX* in,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "R", opt)) {
+    return false;
+  }
+  auto offset = chat_traj.rfind_last_message_prefix_end_at(chat_traj.token_count());
+  chat_traj.assign_range_message_prefix_id(
+      chat_traj.message_prefix_id_,
+      offset,
+      chat_traj.token_count());
   return true;
 }
 
@@ -146,12 +216,7 @@ rendezllama::maybe_do_tail_command(
     return false;
   }
   unsigned n = 10;
-  {
-    int tmp_n = 0;
-    if (parse_int_FildeshX(in, &tmp_n) && tmp_n > 0) {
-      n = tmp_n;
-    }
-  }
+  parse_unsigned_FildeshX(in, &n);
   print_tail_lines(out, vocabulary, chat_traj, n);
   return true;
 }
@@ -168,7 +233,7 @@ rendezllama::maybe_parse_yield_command(
   }
   s = '\n';
   if (in->off < in->size) {
-    s.insert(s.end(), &in->at[in->off], &in->at[in->size]);
+    s += fildesh::make_string_view(*in);
   }
   else {
     s += opt.confidant + ':';

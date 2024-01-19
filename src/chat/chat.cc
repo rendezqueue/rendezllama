@@ -3,16 +3,18 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <thread>
 
 #include <fildesh/fildesh.h>
 
 #include "src/chat/display.hh"
+#include "src/chat/guide.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
 #include "src/language/vocabulary.hh"
-#include "src/tokenize/tokenize.hh"
 
 using rendezllama::ChatDisplay;
+using rendezllama::ChatGuide;
 using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
 using rendezllama::Vocabulary;
@@ -20,7 +22,7 @@ using rendezllama::Vocabulary;
 
   const std::string&
 rendezllama::antiprompt_suffix(
-    const std::string& text,
+    std::string_view text,
     const std::vector<std::string>& antiprompts)
 {
   static const std::string empty_string;
@@ -45,96 +47,49 @@ static bool maybe_trim_endspace(std::string& s)
   return result;
 }
 
-static
-  bool
-eom_newline_check(
-    const ChatOptions& opt,
-    const ChatTrajectory& chat_traj)
-{
-  if (chat_traj.line_prefix_index() < opt.chat_prefixes.size()-1) {
-    return true;
-  }
-  return !opt.multiline_confidant_on;
-}
-
-  bool
-rendezllama::eom_token_check(
-    const Vocabulary& vocabulary,
-    llama_token token_id,
-    const ChatOptions& opt,
-    const ChatTrajectory& chat_traj)
-
-{
-  if (token_id == vocabulary.eos_token_id()) {
-    return true;
-  }
-  if (eom_newline_check(opt, chat_traj)) {
-    return token_id == vocabulary.newline_token_id();
-  }
-  return false;
-}
-
   void
 rendezllama::augment_tokenize_chat_input(
+    ChatGuide& chat_guide,
     ChatTrajectory& chat_traj,
     bool& prevent_subsequent_newline,
     std::string s,
-    const std::string& matched_antiprompt,
     const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
-  const char* const maybe_space_prefix = (
-      opt.chat_prefixes[0].back() == '\n'
-      ? "" : " ");
   prevent_subsequent_newline = false;
   if (s.size() >= 2 && s[0] == '\\' && s[1] == 'n') {
+    chat_guide.end_turn();
+    chat_guide.begin_turn(opt.message_opts.size()-1);
     s.erase(0, 2);
-    std::string maybe_space;
-    if (matched_antiprompt != "\n") {
-      chat_traj.push_back(vocabulary.newline_token_id());
-    }
-    if (s.empty() || s[0] != ' ') {
-      maybe_space = ' ';
-    }
-    chat_traj.line_prefix_index() = opt.chat_prefixes.size()-1;
-    s = opt.chat_prefixes[chat_traj.line_prefix_index()] + maybe_space + s;
     prevent_subsequent_newline = maybe_trim_endspace(s);
+    if (opt.message_opts.back().prefix.back() != '\n' || opt.linespace_on) {
+      if (!s.empty() && s.front() != ' ') {
+        s.insert(0, " ");
+      }
+    }
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else if (s.front() == '\n') {
-    s.erase(0, 1);
     // This is from /yield.
-    if (matched_antiprompt != "\n") {
-      chat_traj.push_back(vocabulary.newline_token_id());
-    }
-    if (opt.linespace_on) {s = ' ' + s;}
-    chat_traj.line_prefix_index() = opt.chat_prefixes.size();
+    chat_guide.yield_turn(s.substr(1));
   }
   else if (s.front() == ' ') {
     prevent_subsequent_newline = maybe_trim_endspace(s);
-  }
-  else if (s.back() == '[' || s.back() == ':') {
-    // Nothing.
-  }
-  else if (matched_antiprompt == opt.chat_prefixes[0]) {
-    chat_traj.tokenize_append(maybe_space_prefix + s + '\n', vocabulary);
-    chat_traj.display_token_count_ = chat_traj.token_count();
-    chat_traj.line_prefix_index() = 1;
-    s = opt.chat_prefixes[1];
-    prevent_subsequent_newline = true;
+    chat_traj.tokenize_append(s, vocabulary);
   }
   else {
-    if (matched_antiprompt != "\n") {
-      chat_traj.push_back(vocabulary.newline_token_id());
+    chat_guide.yield_turn(0);
+    if (opt.message_opts[0].prefix.back() != '\n' || opt.linespace_on) {
+      if (!s.empty() && s.front() != ' ') {
+        s.insert(0, " ");
+      }
     }
-    chat_traj.line_prefix_index() = 0;
-    chat_traj.tokenize_append(
-        opt.chat_prefixes[0] + maybe_space_prefix + s + '\n',
-        vocabulary);
-    chat_traj.line_prefix_index() = 1;
-    s = opt.chat_prefixes[1];
+    chat_traj.tokenize_append(s, vocabulary);
+    chat_guide.yield_turn();
+    chat_traj.display_token_count_ = chat_traj.rfind_message_prefix_begin_at(
+        chat_traj.token_count()-1);
     prevent_subsequent_newline = true;
   }
-  chat_traj.tokenize_append(s, vocabulary);
 }
 
   std::tuple<struct llama_model*, struct llama_context*>
@@ -164,8 +119,7 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = opt.context_token_limit;
   ctx_params.seed = opt.seed;
-  ctx_params.f16_kv = true;
-  ctx_params.rope_freq_scale = 1.0;
+  ctx_params.rope_freq_scale = llama_rope_freq_scale_train(model);
   ctx_params.n_threads = opt.thread_count;
   ctx_params.n_batch = opt.batch_count;
   while (
@@ -206,6 +160,7 @@ temperature_based_sample(
   llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
   llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
   llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
+  llama_sample_min_p(ctx, candidates_data, opt.min_p, keep_one);
   llama_sample_temp(ctx, candidates_data, opt.temperature);
   chat_traj.push_back(llama_sample_token(ctx, candidates_data));
 }
@@ -247,9 +202,9 @@ rendezllama::generate_next_token(
     struct llama_context* ctx,
     bool preventing_newline,
     const std::vector<llama_token>& extra_penalized_tokens,
-    const rendezllama::ChatOptions& opt)
+    const Vocabulary& vocabulary,
+    const ChatOptions& opt)
 {
-  const Vocabulary vocabulary(ctx);
   float* logits = llama_get_logits(ctx);
   if (preventing_newline) {
     // Zero probability for message-ending tokens when requested.
@@ -281,14 +236,12 @@ rendezllama::generate_next_token(
     candidates.data(), candidates.size(), false,
   }};
 
-  llama_sample_repetition_penalty(
+  llama_sample_repetition_penalties(
       ctx, candidates_data,
       penalized_tokens.data(), penalized_tokens.size(),
-      opt.repeat_penalty);
-  llama_sample_frequency_and_presence_penalties(
-      ctx, candidates_data,
-      penalized_tokens.data(), penalized_tokens.size(),
-      opt.frequency_penalty, opt.presence_penalty);
+      opt.repeat_penalty,
+      opt.frequency_penalty,
+      opt.presence_penalty);
 
   if (opt.mirostat_sampling == 1) {
     mirostat1_sample(candidates_data, chat_traj, ctx, opt);
@@ -299,12 +252,6 @@ rendezllama::generate_next_token(
   else {
     temperature_based_sample(candidates_data, chat_traj, ctx, opt);
   }
-
-  // Interpret end-of-stream (technically "end-of-sentence" as a newline token.
-  if (chat_traj.token() == vocabulary.eos_token_id() && eom_newline_check(opt, chat_traj)) {
-    chat_traj.push_back(vocabulary.newline_token_id());
-    chat_traj.erase_range(chat_traj.token_count()-2, chat_traj.token_count()-1);
-  }
 }
 
   bool
@@ -312,49 +259,48 @@ rendezllama::commit_to_context(
     struct llama_context* ctx,
     ChatDisplay& chat_disp,
     ChatTrajectory& chat_traj,
+    const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
-  const Vocabulary vocabulary(ctx);
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {
     return true;
   }
 
-  if (chat_traj.token_count() > opt.context_token_limit) {
-    // Drop some of the rolling prompt while keeping the priming prompt
-    // to avoid exceeding our context token limit.
-    const unsigned rolling_token_count =
-      (opt.context_token_limit - chat_traj.priming_token_count_) / 2;
-    for (unsigned i = chat_traj.token_count() - rolling_token_count;
-         i < chat_traj.token_count();
-         ++i)
-    {
-      if (vocabulary.last_char_of(chat_traj.token_at(i)) == '\n') {
-        chat_traj.rollforget(i+1, vocabulary);
-        break;
-      }
-    }
-    if (chat_traj.token_count() >= opt.context_token_limit) {
-      chat_traj.rollforget(chat_traj.token_count() - rolling_token_count, vocabulary);
-    }
-    assert(chat_traj.token_count() < opt.context_token_limit);
-  }
+  chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary);
 
   // Reset thread count just in case the user reconfigured it.
-  llama_set_n_threads(ctx, opt.thread_count, opt.thread_count);
+  const unsigned thread_count = opt.thread_count;
+  unsigned batch_thread_count = opt.batch_thread_count;
+  if (batch_thread_count == 0) {
+    batch_thread_count = std::thread::hardware_concurrency();
+  }
+  if (batch_thread_count == 0) {
+    batch_thread_count = thread_count;
+  }
+  llama_set_n_threads(ctx, thread_count, batch_thread_count);
+
   // Clear KV cache past current position just in case the user deleted tokens.
-  llama_kv_cache_tokens_rm(ctx, chat_traj.context_token_count_, -1);
+  llama_kv_cache_seq_rm(ctx, -1, chat_traj.context_token_count_, -1);
 
   while (chat_traj.context_token_count_ < chat_traj.token_count()) {
     const unsigned n = std::min(
         opt.batch_count,
         chat_traj.token_count() - chat_traj.context_token_count_);
 
+#if LLAMA_OPENBLAS_ON
+    if (n < 32) {
+      llama_set_n_threads(ctx, thread_count, batch_thread_count);
+    }
+    else {
+      llama_set_n_threads(ctx, thread_count, 1);
+    }
+#endif
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
 
     llama_batch batch = llama_batch_get_one(
-        (int*)&chat_traj.token_at(chat_traj.context_token_count_),
+        const_cast<int*>(&chat_traj.tokens()[chat_traj.context_token_count_]),
         n,
         chat_traj.context_token_count_,
         0);
