@@ -17,11 +17,18 @@ Vocabulary::Vocabulary(const llama_model* model)
 {
   if (!model_) {return;}
 
+  boundary_prefix_ = "☺";
+  std::string text = boundary_prefix_ + '\n';
+  std::vector<Token_id> tokens(text.size()+1);
   int n = llama_tokenize(
-      model_, "\n", 1, &newline_token_id_, 1,
+      model_,
+      text.data(), text.size(),
+      tokens.data(), tokens.size(),
       /*add_bos=*/false,
-      /*special=*/true);
-  assert(n == 1 && "need a unique newline token");
+      /*special=*/false);
+  assert(n >= 2 && "need to tokenize boundary prefix");
+  newline_token_id_ = tokens[n-1];
+  boundary_prefix_tokens_.assign(tokens.begin(), tokens.begin()+(n-1));
 }
 
 Token_id Vocabulary::bos_token_id() const {
@@ -116,11 +123,12 @@ tokenize_append(
     std::vector<Token_id>& tokens,
     std::string_view text,
     const llama_model* model,
-    Token_id newline_token_id,
+    const std::string_view boundary_prefix,
+    const std::vector<Token_id>& boundary_prefix_tokens,
     std::string& tmp_s)
 {
   if (text.empty()) {return;}
-  tmp_s = '\n';
+  tmp_s = boundary_prefix;
   tmp_s += text;
   size_t offset = tokens.size();
   tokens.resize(offset + tmp_s.size() + 1);
@@ -130,13 +138,12 @@ tokenize_append(
       tokens.data()+offset, tokens.size()-offset,
       /*add_bos=*/false,
       /*special=*/false);
-  assert(n >= 1);
+  assert(n > 0);
+  assert((size_t)n > boundary_prefix_tokens.size());
   tokens.resize(offset + (size_t)n);
-  std::vector<Token_id>::iterator it = std::find(
-      tokens.begin()+offset, tokens.end(),
-      newline_token_id);
-  assert(it != tokens.end());
-  tokens.erase(tokens.begin()+offset, it+1);
+  tokens.erase(
+      tokens.begin()+offset,
+      tokens.begin()+offset+boundary_prefix_tokens.size());
 }
 
   void
@@ -157,7 +164,7 @@ Vocabulary::tokenize_to(
   std::string_view::size_type beg = 0;
   while (end != std::string_view::npos) {
     tokenize_append(tokens, text.substr(beg, end-beg), model_,
-                    this->newline_token_id(), tmp_s);
+                    boundary_prefix_, boundary_prefix_tokens_, tmp_s);
     beg = end;
     end = std::string_view::npos;
     for (size_t i = 0; i < next_indices.size(); ++i) {
@@ -177,7 +184,7 @@ Vocabulary::tokenize_to(
     }
   }
   tokenize_append(tokens, text.substr(beg), model_,
-                  this->newline_token_id(), tmp_s);
+                  boundary_prefix_, boundary_prefix_tokens_, tmp_s);
 }
 
   void

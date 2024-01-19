@@ -95,6 +95,8 @@ int main(int argc, char** argv)
 
   Vocabulary vocabulary(model);
   rendezllama::ChatDisplay chat_disp;
+  Vocabulary::Token_id first_priming_token_id = vocabulary.bos_token_id();
+  std::vector<Vocabulary::Token_id> priming_tokens;
   if (exstatus == 0) {
     if (!opt.bos_token_alias.empty()) {
       vocabulary.assign_substitution(
@@ -120,9 +122,22 @@ int main(int argc, char** argv)
           chat_disp.answer_prompt_tokens_,
           opt.answer_prompt);
     }
+    vocabulary.tokenize_to(priming_tokens, opt.priming_prompt);
+    if (!priming_tokens.empty()) {
+      auto begin = priming_tokens.begin();
+      if (0 != llama_add_bos_token(model)) {
+        if (*begin == vocabulary.bos_token_id()) {
+          priming_tokens.erase(begin, begin+1);
+        }
+      }
+      else {
+        first_priming_token_id = *begin;
+        priming_tokens.erase(begin, begin+1);
+      }
+    }
   }
 
-  rendezllama::ChatTrajectory chat_traj(vocabulary.bos_token_id());
+  rendezllama::ChatTrajectory chat_traj(first_priming_token_id);
   if (exstatus == 0) {
     chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
     chat_traj.transcript_out_ = open_transcript_outfile(
@@ -133,16 +148,18 @@ int main(int argc, char** argv)
   // Tokenize the prompt.
   const std::vector<llama_token>& chat_tokens = chat_traj.tokens();
   if (exstatus == 0) {
-    chat_traj.tokenize_append(opt.priming_prompt, vocabulary);
+    chat_traj.insert_all_at(1, priming_tokens);
+    priming_tokens.clear();
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
     chat_traj.tokenize_append(opt.rolling_prompt, vocabulary);
-    chat_guide.begin_turn(1);
+    chat_traj.message_prefix_id_ = 0;
+    chat_guide.yield_turn(1);
     print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
   if (exstatus == 0) {
-    assert((int)opt.context_token_limit == llama_n_ctx(ctx));
+    assert(opt.context_token_limit == llama_n_ctx(ctx));
     // It's convenient to save a long transcript and reload it later,
     // so we allow the full prompt to exceed context limit with the expectation
     // that the earlier part of the rolling prompt won't even be evaluated.

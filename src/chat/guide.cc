@@ -118,7 +118,10 @@ ChatGuide::maybe_yield_turn()
   else {
     std::string_view suffix = opt_.message_opts[turn_index].suffix;
     if (!traj_.endswith_nonempty(suffix, vocab_)) {
-      return false;
+      suffix = vocab_.eos_token_alias();
+      if (suffix.empty() || !traj_.endswith_nonempty(suffix, vocab_)) {
+        return false;
+      }
     }
   }
   this->yield_turn();

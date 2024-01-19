@@ -53,6 +53,9 @@ class Vocabulary {
   std::string eos_token_alias_;
   struct SubstitutionRule { std::string alias; Token_id token_id; };
   std::vector<SubstitutionRule> special_tokens_;
+
+  std::string boundary_prefix_;
+  std::vector<Token_id> boundary_prefix_tokens_;
 };
 
 class GlobalScope {

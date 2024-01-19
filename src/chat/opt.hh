@@ -46,6 +46,7 @@ struct ChatOptions {
   const char command_delim_chars[5] = ":=! ";
 
   unsigned thread_count = 1;
+  unsigned batch_thread_count = 0;
   unsigned sentence_limit = 0;
   unsigned sentence_token_limit = 0;
   unsigned top_k = 1000;

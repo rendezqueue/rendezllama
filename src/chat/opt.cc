@@ -454,8 +454,8 @@ slurp_sxpb_options_close_FildeshX(
       content = slurp_FildeshX(priming_in);
     }
     if (!content) {
-      puts_FildeshO(err_out, "Cannot read given x_priming file: ");
-      puts_FildeshO(err_out, s);
+      putstr_FildeshO(err_out, "Cannot read given x_priming file: ");
+      putstr_FildeshO(err_out, s);
       putc_FildeshO(err_out, '\n');
       all_good = false;
     }
@@ -476,8 +476,8 @@ slurp_sxpb_options_close_FildeshX(
       content = slurp_FildeshX(answer_in);
     }
     if (!content) {
-      puts_FildeshO(err_out, "Cannot read given x_answer file: ");
-      puts_FildeshO(err_out, s);
+      putstr_FildeshO(err_out, "Cannot read given x_answer file: ");
+      putstr_FildeshO(err_out, s);
       putc_FildeshO(err_out, '\n');
       all_good = false;
     }
@@ -588,6 +588,7 @@ slurp_sxpb_options_close_FildeshX(
   lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_eta, sxpb, top_it, "mirostat_eta");
 
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.thread_count, sxpb, top_it, "thread_count");
+  lone_subfield_at_FildeshSxpb_to_unsigned(&opt.batch_thread_count, sxpb, top_it, "batch_thread_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.batch_count, sxpb, top_it, "batch_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.sentence_limit, sxpb, top_it, "sentence_limit");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.sentence_token_limit, sxpb, top_it, "sentence_token_limit");
