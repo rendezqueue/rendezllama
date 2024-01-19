@@ -153,12 +153,13 @@ int main(int argc, char** argv)
     // No need for --keep, we just directly compute the priming prompt number of tokens.
     chat_traj.priming_token_count_ = chat_traj.token_count();
     chat_traj.tokenize_append(opt.rolling_prompt, vocabulary);
-    chat_guide.begin_turn(1);
+    chat_traj.message_prefix_id_ = 0;
+    chat_guide.yield_turn(1);
     print_initialization(eout, vocabulary, opt, chat_traj);
   }
 
   if (exstatus == 0) {
-    assert((int)opt.context_token_limit == llama_n_ctx(ctx));
+    assert(opt.context_token_limit == llama_n_ctx(ctx));
     // It's convenient to save a long transcript and reload it later,
     // so we allow the full prompt to exceed context limit with the expectation
     // that the earlier part of the rolling prompt won't even be evaluated.

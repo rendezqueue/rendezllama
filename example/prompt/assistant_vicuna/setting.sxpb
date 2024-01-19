@@ -1,6 +1,18 @@
-(protagonist "### Human")
-(confidant "### Assistant")
+(protagonist "USER")
+(confidant "ASSISTANT")
+(((chat_prefixes))
+ (m
+   (prefix "{{user}}:")
+   (suffix "</s>")
+ )
+ (m
+   (prefix " {{char}}:")
+   ; Model must be fine-tuned to end the response with EOS token.
+   (suffix "</s>")
+ )
+)
 (substitution
+  (eos_token_alias "</s>")
   (protagonist_alias "{{user}}")
   (confidant_alias "{{char}}")
 )

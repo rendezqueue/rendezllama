@@ -1,17 +1,29 @@
 #!/usr/bin/env fildesh
 
-(: scene Str (?? .self.opt.scene "roshambo_kira"))
 (: model_file Filename
  (?? .self.opt.model
-  "/mnt/llama_model_data/llama_cpp_models/7B/ggml-model-q4_0.gguf"))
-(: setting_file Filename (++ "example/prompt/" scene "/setting.sxpb"))
+  "/mnt/llama_model_data/quantize/gold/chatml/openhermes-2.5-mistral-16k-7b.Q8_0.gguf"))
+(: preset_file Filename (?? .self.opt.preset "/dev/null"))
+(: scene Str (?? .self.opt.scene "roshambo_kira"))
+(: setting_file Filename
+ (?? .self.opt.setting
+  (++ "example/prompt/" scene "/setting.sxpb")))
 (: thread_count Str (?? .self.opt.thread_count "8"))
+
+|< zec / $(XOF setting_file) /
+|- replace_string "example/prompt/"
+|- replace_string "/setting"
+|- replace_string ".sxpb"
+|- replace_string "/" "_"
+|- zec / "bld/example/prompt/" / -
+|> zec -o $(OF transcript_file) -- - / ".txt" /
 
 |< stdin
 |- ./bld/src/chat/chat \
   --model $(XOF model_file) \
   --thread_count "${thread_count}" \
-  --o_rolling "bld/example/prompt/${scene}.txt" \
+  --o_rolling $(XA transcript_file) \
+  --x_setting $(XOF preset_file) \
   --x_setting $(XOF setting_file)
 |> stdout
 

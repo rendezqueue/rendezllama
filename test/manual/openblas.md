@@ -7,7 +7,7 @@ By default, we build llama.cpp with OpenBLAS, but we hook it up ourselves and co
 sh
 set -e
 
-make
+make LLAMA_OPENBLAS_ON=1
 
 # Test that we are defining GGML_USE_OPENBLAS.
 grep -e "-DGGML_USE_OPENBLAS" "bld/compile_commands.json"

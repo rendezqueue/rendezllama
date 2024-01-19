@@ -1,0 +1,18 @@
+(protagonist "User")
+(confidant "Assistant")
+(substitution
+  (protagonist_alias "{{user}}")
+  (confidant_alias "{{char}}")
+)
+(x_priming "../assistant_vicuna/priming.txt")
+(x_rolling "../assistant_vicuna/rolling.txt")
+(o_rolling "../../../bld/example/prompt/assistant_plain.txt")
+(sentence_limit 5)
+(sentence_token_limit 50)
+
+; Defaults.
+(model_token_limit 2048)
+(repeat_window 256)
+(repeat_penalty 1.17647)
+(temperature 0.7)
+(mirostat 2)

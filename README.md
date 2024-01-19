@@ -6,7 +6,7 @@ For now, there's just a command-line interface, but the plan is to make a progre
 
 ## Chat CLI
 
-Assuming you have the quantized weights already and can compile C++, you can try the [assistant_vicuna example](example/prompt/assistant_vicuna/) with a few commands:
+Assuming you have the quantized weights already and can compile C++, you can try the [assistant_plain example](example/prompt/assistant_vanilla/) with a few commands:
 ```shell
 # If undefined, assume the 7B model exists in a sibling llama.cpp/ dir.
 MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.gguf}"
@@ -14,7 +14,7 @@ MODEL="${MODEL:-../llama.cpp/models/7B/ggml-model-q4_0.gguf}"
 make
 # Run with specific settings from a file. They can be given as flags too.
 ./bld/src/chat/chat \
-  --x_setting example/prompt/assistant_vicuna/setting.sxpb \
+  --x_setting example/prompt/assistant_plain/setting.sxpb \
   --thread_count 8 \
   --model "${MODEL}"
 ```
