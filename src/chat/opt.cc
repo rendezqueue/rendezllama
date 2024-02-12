@@ -277,16 +277,14 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     }
     else if (0 == strcmp("--x_priming", argv[argi])) {
       argi += 1;
-      FildeshX* priming_in = open_FildeshXF(argv[argi]);
-      const char* content = slurp_FildeshX(priming_in);
-      if (content && content[0] != '\0') {
+      std::string content;
+      if (fildesh::slurp_file_to_string(content, argv[argi])) {
         opt.priming_prompt += content;
         // Ensure newline at end.
         if (opt.priming_prompt.back() != '\n') {
           opt.priming_prompt += '\n';
         }
       }
-      close_FildeshX(priming_in);
     }
     else if (0 == strcmp("--x_rolling", argv[argi])) {
       argi += 1;
@@ -301,16 +299,14 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     }
     else if (0 == strcmp("--x_answer", argv[argi])) {
       argi += 1;
-      FildeshX* answer_in = open_FildeshXF(argv[argi]);
-      const char* content = slurp_FildeshX(answer_in);
-      if (content && content[0] != '\0') {
+      std::string content;
+      if (fildesh::slurp_file_to_string(content, argv[argi])) {
         opt.answer_prompt += content;
         // Ensure newline at end.
         if (opt.answer_prompt.back() != '\n') {
           opt.answer_prompt += '\n';
         }
       }
-      close_FildeshX(answer_in);
     }
     else if (0 == strcmp("--command_prefix_char", argv[argi])) {
       argi += 1;
@@ -426,7 +422,7 @@ slurp_sxpb_options_close_FildeshX(
     FildeshX* in,
     ChatOptions& opt,
     const FildeshSxprotoField* schema,
-    const std::string& filename)
+    const std::string& sxpb_filename)
 {
   FildeshO* err_out = open_FildeshOF("/dev/stderr");
   const char* s = NULL;
@@ -448,47 +444,41 @@ slurp_sxpb_options_close_FildeshX(
       &opt.model_token_limit, sxpb, top_it, "model_token_limit");
 
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "x_priming")) {
-    FildeshX* priming_in = open_sibling_FildeshXF(filename.c_str(), s);
-    const char* content = NULL;
-    if (priming_in) {
-      content = slurp_FildeshX(priming_in);
-    }
-    if (!content) {
+    const std::string priming_filename = fildesh::sibling_pathname(
+        sxpb_filename.c_str(), s);
+    std::string content;
+    if (!fildesh::slurp_file_to_string(content, priming_filename.c_str())) {
       putstr_FildeshO(err_out, "Cannot read given x_priming file: ");
       putstr_FildeshO(err_out, s);
       putc_FildeshO(err_out, '\n');
       all_good = false;
     }
-    else if (content[0] != '\0') {
+    else if (!content.empty()) {
       opt.priming_prompt += content;
       // Ensure newline at end.
       if (opt.priming_prompt.back() != '\n') {
         opt.priming_prompt += '\n';
       }
     }
-    close_FildeshX(priming_in);
   }
 
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "x_answer")) {
-    FildeshX* answer_in = open_sibling_FildeshXF(filename.c_str(), s);
-    const char* content = NULL;
-    if (answer_in) {
-      content = slurp_FildeshX(answer_in);
-    }
-    if (!content) {
+    const std::string answer_filename = fildesh::sibling_pathname(
+        sxpb_filename.c_str(), s);
+    std::string content;
+    if (!fildesh::slurp_file_to_string(content, answer_filename.c_str())) {
       putstr_FildeshO(err_out, "Cannot read given x_answer file: ");
       putstr_FildeshO(err_out, s);
       putc_FildeshO(err_out, '\n');
       all_good = false;
     }
-    else if (content[0] != '\0') {
+    else if (!content.empty()) {
       opt.answer_prompt = content;
       // Ensure newline at end.
       if (opt.answer_prompt.back() != '\n') {
         opt.answer_prompt += '\n';
       }
     }
-    close_FildeshX(answer_in);
   }
 
   lone_subfield_at_FildeshSxpb_to_cc_string(
@@ -503,22 +493,22 @@ slurp_sxpb_options_close_FildeshX(
       &opt.lora_base_model_filename, sxpb, top_it, "lora_base_model");
 
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "x_rolling")) {
-    FildeshX* rolling_in = open_sibling_FildeshXF(filename.c_str(), s);
+    FildeshX* rolling_in = open_sibling_FildeshXF(sxpb_filename.c_str(), s);
     parse_rolling_prompt(rolling_in, opt);
     close_FildeshX(rolling_in);
   }
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "o_rolling")) {
-    opt.transcript_sibling_filename = filename;
+    opt.transcript_sibling_filename = sxpb_filename;
     opt.transcript_filename = s;
   }
 
   if (lone_subfield_at_FildeshSxpb_to_cc_string(&opt.protagonist, sxpb, top_it, "protagonist")) {
-    if (filename.empty()) {
+    if (sxpb_filename.empty()) {
       reinitialize_chat_prefixes(opt);
     }
   }
   if (lone_subfield_at_FildeshSxpb_to_cc_string(&opt.confidant, sxpb, top_it, "confidant")) {
-    if (filename.empty()) {
+    if (sxpb_filename.empty()) {
       reinitialize_chat_prefixes(opt);
     }
   }
@@ -559,7 +549,7 @@ slurp_sxpb_options_close_FildeshX(
       }
       opt.message_opts.push_back(message_opt);
     }
-    if (filename.empty()) {
+    if (sxpb_filename.empty()) {
       reinitialize_chat_prefixes(opt);
     }
   }
