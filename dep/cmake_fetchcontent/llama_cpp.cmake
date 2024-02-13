@@ -8,7 +8,6 @@ set(LlamaCpp_SOURCE_DIR "${llamacpp_SOURCE_DIR}" PARENT_SCOPE)
 set(LlamaCpp_INCLUDE_DIRS "${llamacpp_SOURCE_DIR}" PARENT_SCOPE)
 set(LlamaCpp_LIBRARIES "$<TARGET_NAME:llama>" PARENT_SCOPE)
 
-add_definitions("-DNDEBUG")
 if (LLAMA_OPENBLAS_ON)
   find_package(OpenBLAS REQUIRED)
   target_compile_definitions(ggml PRIVATE "GGML_USE_OPENBLAS")
