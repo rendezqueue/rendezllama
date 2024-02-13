@@ -254,6 +254,7 @@ rendezllama::generate_next_token(
   }
 }
 
+
   bool
 rendezllama::commit_to_context(
     struct llama_context* ctx,

@@ -65,6 +65,7 @@ rendezllama::options_sxproto_schema()
     {"thread_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"batch_thread_count", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
     // {"sampling", FILL_FildeshSxprotoField_MESSAGE(sampling_message)},
+    // {"infer", FILL_FildeshSxprotoField_MESSAGE(inference_message)},
     {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"top_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
