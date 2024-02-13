@@ -6,7 +6,7 @@ chat_process = subprocess.Popen(
     args=[
       '../../../bld/src/chat/chat',
       '--x_setting',
-      'setting.sxproto',
+      'setting.sxpb',
       '--model',
       os.environ['BOT_MODEL'],
     ],
