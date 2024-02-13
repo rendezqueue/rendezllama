@@ -64,7 +64,10 @@ open_transcript_outfile(
 }
 
 
-static void nothing_log_callback(enum ggml_log_level level, const char* text, void* user_data) {
+static
+  void
+noop_log_callback(enum ggml_log_level level, const char* text, void* user_data)
+{
   (void) level;
   (void) text;
   (void) user_data;
@@ -80,7 +83,7 @@ int main(int argc, char** argv)
   rendezllama::ChatOptions opt;
   exstatus = parse_options(opt, argc, argv);
 
-  llama_log_set(nothing_log_callback, NULL);
+  llama_log_set(noop_log_callback, NULL);
   llama_context* ctx = NULL;
   llama_model* model = NULL;
   if (exstatus == 0) {

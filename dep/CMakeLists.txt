@@ -2,7 +2,7 @@
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_module")
 
 
-# Reintroduce NDEBUG so libraries get the flags their expected defaults.
+# Reintroduce NDEBUG so dependencies can remove it again if appropriate.
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 set(CMAKE_C_FLAGS_RELONHOST "${CMAKE_C_FLAGS_RELONHOST} -DNDEBUG")

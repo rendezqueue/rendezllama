@@ -30,6 +30,7 @@ set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE} -Wall -Wextra")
 
 
 include(CTest)
+
 add_subdirectory(dep EXCLUDE_FROM_ALL)
 include_directories(
   "${PROJECT_SOURCE_DIR}"
