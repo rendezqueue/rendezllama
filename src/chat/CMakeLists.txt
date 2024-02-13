@@ -6,15 +6,20 @@ add_executable(chat
   "cmd.hh"
   "display.cc"
   "display.hh"
+  "guide.cc"
+  "guide.hh"
   "opt.cc"
   "opt.hh"
+  "opt_schema.cc"
+  "opt_schema.hh"
   "trajectory.cc"
   "trajectory.hh"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
-  "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.cc"
-  "${CMAKE_SOURCE_DIR}/src/tokenize/tokenize.hh"
 )
+if (LLAMA_OPENBLAS_ON)
+  target_compile_definitions(chat PRIVATE "LLAMA_OPENBLAS_ON=1")
+endif()
 target_link_libraries(chat PRIVATE
   ${FildeshSxproto_LIBRARIES}
   ${LlamaCpp_LIBRARIES}

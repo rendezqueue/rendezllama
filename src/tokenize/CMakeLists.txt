@@ -1,7 +1,5 @@
 add_executable(tokenize
   "tokenize_main.cc"
-  "tokenize.cc"
-  "tokenize.hh"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
 )

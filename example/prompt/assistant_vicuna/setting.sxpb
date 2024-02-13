@@ -1,10 +1,24 @@
-(protagonist "### Human")
-(confidant "### Assistant")
+(protagonist "USER")
+(confidant "ASSISTANT")
+(((chat_prefixes))
+ (m
+   (prefix "{{user}}:")
+   (suffix "</s>")
+ )
+ (m
+   (prefix " {{char}}:")
+   ; Model must be fine-tuned to end the response with EOS token.
+   (suffix "</s>")
+ )
+)
+(substitution
+  (eos_token_alias "</s>")
+  (protagonist_alias "{{user}}")
+  (confidant_alias "{{char}}")
+)
 (x_priming "priming.txt")
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/assistant_vicuna.txt")
-(template_protagonist "{{user}}")
-(template_confidant "{{char}}")
 (sentence_limit 5)
 (sentence_token_limit 50)
 

@@ -11,7 +11,7 @@ class ChatDisplay {
 
   void
   displaystring_to(
-      std::string& out,
+      FildeshO* out,
       Vocabulary::Token_id token_id,
       const Vocabulary& vocabulary) const;
 

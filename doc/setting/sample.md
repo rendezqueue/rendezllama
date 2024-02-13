@@ -20,11 +20,15 @@ Mirostat version 2 is the current default with the following parameters.
 (temperature 0.7)
 ; Turn Mirostat off.
 (mirostat 0)
+; Top-K Sampling (default is 1000).
 (top_k 40)
+; Top-P Sampling (default is 0.95).
 (top_p 0.9)
-; Tail Free Sampling cutoff (default is 1.0,, off)
+; Min-P Sampling (default is 0.05).
+(min_p 0.05)
+; Tail Free Sampling cutoff (default is 1.0, off).
 (tfs_z 0.9)
-; Locally Typical Sampling cutoff (default is 1.0, off)
+; Locally Typical Sampling cutoff (default is 1.0, off).
 (typical_p 0.9)
 ```
 
