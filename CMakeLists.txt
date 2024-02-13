@@ -10,12 +10,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(LLAMA_OPENBLAS_ON "llama: use OpenBLAS" OFF)
 
-add_subdirectory(dep EXCLUDE_FROM_ALL)
-include_directories(
-  "${PROJECT_SOURCE_DIR}"
-  ${Fildesh_INCLUDE_DIRS}
-)
-
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -36,6 +30,11 @@ set(CMAKE_CXX_FLAGS_RELONHOST "${CMAKE_CXX_FLAGS_RELEASE} -Wall -Wextra")
 
 
 include(CTest)
+add_subdirectory(dep EXCLUDE_FROM_ALL)
+include_directories(
+  "${PROJECT_SOURCE_DIR}"
+  ${Fildesh_INCLUDE_DIRS}
+)
 
 add_subdirectory(src)
 add_subdirectory(example)
