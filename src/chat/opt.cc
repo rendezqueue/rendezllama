@@ -513,7 +513,7 @@ slurp_sxpb_options_close_FildeshX(
     }
   }
 
-  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "substitution");
+  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "substitute");
   if (!nullish_FildeshSxpbIT(it)) {
     FildeshSxpbIT sub_it;
     lone_subfield_at_FildeshSxpb_to_cc_string(&opt.protagonist_alias, sxpb, it, "protagonist_alias");
