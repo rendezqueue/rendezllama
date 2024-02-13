@@ -6,6 +6,7 @@
 #include <thread>
 
 #include <fildesh/fildesh.h>
+#include <fildesh/string.hh>
 
 #include "src/chat/display.hh"
 #include "src/chat/guide.hh"
@@ -216,10 +217,18 @@ rendezllama::generate_next_token(
       chat_traj.token_count(), opt.repeat_last_count);
 
   std::vector<llama_token> penalized_tokens;
-  penalized_tokens.resize(trailing_token_count);
+  penalized_tokens.reserve(trailing_token_count);
+  fildesh::ostringstream oss;
   for (unsigned i = 0; i < trailing_token_count; ++i) {
-    penalized_tokens[i] = chat_traj.token_at(
+    Vocabulary::Token_id token_id = chat_traj.token_at(
         chat_traj.token_count() - trailing_token_count + i);
+    oss.truncate();
+    vocabulary.detokenize_to(oss, token_id);
+    const std::string& matched = rendezllama::antiprompt_suffix(
+        oss.view(), opt.antiprompts);
+    if (matched.empty()) {
+      penalized_tokens.push_back(token_id);
+    }
   }
   penalized_tokens.insert(
       penalized_tokens.end(),
