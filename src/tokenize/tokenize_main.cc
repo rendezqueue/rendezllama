@@ -1,4 +1,5 @@
 #include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 
 #include "llama.h"
 
@@ -52,14 +53,10 @@ int main(int argc, char** argv)
   std::string prompt = " ";
 
   {
-    FildeshX* prompt_in = open_FildeshXF(prompt_filename);
-    if (prompt_in) {
-      const char* content = slurp_FildeshX(prompt_in);
-      if (content) {
-        prompt += content;
-      }
+    std::string content;
+    if (fildesh::slurp_file_to_string(content, prompt_filename)) {
+      prompt += content;
     }
-    close_FildeshX(prompt_in);
   }
 
   llama_model_params model_params = llama_model_default_params();
