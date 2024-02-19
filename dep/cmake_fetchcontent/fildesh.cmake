@@ -1,7 +1,7 @@
 FetchContent_Declare(
   Fildesh
   GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
-  GIT_TAG "9defdbec27700e01888d0834015e28947baba7cd"
+  GIT_TAG "92f1cafddaae478bb0b76c57c169e9300e99b931"
 )
 FetchContent_MakeAvailable(Fildesh)
 set(Fildesh_INCLUDE_DIRS ${Fildesh_INCLUDE_DIRS} PARENT_SCOPE)
