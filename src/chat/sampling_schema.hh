@@ -19,8 +19,5 @@ static FildeshSxprotoField sampling_selection_oneof[] = {
 static FildeshSxprotoField sampling_message[] = {
   {"penalty_token_count",
   {"adjustments", FILL_FildeshSxprotoField_MANYOF(sampling_adjustments_manyof)},
-  {"pick", FILL_FildeshSxprotoField_ONEOF(sampling_selection_oneof)},
-};
-static FildeshSxprotoField infer_message[] = {
-  {"sample", FILL_FildeshSxprotoField_MESSAGE(sampling_message)},
+  {"pick_with", FILL_FildeshSxprotoField_ONEOF(sampling_selection_oneof)},
 };
