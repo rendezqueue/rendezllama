@@ -170,7 +170,7 @@ int main(int argc, char** argv)
   }
 
   if (exstatus == 0) {
-    assert(opt.context_token_limit == llama_n_ctx(ctx));
+    assert(opt.context_token_limit <= llama_n_ctx(ctx));
     // It's convenient to save a long transcript and reload it later,
     // so we allow the full prompt to exceed context limit with the expectation
     // that the earlier part of the rolling prompt won't even be evaluated.
