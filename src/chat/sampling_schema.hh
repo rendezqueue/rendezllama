@@ -1,8 +1,8 @@
-static FildeshSxprotoField sampling_adjustments_manyof[] = {
-  {"", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
-  {"repeat_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-  {"frequency_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-  {"presence_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+
+static FildeshSxprotoField sampling_adjustments_oneof[] = {
+  {"repetition", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+  {"frequency", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+  {"presence", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
   {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
   {"tfs_z", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
   {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
@@ -18,6 +18,6 @@ static FildeshSxprotoField sampling_selection_oneof[] = {
 };
 static FildeshSxprotoField sampling_message[] = {
   {"penalty_token_count",
-  {"adjustments", FILL_FildeshSxprotoField_MANYOF(sampling_adjustments_manyof)},
+  {"adjustments", FILL_FildeshSxprotoField_MANYOF(sampling_adjustments_oneof)},
   {"pick_with", FILL_FildeshSxprotoField_ONEOF(sampling_selection_oneof)},
 };
