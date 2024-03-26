@@ -1,5 +1,5 @@
-#ifndef RENDEZLLAMA_CHAT_HH_
-#define RENDEZLLAMA_CHAT_HH_
+#ifndef RENDEZLLAMA_LANGUAGE_INFERENCE_HH_
+#define RENDEZLLAMA_LANGUAGE_INFERENCE_HH_
 #include <ostream>
 #include <string>
 #include <tuple>
