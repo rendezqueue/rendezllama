@@ -3,12 +3,12 @@
 #include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
 
-#include "src/chat/chat.hh"
 #include "src/chat/display.hh"
 #include "src/chat/cmd.hh"
 #include "src/chat/guide.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
+#include "src/language/inference.hh"
 #include "src/language/vocabulary.hh"
 
 using rendezllama::Vocabulary;
