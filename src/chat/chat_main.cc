@@ -3,12 +3,12 @@
 #include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
 
-#include "src/chat/chat.hh"
 #include "src/chat/display.hh"
 #include "src/chat/cmd.hh"
 #include "src/chat/guide.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
+#include "src/language/inference.hh"
 #include "src/language/vocabulary.hh"
 
 using rendezllama::Vocabulary;
@@ -170,7 +170,7 @@ int main(int argc, char** argv)
   }
 
   if (exstatus == 0) {
-    assert(opt.context_token_limit == llama_n_ctx(ctx));
+    assert(opt.context_token_limit <= llama_n_ctx(ctx));
     // It's convenient to save a long transcript and reload it later,
     // so we allow the full prompt to exceed context limit with the expectation
     // that the earlier part of the rolling prompt won't even be evaluated.

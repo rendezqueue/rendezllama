@@ -1,7 +1,6 @@
 add_executable(chat
   "chat_main.cc"
   "chat.cc"
-  "chat.hh"
   "cmd.cc"
   "cmd.hh"
   "display.cc"
@@ -14,6 +13,7 @@ add_executable(chat
   "opt_schema.hh"
   "trajectory.cc"
   "trajectory.hh"
+  "${CMAKE_SOURCE_DIR}/src/language/inference.hh"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
 )
