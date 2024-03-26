@@ -1,4 +1,4 @@
-#include "chat.hh"
+#include "src/language/inference.hh"
 
 #include <algorithm>
 #include <cassert>

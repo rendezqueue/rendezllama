@@ -210,7 +210,7 @@ Vocabulary::assign_substitution(std::string_view alias, Token_id token_id)
 }
 
 rendezllama::GlobalScope::GlobalScope() {
-  llama_backend_init(/*numa=*/false);
+  llama_backend_init();
 }
 
 rendezllama::GlobalScope::~GlobalScope() {
