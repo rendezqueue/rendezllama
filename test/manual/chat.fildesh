@@ -1,22 +1,22 @@
 #!/usr/bin/env fildesh
 
-(: model_file Filename
+(: model_file Filepath
  (?? .self.opt.model
   "/mnt/llama_model_data/quantize/gold/chatml/openhermes-2.5-mistral-16k-7b.Q8_0.gguf"))
-(: preset_file Filename (?? .self.opt.preset "/dev/null"))
+(: preset_file Filepath (?? .self.opt.preset "/dev/null"))
 (: scene Str (?? .self.opt.scene "roshambo_kira"))
-(: setting_file Filename
+(: setting_file Filepath
  (?? .self.opt.setting
   (++ "example/prompt/" scene "/setting.sxpb")))
 (: thread_count Str (?? .self.opt.thread_count "8"))
 
-|< zec / $(XOF setting_file) /
+|< splice / $(XOF setting_file) /
 |- replace_string "example/prompt/"
 |- replace_string "/setting"
 |- replace_string ".sxpb"
 |- replace_string "/" "_"
-|- zec / "bld/example/prompt/" / -
-|> zec -o $(OF transcript_file) -- - / ".txt" /
+|- splice / "bld/example/prompt/" / -
+|> splice -o $(OF transcript_file) -- - / ".txt" /
 
 |< stdin
 |- ./bld/src/chat/chat \

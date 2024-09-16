@@ -429,7 +429,7 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
       &opt.model_token_limit, sxpb, top_it, "model_token_limit");
 
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "x_priming")) {
-    const std::string priming_filename = fildesh::sibling_pathname(
+    const std::string priming_filename = fildesh::sibling_filepath(
         sxpb_filename.c_str(), s);
     std::string content;
     if (!fildesh::slurp_file_to_string(content, priming_filename.c_str())) {
@@ -448,7 +448,7 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
   }
 
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "x_answer")) {
-    const std::string answer_filename = fildesh::sibling_pathname(
+    const std::string answer_filename = fildesh::sibling_filepath(
         sxpb_filename.c_str(), s);
     std::string content;
     if (!fildesh::slurp_file_to_string(content, answer_filename.c_str())) {
