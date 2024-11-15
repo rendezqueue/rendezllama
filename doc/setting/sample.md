@@ -26,8 +26,6 @@ Mirostat version 2 is the current default with the following parameters.
 (top_p 0.9)
 ; Min-P Sampling (default is 0.05).
 (min_p 0.05)
-; Tail Free Sampling cutoff (default is 1.0, off).
-(tfs_z 0.9)
 ; Locally Typical Sampling cutoff (default is 1.0, off).
 (typical_p 0.9)
 ```

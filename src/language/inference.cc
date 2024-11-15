@@ -17,8 +17,15 @@ using rendezllama::ChatDisplay;
 using rendezllama::ChatGuide;
 using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
+using rendezllama::Inference;
 using rendezllama::Vocabulary;
 
+Inference::Inference(const Vocabulary& vocabulary)
+  : vocabulary_(vocabulary)
+{}
+Inference::~Inference() {
+  if (smpl_) {llama_sampler_free(smpl_);}
+}
 
   const std::string&
 rendezllama::antiprompt_suffix(
@@ -119,7 +126,6 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = opt.context_token_limit;
-  ctx_params.seed = opt.seed;
   ctx_params.n_threads = opt.thread_count;
   ctx_params.n_batch = opt.batch_count;
   ctx_params.rope_freq_scale = llama_rope_freq_scale_train(model);
@@ -144,125 +150,97 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 static
   void
 temperature_based_sample(
-    llama_token_data_array* candidates_data,
-    ChatTrajectory& chat_traj,
-    struct llama_context* ctx,
-    const rendezllama::ChatOptions& opt)
+    struct llama_sampler* smpl,
+    const rendezllama::ChatOptions& opt,
+    unsigned seed)
 {
   const unsigned keep_one = 1;
-  llama_sample_top_k(ctx, candidates_data, opt.top_k, keep_one);
-  llama_sample_tail_free(ctx, candidates_data, opt.tfs_z, keep_one);
-  llama_sample_typical(ctx, candidates_data, opt.typical_p, keep_one);
-  llama_sample_top_p(ctx, candidates_data, opt.top_p, keep_one);
-  llama_sample_min_p(ctx, candidates_data, opt.min_p, keep_one);
-  llama_sample_temp(ctx, candidates_data, opt.temperature);
-  chat_traj.push_back(llama_sample_token(ctx, candidates_data));
+  llama_sampler_chain_add(smpl, llama_sampler_init_top_k(opt.top_k));
+  llama_sampler_chain_add(smpl, llama_sampler_init_typical(opt.typical_p, keep_one));
+  llama_sampler_chain_add(smpl, llama_sampler_init_top_p(opt.top_p, keep_one));
+  llama_sampler_chain_add(smpl, llama_sampler_init_min_p(opt.min_p, keep_one));
+  llama_sampler_chain_add(smpl, llama_sampler_init_temp(opt.temperature));
+  llama_sampler_chain_add(smpl, llama_sampler_init_dist(seed));
 }
 
 static
   void
 mirostat1_sample(
-    llama_token_data_array* candidates_data,
-    ChatTrajectory& chat_traj,
-    struct llama_context* ctx,
-    const rendezllama::ChatOptions& opt)
+    struct llama_sampler* smpl,
+    const rendezllama::ChatOptions& opt,
+    unsigned seed,
+    const Vocabulary& vocabulary)
 {
-  float mirostat_mu = chat_traj.mirostat_mu();
   const int mirostat_m = 100;
-  llama_sample_temp(ctx, candidates_data, opt.temperature);
-  chat_traj.push_back(llama_sample_token_mirostat(
-          ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, mirostat_m, &mirostat_mu));
-  chat_traj.mirostat_mu() = mirostat_mu;
+  llama_sampler_chain_add(
+      smpl,
+      llama_sampler_init_mirostat(
+          vocabulary.cardinality(), seed,
+          opt.mirostat_tau, opt.mirostat_eta, mirostat_m));
 }
 
 static
   void
 mirostat2_sample(
-    llama_token_data_array* candidates_data,
-    ChatTrajectory& chat_traj,
-    struct llama_context* ctx,
-    const rendezllama::ChatOptions& opt)
+    struct llama_sampler* smpl,
+    const rendezllama::ChatOptions& opt,
+    unsigned seed)
 {
-  float mirostat_mu = chat_traj.mirostat_mu();
-  llama_sample_temp(ctx, candidates_data, opt.temperature);
-  chat_traj.push_back(llama_sample_token_mirostat_v2(
-          ctx, candidates_data, opt.mirostat_tau, opt.mirostat_eta, &mirostat_mu));
-  chat_traj.mirostat_mu() = mirostat_mu;
+  llama_sampler_chain_add(
+      smpl,
+      llama_sampler_init_mirostat_v2(
+          seed, opt.mirostat_tau, opt.mirostat_eta));
 }
 
   void
-rendezllama::generate_next_token(
-    ChatTrajectory& chat_traj,
-    struct llama_context* ctx,
-    bool preventing_newline,
-    const std::vector<llama_token>& extra_penalized_tokens,
-    const Vocabulary& vocabulary,
-    const ChatOptions& opt)
+Inference::reinitialize(const ChatOptions& opt)
 {
-  float* logits = llama_get_logits(ctx);
-  if (preventing_newline) {
-    // Zero probability for message-ending tokens when requested.
-    logits[vocabulary.eos_token_id()] = 0;
-    logits[vocabulary.newline_token_id()] = 0;
+  auto seed = opt.seed;
+  if (smpl_) {
+    llama_sampler_free(smpl_);
+    seed = INT_MAX & time(NULL);
   }
-
-  const size_t trailing_token_count = std::min(
-      chat_traj.token_count(), opt.repeat_last_count);
-
-  std::vector<llama_token> penalized_tokens;
-  penalized_tokens.resize(trailing_token_count);
-  for (unsigned i = 0; i < trailing_token_count; ++i) {
-    penalized_tokens[i] = chat_traj.token_at(
-        chat_traj.token_count() - trailing_token_count + i);
-  }
-  penalized_tokens.insert(
-      penalized_tokens.end(),
-      extra_penalized_tokens.begin(), extra_penalized_tokens.end());
-
-  std::vector<llama_token_data> candidates;
-  candidates.resize(vocabulary.cardinality());
-  for (llama_token i = 0; i < (llama_token)candidates.size(); ++i) {
-    candidates[i] = llama_token_data{
-      i, logits[i], 0.0f,
-    };
-  }
-  llama_token_data_array candidates_data[1] = {{
-    candidates.data(), candidates.size(), false,
-  }};
-
-  llama_sample_repetition_penalties(
-      ctx, candidates_data,
-      penalized_tokens.data(), penalized_tokens.size(),
+  token_count_ = 0;
+  auto smpl_param = llama_sampler_chain_default_params();
+  smpl_ = llama_sampler_chain_init(smpl_param);
+  llama_sampler_init_penalties(
+      vocabulary_.cardinality(),
+      vocabulary_.eos_token_id(),
+      vocabulary_.newline_token_id(),
+      opt.repeat_last_count,
       opt.repeat_penalty,
       opt.frequency_penalty,
-      opt.presence_penalty);
-
+      opt.presence_penalty,
+      /*penalize_newline=*/true,
+      /*ignore_eos=*/false);
   if (opt.mirostat_sampling == 1) {
-    mirostat1_sample(candidates_data, chat_traj, ctx, opt);
+    mirostat1_sample(smpl_, opt, seed, vocabulary_);
   }
   else if (opt.mirostat_sampling == 2) {
-    mirostat2_sample(candidates_data, chat_traj, ctx, opt);
+    mirostat2_sample(smpl_, opt, seed);
   }
   else {
-    temperature_based_sample(candidates_data, chat_traj, ctx, opt);
+    temperature_based_sample(smpl_, opt, seed);
   }
 }
 
   bool
-rendezllama::commit_to_context(
+Inference::commit_to_context(
     struct llama_context* ctx,
     ChatDisplay& chat_disp,
     ChatTrajectory& chat_traj,
-    const Vocabulary& vocabulary,
     const ChatOptions& opt)
 {
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
+  if (chat_traj.context_token_count_ < chat_traj.token_count()) {
+    this->reinitialize(opt);
+  }
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {
     return true;
   }
 
-  chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary);
+  chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary_);
 
   // Reset thread count just in case the user reconfigured it.
   const unsigned thread_count = opt.thread_count;
@@ -291,13 +269,11 @@ rendezllama::commit_to_context(
       llama_set_n_threads(ctx, thread_count, 1);
     }
 #endif
-    chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary);
+    chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary_);
 
     llama_batch batch = llama_batch_get_one(
         const_cast<int*>(&chat_traj.tokens()[chat_traj.context_token_count_]),
-        n,
-        chat_traj.context_token_count_,
-        0);
+        n);
     const int istat = llama_decode(ctx, batch);
     if (istat != 0) {
       fildesh_log_error("Failed to eval.");
@@ -310,6 +286,44 @@ rendezllama::commit_to_context(
   }
   assert(chat_traj.context_token_count_ == chat_traj.token_count());
   chat_traj.erased_since_eval_ = false;
+  while (token_count_ < chat_traj.token_count()) {
+    Vocabulary::Token_id token_id = chat_traj.token_at(token_count_);
+    llama_sampler_accept(smpl_, token_id);
+    token_count_ += 1;
+  }
   return true;
+}
+
+  void
+Inference::sample_to_trajectory(
+    ChatTrajectory& chat_traj,
+    struct llama_context* ctx,
+    bool preventing_newline)
+{
+  float* logits = llama_get_logits(ctx);
+  if (preventing_newline) {
+    // Zero probability for message-ending tokens when requested.
+    logits[vocabulary_.eos_token_id()] = 0;
+    logits[vocabulary_.newline_token_id()] = 0;
+  }
+
+  std::vector<llama_token_data> candidates;
+  candidates.resize(vocabulary_.cardinality());
+  for (llama_token i = 0; i < (llama_token)candidates.size(); ++i) {
+    candidates[i] = llama_token_data{
+      i, logits[i], 0.0f,
+    };
+  }
+  logits = NULL;
+  llama_token_data_array candidates_data[1] = {{
+    candidates.data(),
+    candidates.size(),
+    /*selected=*/0,
+    /*sorted=*/false,
+  }};
+  llama_sampler_apply(smpl_, candidates_data);
+  chat_traj.push_back(candidates[candidates_data->selected].id);
+  llama_sampler_accept(smpl_, chat_traj.token());
+  token_count_ += 1;
 }
 

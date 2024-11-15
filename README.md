@@ -66,8 +66,6 @@ Remember, the recent chat content is just a rolling prompt concatenated to the e
   - `/b` or `/b 1` deletes the last token.
   - `/B` or `/B 1` deletes the last word.
 - Repeat penalty.
-  - `/less= some unwanted words` adds extra tokens to be penalized.
-  - `/dropless` clears the extra penalized tokens list.
   - See [doc/setting/penalty.md](doc/setting/penalty.md) for algorithm parameters. Defaults are okay for a chatbot.
 - Temperature-based sampling.
   - See [doc/setting/sample.md](doc/setting/sample.md) for algorithm parameters. Defaults are okay for a chatbot.

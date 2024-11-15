@@ -33,11 +33,6 @@ class ChatTrajectory {
   size_type find_token_at(size_type i, Token_id id) const;
   size_type rfind_token_at(size_type i, Token_id id) const;
 
-  float mirostat_mu() const {return mirostat_mu_values_.back();}
-  float& mirostat_mu() {return mirostat_mu_values_.back();}
-  const float& mirostat_mu_at(unsigned i) const {return mirostat_mu_values_[i];}
-  float& mirostat_mu_at(unsigned i) {return mirostat_mu_values_[i];}
-
   void tokenize_append_message_prefix(
       message_prefix_id id,
       std::string_view s,
@@ -70,7 +65,6 @@ class ChatTrajectory {
 
  private:
   std::vector<Token_id> token_ids_;
-  std::vector<float> mirostat_mu_values_;
   std::vector<unsigned> message_prefix_ids_;
  public:
   FildeshO* transcript_out_ = nullptr;

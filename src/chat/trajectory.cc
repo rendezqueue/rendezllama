@@ -11,7 +11,6 @@ using rendezllama::Vocabulary;
 
 ChatTrajectory::ChatTrajectory(Token_id token_id) {
   token_ids_.push_back(token_id);
-  mirostat_mu_values_.push_back(0);
   message_prefix_ids_.push_back(this->not_a_message_prefix_id());
 }
 
@@ -24,7 +23,6 @@ ChatTrajectory::~ChatTrajectory()
 ChatTrajectory::push_back(Token_id token_id)
 {
   token_ids_.push_back(token_id);
-  mirostat_mu_values_.push_back(this->mirostat_mu());
   message_prefix_ids_.push_back(this->not_a_message_prefix_id());
 }
 
@@ -34,9 +32,6 @@ ChatTrajectory::insert_all_at(
 {
   assert(i > 0);
   token_ids_.insert(token_ids_.begin() + i, a.begin(), a.end());
-  mirostat_mu_values_.insert(
-      mirostat_mu_values_.begin() + i,
-      a.size(), this->mirostat_mu_at(i-1));
   message_prefix_ids_.insert(
       message_prefix_ids_.begin() + i,
       a.size(), this->not_a_message_prefix_id());
@@ -89,9 +84,6 @@ ChatTrajectory::erase_range(size_type beg, size_type end)
     // The -1 is added to force an eval.
     context_token_count_ = token_count()-1;
   }
-  mirostat_mu_values_.erase(
-      mirostat_mu_values_.begin() + beg,
-      mirostat_mu_values_.begin() + end);
   message_prefix_ids_.erase(
       message_prefix_ids_.begin() + beg,
       message_prefix_ids_.begin() + end);

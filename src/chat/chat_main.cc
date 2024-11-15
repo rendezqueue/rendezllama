@@ -154,12 +154,12 @@ int main(int argc, char** argv)
 
   rendezllama::ChatTrajectory chat_traj(first_priming_token_id);
   if (exstatus == 0) {
-    chat_traj.mirostat_mu() = 2 * opt.mirostat_tau;
     chat_traj.transcript_out_ = open_transcript_outfile(
         exstatus, opt.transcript_sibling_filename, opt.transcript_filename);
   }
 
   rendezllama::ChatGuide chat_guide(vocabulary, chat_traj, opt);
+  rendezllama::Inference inference(vocabulary);
   // Tokenize the prompt.
   const std::vector<llama_token>& chat_tokens = chat_traj.tokens();
   if (exstatus == 0) {
@@ -194,7 +194,6 @@ int main(int argc, char** argv)
     eout.flush();
   }
 
-  std::vector<llama_token> extra_penalized_tokens;
   unsigned line_byte_limit = 0;
   unsigned line_byte_count = 0;
   unsigned sentence_count = 0;
@@ -211,7 +210,7 @@ int main(int argc, char** argv)
       chat_traj.display_token_count_ = chat_traj.token_count();
     }
     chat_disp.maybe_insert_answer_prompt(chat_traj, vocabulary);
-    if (!rendezllama::commit_to_context(ctx, chat_disp, chat_traj, vocabulary, opt)) {
+    if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt)) {
       exstatus = 1;
       break;
     }
@@ -224,10 +223,7 @@ int main(int argc, char** argv)
       inputting = true;
     }
     else {
-      rendezllama::generate_next_token(
-          chat_traj, ctx,
-          preventing_newline, extra_penalized_tokens,
-          vocabulary, opt);
+      inference.sample_to_trajectory(chat_traj, ctx, preventing_newline);
       preventing_newline = false;
 
       chat_disp.show_new(chat_traj, vocabulary);
@@ -324,23 +320,6 @@ int main(int argc, char** argv)
         else if (skipstr_FildeshX(&slice, "opt")) {
           rendezllama::print_options(eout, opt);
         }
-        else if (skipstr_FildeshX(&slice, "dropless")) {
-          extra_penalized_tokens.clear();
-        }
-        else if (skipstr_FildeshX(&slice, "less")) {
-          if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
-              slice.off < slice.size)
-          {
-            std::vector<llama_token> tmp;
-            vocabulary.tokenize_to(tmp, fildesh::make_string_view(slice));
-            extra_penalized_tokens.insert(
-                extra_penalized_tokens.end(),
-                tmp.begin(), tmp.end());
-          }
-          else {
-            fildesh_log_warning("Need some content for less=.");
-          }
-        }
         else if (
             skipstr_FildeshX(&slice, "forget") ||
             skipstr_FildeshX(&slice, "rollforget"))
@@ -371,10 +350,7 @@ int main(int argc, char** argv)
               }
             }
           }
-          if (!rendezllama::commit_to_context(
-                  ctx, chat_disp, chat_traj,
-                  vocabulary, opt))
-          {
+          if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt)) {
             exstatus = 1;
             break;
           }
@@ -404,9 +380,7 @@ int main(int argc, char** argv)
           matched_antiprompt = '\n';
           // Might as well process now.
           chat_traj.display_token_count_ = chat_traj.token_count();
-          if (!rendezllama::commit_to_context(
-                  ctx, chat_disp, chat_traj, vocabulary, opt))
-          {
+          if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt)) {
             exstatus = 1;
             break;
           }

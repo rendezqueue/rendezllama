@@ -18,7 +18,6 @@ basic_test()
 {
   ChatTrajectory traj(0);
   assert(traj.token_count() == 1);
-  assert(traj.mirostat_mu() == 0.0f);
   assert(traj.last_message_prefix_id_at(0) == traj.not_a_message_prefix_id());
 
   assert(traj.priming_token_count_ == 1);
@@ -48,10 +47,6 @@ basic_test()
   traj.erase_all_at(1);
   for (unsigned i = 1; i < 100; ++i) {
     traj.push_back(i);
-    assert(traj.mirostat_mu_at(i) == traj.mirostat_mu());
-    assert(traj.mirostat_mu_at(i) == traj.mirostat_mu_at(i-1));
-    traj.mirostat_mu_at(i) = i;
-    assert(traj.mirostat_mu() == i);
   }
   assert(traj.token_count() == 100);
   assert(traj.find_token_at(0, 1) == 1);
