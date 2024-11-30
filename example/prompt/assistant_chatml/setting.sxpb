@@ -45,5 +45,11 @@
 (model_token_limit 4000)
 
 ; Defaults.
-(temperature 0.7)
-(mirostat 2)
+(language
+ ((infer_via sampling)
+  (adjust_thru (())
+   (temperature 0.7)
+  )
+  ((pick_via mirostat) (version 2))
+ )
+)

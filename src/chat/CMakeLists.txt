@@ -14,6 +14,8 @@ add_executable(chat
   "trajectory.hh"
   "${CMAKE_SOURCE_DIR}/src/language/inference.cc"
   "${CMAKE_SOURCE_DIR}/src/language/inference.hh"
+  "${CMAKE_SOURCE_DIR}/src/language/inference_schema.cc"
+  "${CMAKE_SOURCE_DIR}/src/language/inference_schema.hh"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.cc"
   "${CMAKE_SOURCE_DIR}/src/language/vocabulary.hh"
 )

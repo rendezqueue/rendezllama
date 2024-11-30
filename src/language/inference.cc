@@ -159,7 +159,12 @@ temperature_based_sample(
   llama_sampler_chain_add(smpl, llama_sampler_init_typical(opt.typical_p, keep_one));
   llama_sampler_chain_add(smpl, llama_sampler_init_top_p(opt.top_p, keep_one));
   llama_sampler_chain_add(smpl, llama_sampler_init_min_p(opt.min_p, keep_one));
-  llama_sampler_chain_add(smpl, llama_sampler_init_temp(opt.temperature));
+  if (opt.xtc_probability > 0) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_xtc(opt.xtc_probability, opt.xtc_threshold, keep_one, seed));
+  }
+  else {
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(opt.temperature));
+  }
   llama_sampler_chain_add(smpl, llama_sampler_init_dist(seed));
 }
 

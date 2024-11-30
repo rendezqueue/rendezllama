@@ -9,6 +9,8 @@ add_executable(chat_guide_test
   "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.hh"
   "${PROJECT_SOURCE_DIR}/src/chat/trajectory.cc"
   "${PROJECT_SOURCE_DIR}/src/chat/trajectory.hh"
+  "${PROJECT_SOURCE_DIR}/src/language/inference_schema.cc"
+  "${PROJECT_SOURCE_DIR}/src/language/inference_schema.hh"
   "${PROJECT_SOURCE_DIR}/src/language/vocabulary.cc"
   "${PROJECT_SOURCE_DIR}/src/language/vocabulary.hh"
 )
@@ -26,6 +28,8 @@ add_executable(chat_opt_test
   "${PROJECT_SOURCE_DIR}/src/chat/opt.hh"
   "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.cc"
   "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.hh"
+  "${PROJECT_SOURCE_DIR}/src/language/inference_schema.cc"
+  "${PROJECT_SOURCE_DIR}/src/language/inference_schema.hh"
 )
 target_link_libraries(chat_opt_test PRIVATE
   ${FildeshSxproto_LIBRARIES}

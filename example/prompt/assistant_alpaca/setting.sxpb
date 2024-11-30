@@ -26,4 +26,8 @@
 
 ; Defaults.
 (model_token_limit 2048)
-(mirostat 2)
+(language
+ ((infer_via sampling)
+  ((pick_via mirostat) (version 2))
+ )
+)

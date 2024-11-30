@@ -592,6 +592,56 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     }
   }
 
+
+  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "language");
+  if (!nullish_FildeshSxpbIT(it)) {
+    it = lookup_subfield_at_FildeshSxpb(sxpb, it, "infer_via");
+    if (!nullish_FildeshSxpbIT(it)) {
+      const FildeshSxpbIT sampling_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "sampling");
+      if (!nullish_FildeshSxpbIT(sampling_it)) {
+        FildeshSxpbIT pick_it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "pick_via");
+
+        if (!nullish_FildeshSxpbIT(pick_it)) {
+          if (0 == strcmp(name_at_FildeshSxpb(sxpb, pick_it), "mirostat")) {
+            if (!lone_subfield_at_FildeshSxpb_to_unsigned(&opt.mirostat_sampling, sxpb, pick_it, "version")) {
+              opt.mirostat_sampling = 2;
+            }
+            lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_tau, sxpb, pick_it, "tau");
+            lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_eta, sxpb, pick_it, "eta");
+          }
+          else {
+            opt.mirostat_sampling = 0;
+          }
+        }
+
+        it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "adjust_thru");
+        for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
+             it = next_at_FildeshSxpb(sxpb, it)) {
+          const std::string_view name = name_at_FildeshSxpb(sxpb, it);
+          if (name == "min_p") {
+            opt.min_p = float_value_at_FildeshSxpb(sxpb, it);
+          }
+          else if (name == "top_k") {
+            opt.top_k = unsigned_value_at_FildeshSxpb(sxpb, it);
+          }
+          else if (name == "top_p") {
+            opt.top_p = float_value_at_FildeshSxpb(sxpb, it);
+          }
+          else if (name == "typical_p") {
+            opt.typical_p = float_value_at_FildeshSxpb(sxpb, it);
+          }
+          else if (name == "temperature") {
+            opt.temperature = float_value_at_FildeshSxpb(sxpb, it);
+          }
+          else if (0 == strcmp(name_at_FildeshSxpb(sxpb, it), "xtc")) {
+            lone_subfield_at_FildeshSxpb_to_float(&opt.xtc_probability, sxpb, it, "probability");
+            lone_subfield_at_FildeshSxpb_to_float(&opt.xtc_threshold, sxpb, it, "threshold");
+          }
+        }
+      }
+    }
+  }
+
   close_FildeshO(err_out);
   close_FildeshSxpb(sxpb);
 

@@ -11,10 +11,16 @@
 (sentence_token_limit 70)
 (repeat_window 20)
 (repeat_penalty 1.2)
-(temperature 0.7)
-(mirostat 0)
-(top_k 1000)
-(top_p 0.95)
+(language
+ ((infer_via sampling)
+  (adjust_thru (())
+   (top_k 1000)
+   (top_p 0.95)
+   (temperature 0.7)
+  )
+  ((pick_via probability))
+ )
+)
 
 ; Defaults.
 (model_token_limit 2048)

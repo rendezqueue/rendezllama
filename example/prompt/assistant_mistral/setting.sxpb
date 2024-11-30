@@ -35,7 +35,13 @@
 
 ; Match recommendation for Mistral NeMo v1.
 ; https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct
-(mirostat 0)
 (repeat_window 0)
-(temperature 0.2)
-(top_p 0.7)
+(language
+ ((infer_via sampling)
+  (adjust_thru (())
+   (top_p 0.7)
+   (temperature 0.2)
+  )
+  ((pick_via probability))
+ )
+)

@@ -4,6 +4,8 @@
 
 #include <fildesh/sxproto.h>
 
+#include "src/language/inference_schema.hh"
+
 static FildeshSxprotoField chat_prefixes_m_message[] = {
   {"prefix", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
   {"suffix", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
@@ -29,6 +31,7 @@ static FildeshSxprotoField substitution_message[] = {
 rendezllama::options_sxproto_schema()
 {
   static FildeshSxprotoField toplevel_fields[] = {
+    {"language", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
     {"batch_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"chat_prefixes", FILL_FildeshSxprotoField_MANYOF(chat_prefixes_manyof)},
     {"confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
@@ -37,10 +40,6 @@ rendezllama::options_sxproto_schema()
     {"frequency_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"linespace_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
     {"lora", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
-    {"min_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"mirostat", FILL_FildeshSxprotoField_INT(0, 2)},
-    {"mirostat_eta", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"mirostat_tau", FILL_FildeshSxprotoField_FLOAT(0, 10)},
     {"mlock_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
     {"mmap_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
     {"model", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
@@ -58,22 +57,21 @@ rendezllama::options_sxproto_schema()
     {"sentence_token_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
     {"startspace_on", FILL_DEFAULT_FildeshSxprotoField_BOOL},
     {"substitution", FILL_FildeshSxprotoField_MESSAGE(substitution_message)},
-    {"temperature", FILL_FildeshSxprotoField_FLOAT(0, 10)},
-    {"temp", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
-    {"tfs_z", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"thread_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"batch_thread_count", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
-    // {"sampling", FILL_FildeshSxprotoField_MESSAGE(sampling_message)},
-    // {"infer", FILL_FildeshSxprotoField_MESSAGE(inference_message)},
-    {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
-    {"top_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-    {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"x_answer", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
     {"x_priming", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
     {"x_rolling", FILL_FildeshSxprotoField_STRING(1, FILENAME_MAX)},
   };
   DECLARE_TOPLEVEL_FildeshSxprotoField(schema, toplevel_fields);
-  lone_toplevel_initialization_FildeshSxprotoField(schema);
+  if (!schema->name) {
+    FildeshSxprotoField tmp_field;
+    tmp_field = *rendezllama::language_sxproto_schema();
+    tmp_field.name = toplevel_fields[0].name;
+    tmp_field.tag_id = toplevel_fields[0].tag_id;
+    toplevel_fields[0] = tmp_field;
+    lone_toplevel_initialization_FildeshSxprotoField(schema);
+  }
   return schema;
 }
 
@@ -81,6 +79,7 @@ rendezllama::options_sxproto_schema()
 rendezllama::dynamic_options_sxproto_schema()
 {
   static FildeshSxprotoField toplevel_fields[] = {
+    {"language", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
     {"chat_prefixes", FILL_FildeshSxprotoField_MANYOF(chat_prefixes_manyof)},
     {"confidant", FILL_FildeshSxprotoField_STRING(1, INT_MAX)},
     {"frequency_penalty", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
@@ -99,7 +98,6 @@ rendezllama::dynamic_options_sxproto_schema()
     {"sentence_token_limit", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
     {"temperature", FILL_FildeshSxprotoField_FLOAT(0, 10)},
     {"temp", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
-    {"tfs_z", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
     {"thread_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
     {"batch_thread_count", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
     {"top_k", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
@@ -107,7 +105,14 @@ rendezllama::dynamic_options_sxproto_schema()
     {"typical_p", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
   };
   DECLARE_TOPLEVEL_FildeshSxprotoField(schema, toplevel_fields);
-  lone_toplevel_initialization_FildeshSxprotoField(schema);
+  if (!schema->name) {
+    FildeshSxprotoField tmp_field;
+    tmp_field = *rendezllama::language_sxproto_schema();
+    tmp_field.name = toplevel_fields[0].name;
+    tmp_field.tag_id = toplevel_fields[0].tag_id;
+    toplevel_fields[0] = tmp_field;
+    lone_toplevel_initialization_FildeshSxprotoField(schema);
+  }
   return schema;
 }
 

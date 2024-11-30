@@ -66,6 +66,8 @@ struct ChatOptions {
   unsigned mirostat_sampling = 2;
   float mirostat_tau = 5.0;
   float mirostat_eta = 0.1;
+  float xtc_probability = 0.0;
+  float xtc_threshold = 0.1;
   unsigned model_token_limit = 0;  // Default derived from model.
   unsigned context_token_limit = 0;  // Defaults to model_token_limit.
   unsigned batch_count = 512;
