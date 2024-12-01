@@ -26,14 +26,15 @@ class Inference {
   Inference& operator=(Inference&&) = delete;
 
  private:
-  void reinitialize(const ChatOptions& opt);
+  void reinitialize(const ChatOptions& opt, const struct llama_model* model);
 
  public:
   bool commit_to_context(
       struct llama_context* ctx,
       ChatDisplay& chat_disp,
       ChatTrajectory& chat_traj,
-      const ChatOptions& opt);
+      const ChatOptions& opt,
+      const llama_model* model);
   void sample_to_trajectory(
       ChatTrajectory& chat_traj,
       struct llama_context* ctx,

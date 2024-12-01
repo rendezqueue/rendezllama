@@ -633,9 +633,21 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
           else if (name == "temperature") {
             opt.temperature = float_value_at_FildeshSxpb(sxpb, it);
           }
-          else if (0 == strcmp(name_at_FildeshSxpb(sxpb, it), "xtc")) {
+          else if (name == "xtc") {
             lone_subfield_at_FildeshSxpb_to_float(&opt.xtc_probability, sxpb, it, "probability");
             lone_subfield_at_FildeshSxpb_to_float(&opt.xtc_threshold, sxpb, it, "threshold");
+          }
+          else if (name == "dry") {
+            lone_subfield_at_FildeshSxpb_to_float(&opt.dry_multiplier, sxpb, it, "multiplier");
+            lone_subfield_at_FildeshSxpb_to_float(&opt.dry_base, sxpb, it, "base");
+            lone_subfield_at_FildeshSxpb_to_unsigned(&opt.dry_allowed_length, sxpb, it, "allowed_length");
+            lone_subfield_at_FildeshSxpb_to_unsigned(&opt.dry_window_length, sxpb, it, "window_length");
+          }
+          else if (name == "penalize_with") {
+            lone_subfield_at_FildeshSxpb_to_float(&opt.frequency_penalty, sxpb, it, "frequency");
+            lone_subfield_at_FildeshSxpb_to_float(&opt.presence_penalty, sxpb, it, "presence");
+            lone_subfield_at_FildeshSxpb_to_float(&opt.repeat_penalty, sxpb, it, "repeat");
+            lone_subfield_at_FildeshSxpb_to_unsigned(&opt.repeat_last_count, sxpb, it, "window_length");
           }
         }
       }

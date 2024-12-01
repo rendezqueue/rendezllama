@@ -210,7 +210,7 @@ int main(int argc, char** argv)
       chat_traj.display_token_count_ = chat_traj.token_count();
     }
     chat_disp.maybe_insert_answer_prompt(chat_traj, vocabulary);
-    if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+    if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
       exstatus = 1;
       break;
     }
@@ -350,7 +350,7 @@ int main(int argc, char** argv)
               }
             }
           }
-          if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+          if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
             exstatus = 1;
             break;
           }
@@ -380,7 +380,7 @@ int main(int argc, char** argv)
           matched_antiprompt = '\n';
           // Might as well process now.
           chat_traj.display_token_count_ = chat_traj.token_count();
-          if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt)) {
+          if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
             exstatus = 1;
             break;
           }

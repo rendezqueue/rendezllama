@@ -5,7 +5,7 @@
 #include <fildesh/sxproto.h>
 
 static FildeshSxprotoField penalize_with_fields[] = {
-  {"token_count", FILL_FildeshSxprotoField_INT(1, INT_MAX)},
+  {"window_length", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
   {"repetition", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
   {"frequency", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
   {"presence", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
@@ -17,8 +17,10 @@ static FildeshSxprotoField xtc_fields[] = {
 };
 
 static FildeshSxprotoField dry_fields[] = {
-  {"probability", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
-  {"threshold", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+  {"multiplier", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+  {"base", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+  {"allowed_length", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
+  {"window_length", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
 };
 
 static FildeshSxprotoField adjust_thru_manyof[] = {
