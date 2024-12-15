@@ -150,77 +150,114 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 
 static
   void
-temperature_based_sample(
+apply_sampler_chain(
     struct llama_sampler* smpl,
-    const rendezllama::ChatOptions& opt,
+    const rendezllama::inference::AdjustVia& adjust_via,
+    const rendezllama::Vocabulary& vocabulary,
+    const struct llama_model* model,
     unsigned seed,
     std::ostream& eout)
 {
   const unsigned keep_one = 1;
-  if (opt.top_k > 0) {
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(opt.top_k));
-    eout << "top_k: " << opt.top_k << "\n";
-  }
-  if (opt.typical_p > 0 && opt.typical_p < 1) {
-    llama_sampler_chain_add(smpl, llama_sampler_init_typical(opt.typical_p, keep_one));
-    eout << "typical_p: " << opt.typical_p << "\n";
-  }
-  if (opt.top_p > 0 && opt.top_p < 1) {
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(opt.top_p, keep_one));
-    eout << "top_p: " << opt.top_p << "\n";
-  }
-  if (opt.min_p > 0 && opt.min_p < 1) {
-    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(opt.min_p, keep_one));
-    eout << "min_p: " << opt.min_p << "\n";
-  }
-  if (opt.temperature > 0) {
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(opt.temperature));
-    eout << "temperature: " << opt.temperature << "\n";
-  }
-  if (opt.xtc_probability > 0) {
-    llama_sampler_chain_add(smpl, llama_sampler_init_xtc(opt.xtc_probability, opt.xtc_threshold, keep_one, seed));
-    eout << "xtc: "
-      << "\n  probability: " << opt.xtc_probability
-      << "\n  threshold: " << opt.xtc_threshold
+
+  if (const auto* penalize_with = std::get_if<rendezllama::inference::AdjustViaType_PenalizeWith>(&adjust_via)) {
+    llama_sampler_init_penalties(
+        vocabulary.cardinality(),
+        vocabulary.eos_token_id(),
+        vocabulary.newline_token_id(),
+        penalize_with->window_length,
+        penalize_with->repetition,
+        penalize_with->frequency,
+        penalize_with->presence,
+        /*penalize_newline=*/true,
+        /*ignore_eos=*/false);
+    eout << "penalties:"
+      << "\n  window_length: " << penalize_with->window_length
+      << "\n  repetition: " << penalize_with->repetition
+      << "\n  frequency: " << penalize_with->frequency
+      << "\n  presence: " << penalize_with->presence
       << "\n";
   }
-  llama_sampler_chain_add(smpl, llama_sampler_init_dist(seed));
+  if (const auto* dry = std::get_if<rendezllama::inference::AdjustViaType_Dry>(&adjust_via)) {
+    static const char* seq_breakers[] = {
+      "\n", ":",
+    };
+    llama_sampler_init_dry(
+        model,
+        dry->multiplier,
+        dry->base,
+        dry->allowed_length,
+        dry->window_length,
+        seq_breakers,
+        sizeof(seq_breakers)/sizeof(*seq_breakers));
+    eout << "dry:"
+      << "\n  multiplier: " << dry->multiplier
+      << "\n  base: " << dry->base
+      << "\n  allowed_length: " << dry->allowed_length
+      << "\n  window_length: " << dry->window_length
+      << "\n";
+  }
+  if (const auto* top_k = std::get_if<rendezllama::inference::AdjustViaType_top_k>(&adjust_via)) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(*top_k));
+    eout << "top_k: " << *top_k << "\n";
+  }
+  if (const auto* typical_p = std::get_if<rendezllama::inference::AdjustViaType_typical_p>(&adjust_via)) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_typical(*typical_p, keep_one));
+    eout << "typical_p: " << *typical_p << "\n";
+  }
+  if (const auto* top_p = std::get_if<rendezllama::inference::AdjustViaType_top_p>(&adjust_via)) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(*top_p, keep_one));
+    eout << "top_p: " << *top_p << "\n";
+  }
+  if (const auto* min_p = std::get_if<rendezllama::inference::AdjustViaType_min_p>(&adjust_via)) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(*min_p, keep_one));
+    eout << "min_p: " << *min_p << "\n";
+  }
+  if (const auto* temperature = std::get_if<rendezllama::inference::AdjustViaType_temperature>(&adjust_via)) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(*temperature));
+    eout << "temperature: " << *temperature << "\n";
+  }
+  if (const auto* xtc = std::get_if<rendezllama::inference::AdjustViaType_Xtc>(&adjust_via)) {
+    llama_sampler_chain_add(smpl, llama_sampler_init_xtc(xtc->probability, xtc->threshold, keep_one, seed));
+    eout << "xtc: "
+      << "\n  probability: " << xtc->probability
+      << "\n  threshold: " << xtc->threshold
+      << "\n";
+  }
 }
 
 static
   void
-mirostat1_sample(
+mirostat_sample(
     struct llama_sampler* smpl,
-    const rendezllama::ChatOptions& opt,
+    const rendezllama::inference::Mirostat& mirostat,
     unsigned seed,
-    const Vocabulary& vocabulary)
+    const rendezllama::Vocabulary& vocabulary)
 {
-  const int mirostat_m = 100;
-  llama_sampler_chain_add(
-      smpl,
-      llama_sampler_init_mirostat(
-          vocabulary.cardinality(), seed,
-          opt.mirostat_tau, opt.mirostat_eta, mirostat_m));
-}
-
-static
-  void
-mirostat2_sample(
-    struct llama_sampler* smpl,
-    const rendezllama::ChatOptions& opt,
-    unsigned seed)
-{
-  llama_sampler_chain_add(
-      smpl,
-      llama_sampler_init_mirostat_v2(
-          seed, opt.mirostat_tau, opt.mirostat_eta));
+  if (mirostat.version == 1) {
+    const int mirostat_m = 100;
+    llama_sampler_chain_add(
+        smpl,
+        llama_sampler_init_mirostat(
+            vocabulary.cardinality(), seed,
+            mirostat.tau, mirostat.eta, mirostat_m));
+  }
+  else if (mirostat.version == 2) {
+    llama_sampler_chain_add(
+        smpl,
+        llama_sampler_init_mirostat_v2(
+            seed, mirostat.tau, mirostat.eta));
+  }
 }
 
   void
 Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
 {
   fildesh::ofstream eout("/dev/stderr");
-  auto seed = opt.seed;
+
+  const auto* sampling = std::get_if<rendezllama::inference::Sampling>(&opt.infer_via);
+  assert(sampling);
+  auto seed = sampling->seed;
   if (smpl_) {
     llama_sampler_free(smpl_);
     seed = INT_MAX & time(NULL);
@@ -230,61 +267,18 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
   auto smpl_param = llama_sampler_chain_default_params();
   smpl_ = llama_sampler_chain_init(smpl_param);
 
-  if (opt.repeat_last_count > 0) {
-    llama_sampler_init_penalties(
-        vocabulary_.cardinality(),
-        vocabulary_.eos_token_id(),
-        vocabulary_.newline_token_id(),
-        opt.repeat_last_count,
-        opt.repeat_penalty,
-        opt.frequency_penalty,
-        opt.presence_penalty,
-        /*penalize_newline=*/true,
-        /*ignore_eos=*/false);
-    eout << "penalties:"
-      << "\n  window_length: " << opt.repeat_last_count
-      << "\n  repeat: " << opt.repeat_penalty
-      << "\n  frequency: " << opt.frequency_penalty
-      << "\n  presence: " << opt.presence_penalty
-      << "\n";
+  for (const auto& adjust_via : sampling->adjust_thru) {
+    apply_sampler_chain(smpl_, adjust_via, vocabulary_, model, seed, eout);
   }
 
-  if (opt.dry_window_length > 0) {
-    static const char* seq_breakers[] = {
-      "\n", ":",
-    };
-    llama_sampler_init_dry(
-        model,
-        opt.dry_multiplier,
-        opt.dry_base,
-        opt.dry_allowed_length,
-        opt.dry_window_length,
-        seq_breakers,
-        sizeof(seq_breakers)/sizeof(*seq_breakers));
-    eout << "dry:"
-      << "\n  multiplier: " << opt.dry_multiplier
-      << "\n  base: " << opt.dry_base
-      << "\n  allowed_length: " << opt.dry_allowed_length
-      << "\n  window_length: " << opt.dry_window_length
-      << "\n";
-  }
-
-  if (opt.mirostat_sampling == 0) {
-  }
-  if (opt.mirostat_sampling == 1) {
-    mirostat1_sample(smpl_, opt, seed, vocabulary_);
+  if (const auto* mirostat = std::get_if<rendezllama::inference::Mirostat>(&sampling->pick_via)) {
+    mirostat_sample(smpl_, *mirostat, seed, vocabulary_);
     eout << "mirostat:"
-      << "\n  version: 1"
-      << "\n";
-  }
-  else if (opt.mirostat_sampling == 2) {
-    mirostat2_sample(smpl_, opt, seed);
-    eout << "mirostat:"
-      << "\n  version: 2"
+      << "\n  version: " << mirostat->version
       << "\n";
   }
   else {
-    temperature_based_sample(smpl_, opt, seed, eout);
+    llama_sampler_chain_add(smpl_, llama_sampler_init_dist(seed));
   }
 }
 

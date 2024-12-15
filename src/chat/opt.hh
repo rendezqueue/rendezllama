@@ -6,6 +6,8 @@
 #include <set>
 #include <vector>
 
+#include "src/language/inference_schema.hh"
+
 struct FildeshX;
 struct FildeshSxprotoField;
 
@@ -54,30 +56,10 @@ struct ChatOptions {
   unsigned batch_thread_count = 0;
   unsigned sentence_limit = 0;
   unsigned sentence_token_limit = 0;
-  unsigned top_k = 1000;
-  float top_p = 0.95;
-  float min_p = 0.05;
-  float temperature = 0.7;
-  float typical_p = 1.0;
-  float frequency_penalty = 0.0;
-  float presence_penalty = 0.0;
-  float repeat_penalty = 1.17647;
-  unsigned repeat_last_count = 256;
-  unsigned mirostat_sampling = 2;
-  float mirostat_tau = 5.0;
-  float mirostat_eta = 0.1;
 
-  float dry_multiplier = 0.0;
-  float dry_base = 0.0;
-  unsigned dry_allowed_length = 0;
-  unsigned dry_window_length = 0;
-
-  float xtc_probability = 0.0;
-  float xtc_threshold = 0.1;
   unsigned model_token_limit = 0;  // Default derived from model.
   unsigned context_token_limit = 0;  // Defaults to model_token_limit.
   unsigned batch_count = 512;
-  unsigned seed;
   bool mlock_on = false;
   bool mmap_on = true;
   bool coprocess_mode_on = false;
@@ -85,6 +67,8 @@ struct ChatOptions {
   std::set<std::string> antiprompts;
   // Can't set these yet.
   bool verbose_prompt = false;
+
+  inference::InferVia infer_via;
 };
 
 void

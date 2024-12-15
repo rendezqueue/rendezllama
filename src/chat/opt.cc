@@ -7,9 +7,9 @@
 
 #include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
-#include <fildesh/sxproto.h>
 
 #include "src/chat/opt_schema.hh"
+#include "src/language/inference_schema.hh"
 
 using rendezllama::ChatOptions;
 
@@ -124,18 +124,10 @@ rendezllama::print_options(std::ostream& out, const rendezllama::ChatOptions& op
   }
   out << '\n';
   out
-    << "Sampling: temperature=" << opt.temperature
-    << ", top_k=" << opt.top_k
-    << ", top_p=" << opt.top_p
-    << ", min_p=" << opt.min_p
-    << ", repeat_window=" << opt.repeat_last_count
-    << ", repeat_penalty=" << opt.repeat_penalty
-    << '\n'
     << "Generate: batch_count=" << opt.batch_count
     << ", thread_count=" << opt.thread_count
     << ", sentence_token_limit=" << opt.sentence_token_limit
     << ", sentence_limit=" << opt.sentence_limit
-    << ", seed=" << opt.seed
     << '\n';
   out.flush();
 }
@@ -227,7 +219,8 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
   int exstatus = 0;
   int argi;
 
-  opt.seed = INT_MAX & time(NULL);
+  opt.infer_via = rendezllama::inference::Sampling();
+  std::get<rendezllama::inference::Sampling>(opt.infer_via).seed = INT_MAX & time(NULL);
 
   opt.antiprompts = opt.sentence_terminals;
   opt.antiprompts.insert("\n");
@@ -316,17 +309,6 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       }
       else {
         fildesh_log_error("--batch_count needs positive arg");
-        exstatus = 64;
-      }
-    }
-    else if (0 == strcmp("--seed", argv[argi])) {
-      int n = 0;
-      argi += 1;
-      if (fildesh_parse_int(&n, argv[argi]) && n >= 0) {
-        opt.seed = n;
-      }
-      else {
-        fildesh_log_error("--seed needs non-negative int");
         exstatus = 64;
       }
     }
@@ -473,7 +455,6 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     opt.lora_filename = s;
     opt.mmap_on = false;  // mmap() is incompatible.
   }
-
   if (lone_subfield_at_FildeshSxpb_to_str(&s, sxpb, top_it, "x_rolling")) {
     FildeshX* rolling_in = open_sibling_FildeshXF(sxpb_filename.c_str(), s);
     parse_rolling_prompt(rolling_in, opt);
@@ -547,7 +528,6 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     }
   }
 
-  lone_subfield_at_FildeshSxpb_to_unsigned(&opt.seed, sxpb, top_it, "seed");
   lone_subfield_at_FildeshSxpb_to_bool(&opt.coprocess_mode_on, sxpb, top_it, "coprocess_mode_on");
   lone_subfield_at_FildeshSxpb_to_bool(&opt.startspace_on, sxpb, top_it, "startspace_on");
   lone_subfield_at_FildeshSxpb_to_bool(&opt.linespace_on, sxpb, top_it, "linespace_on");
@@ -555,19 +535,7 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
   lone_subfield_at_FildeshSxpb_to_bool(&opt.mmap_on, sxpb, top_it, "mmap_on");
 
   /** Command option??*/
-  lone_subfield_at_FildeshSxpb_to_float(&opt.frequency_penalty, sxpb, top_it, "frequency_penalty");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.presence_penalty, sxpb, top_it, "presence_penalty");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.repeat_penalty, sxpb, top_it, "repeat_penalty");
-  lone_subfield_at_FildeshSxpb_to_unsigned(&opt.repeat_last_count, sxpb, top_it, "repeat_last_count");
-  lone_subfield_at_FildeshSxpb_to_unsigned(&opt.top_k, sxpb, top_it, "top_k");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.top_p, sxpb, top_it, "top_p");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.min_p, sxpb, top_it, "min_p");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.typical_p, sxpb, top_it, "typical_p");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.temperature, sxpb, top_it, "temperature");
 
-  lone_subfield_at_FildeshSxpb_to_unsigned(&opt.mirostat_sampling, sxpb, top_it, "mirostat");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_tau, sxpb, top_it, "mirostat_tau");
-  lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_eta, sxpb, top_it, "mirostat_eta");
 
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.thread_count, sxpb, top_it, "thread_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.batch_thread_count, sxpb, top_it, "batch_thread_count");
@@ -598,58 +566,28 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     it = lookup_subfield_at_FildeshSxpb(sxpb, it, "infer_via");
     if (!nullish_FildeshSxpbIT(it)) {
       const FildeshSxpbIT sampling_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "sampling");
+      rendezllama::inference::Sampling sampling;
       if (!nullish_FildeshSxpbIT(sampling_it)) {
-        FildeshSxpbIT pick_it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "pick_via");
+        lone_subfield_at_FildeshSxpb_to_unsigned(&sampling.seed, sxpb, sampling_it, "seed");
 
+        FildeshSxpbIT pick_it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "pick_via");
         if (!nullish_FildeshSxpbIT(pick_it)) {
-          if (0 == strcmp(name_at_FildeshSxpb(sxpb, pick_it), "mirostat")) {
-            if (!lone_subfield_at_FildeshSxpb_to_unsigned(&opt.mirostat_sampling, sxpb, pick_it, "version")) {
-              opt.mirostat_sampling = 2;
-            }
-            lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_tau, sxpb, pick_it, "tau");
-            lone_subfield_at_FildeshSxpb_to_float(&opt.mirostat_eta, sxpb, pick_it, "eta");
-          }
-          else {
-            opt.mirostat_sampling = 0;
-          }
+          rendezllama::inference::populate_PickVia(sampling.pick_via, sxpb, pick_it);
+        }
+        else {
+          rendezllama::inference::Probability probability;
+          sampling.pick_via = probability;
         }
 
         it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "adjust_thru");
         for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
              it = next_at_FildeshSxpb(sxpb, it)) {
-          const std::string_view name = name_at_FildeshSxpb(sxpb, it);
-          if (name == "min_p") {
-            opt.min_p = float_value_at_FildeshSxpb(sxpb, it);
-          }
-          else if (name == "top_k") {
-            opt.top_k = unsigned_value_at_FildeshSxpb(sxpb, it);
-          }
-          else if (name == "top_p") {
-            opt.top_p = float_value_at_FildeshSxpb(sxpb, it);
-          }
-          else if (name == "typical_p") {
-            opt.typical_p = float_value_at_FildeshSxpb(sxpb, it);
-          }
-          else if (name == "temperature") {
-            opt.temperature = float_value_at_FildeshSxpb(sxpb, it);
-          }
-          else if (name == "xtc") {
-            lone_subfield_at_FildeshSxpb_to_float(&opt.xtc_probability, sxpb, it, "probability");
-            lone_subfield_at_FildeshSxpb_to_float(&opt.xtc_threshold, sxpb, it, "threshold");
-          }
-          else if (name == "dry") {
-            lone_subfield_at_FildeshSxpb_to_float(&opt.dry_multiplier, sxpb, it, "multiplier");
-            lone_subfield_at_FildeshSxpb_to_float(&opt.dry_base, sxpb, it, "base");
-            lone_subfield_at_FildeshSxpb_to_unsigned(&opt.dry_allowed_length, sxpb, it, "allowed_length");
-            lone_subfield_at_FildeshSxpb_to_unsigned(&opt.dry_window_length, sxpb, it, "window_length");
-          }
-          else if (name == "penalize_with") {
-            lone_subfield_at_FildeshSxpb_to_float(&opt.frequency_penalty, sxpb, it, "frequency");
-            lone_subfield_at_FildeshSxpb_to_float(&opt.presence_penalty, sxpb, it, "presence");
-            lone_subfield_at_FildeshSxpb_to_float(&opt.repeat_penalty, sxpb, it, "repeat");
-            lone_subfield_at_FildeshSxpb_to_unsigned(&opt.repeat_last_count, sxpb, it, "window_length");
+          rendezllama::inference::AdjustVia adjust_via;
+          if (rendezllama::inference::populate_AdjustVia(adjust_via, sxpb, it)) {
+            sampling.adjust_thru.push_back(adjust_via);
           }
         }
+        opt.infer_via = sampling;
       }
     }
   }
