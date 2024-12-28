@@ -161,7 +161,6 @@ static
 apply_sampler_chain(
     struct llama_sampler* smpl,
     const rendezllama::inference::AdjustVia& adjust_via,
-    const rendezllama::Vocabulary& vocabulary,
     const struct llama_model* model,
     unsigned seed,
     std::ostream& eout)
@@ -170,15 +169,10 @@ apply_sampler_chain(
 
   if (const auto* penalize_with = std::get_if<AdjustViaKind::penalize_with>(&adjust_via)) {
     llama_sampler_init_penalties(
-        vocabulary.cardinality(),
-        vocabulary.eos_token_id(),
-        vocabulary.newline_token_id(),
         penalize_with->window_length,
         penalize_with->repetition,
         penalize_with->frequency,
-        penalize_with->presence,
-        /*penalize_newline=*/true,
-        /*ignore_eos=*/false);
+        penalize_with->presence);
     eout << "penalties:"
       << "\n  window_length: " << penalize_with->window_length
       << "\n  repetition: " << penalize_with->repetition
@@ -279,7 +273,7 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
   smpl_ = llama_sampler_chain_init(smpl_param);
 
   for (const auto& adjust_via : sampling->adjust_thru) {
-    apply_sampler_chain(smpl_, adjust_via, vocabulary_, model, seed, eout);
+    apply_sampler_chain(smpl_, adjust_via, model, seed, eout);
   }
 
   if (const auto* mirostat = std::get_if<rendezllama::inference::Mirostat>(&sampling->pick_via)) {
