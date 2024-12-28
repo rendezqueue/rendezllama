@@ -7,15 +7,13 @@
 (sentence_limit 4)
 (sentence_token_limit 50)
 
-; Defaults.
 (model_token_limit 2048)
-(repeat_window 256)
-(repeat_penalty 1.17647)
 (language
  ((infer_via sampling)
+  ((pick_via mirostat) (version 2))
   (adjust_thru (())
+   (penalize_with (window_length 256) (repetition 1.17647))
    (temperature 0.7)
   )
-  ((pick_via mirostat) (version 2))
  )
 )

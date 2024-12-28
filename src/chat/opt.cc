@@ -9,7 +9,7 @@
 #include <fildesh/string.hh>
 
 #include "src/chat/opt_schema.hh"
-#include "src/language/inference_schema.hh"
+#include "src/language/language_schema.hh"
 
 using rendezllama::ChatOptions;
 
@@ -146,11 +146,11 @@ static void reinitialize_chat_prefixes(ChatOptions& opt) {
   for (auto& message_opt : opt.message_opts) {
     if (!message_opt.given_prefix.empty()) {
       message_opt.prefix = message_opt.given_prefix;
-      if (!opt.protagonist_alias.empty()) {
-        string_replace(message_opt.prefix, opt.protagonist_alias, opt.protagonist);
+      if (!opt.substitution.protagonist_alias.empty()) {
+        string_replace(message_opt.prefix, opt.substitution.protagonist_alias, opt.protagonist);
       }
-      if (!opt.confidant_alias.empty()) {
-        string_replace(message_opt.prefix, opt.confidant_alias, opt.confidant);
+      if (!opt.substitution.confidant_alias.empty()) {
+        string_replace(message_opt.prefix, opt.substitution.confidant_alias, opt.confidant);
       }
     }
     if (!message_opt.given_suffix.empty()) {
@@ -186,11 +186,11 @@ static int initialize_options(ChatOptions& opt) {
     }
   }
   if (exstatus == 0) {
-    if (!opt.protagonist_alias.empty()) {
-      replace_in_prompts(opt, opt.protagonist_alias, opt.protagonist);
+    if (!opt.substitution.protagonist_alias.empty()) {
+      replace_in_prompts(opt, opt.substitution.protagonist_alias, opt.protagonist);
     }
-    if (!opt.confidant_alias.empty()) {
-      replace_in_prompts(opt, opt.confidant_alias, opt.confidant);
+    if (!opt.substitution.confidant_alias.empty()) {
+      replace_in_prompts(opt, opt.substitution.confidant_alias, opt.confidant);
     }
     ensure_linespace(opt.priming_prompt, opt.startspace_on, opt.linespace_on);
     ensure_linespace(opt.rolling_prompt, opt.linespace_on, opt.linespace_on);
@@ -220,7 +220,6 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
   int argi;
 
   opt.infer_via = rendezllama::inference::Sampling();
-  std::get<rendezllama::inference::Sampling>(opt.infer_via).seed = INT_MAX & time(NULL);
 
   opt.antiprompts = opt.sentence_terminals;
   opt.antiprompts.insert("\n");
@@ -404,6 +403,20 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
   const FildeshSxpbIT top_it = top_of_FildeshSxpb(sxpb);
   FildeshSxpbIT it;
 
+  rendezllama::language::Language language;
+  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "language");
+  if (!nullish_FildeshSxpbIT(it)) {
+    if (!rendezllama::language::populate_Language(language, sxpb, it)) {
+      return false;
+    }
+    if (language.infer_via.index() != 0) {
+      opt.infer_via = language.infer_via;
+    }
+    if (!nullish_FildeshSxpbIT(lookup_subfield_at_FildeshSxpb(sxpb, it, "substitution"))) {
+      opt.substitution = language.substitution;
+    }
+  }
+
   lone_subfield_at_FildeshSxpb_to_unsigned(
       &opt.context_token_limit, sxpb, top_it, "context_token_limit");
 
@@ -476,35 +489,6 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     }
   }
 
-  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "substitution");
-  if (!nullish_FildeshSxpbIT(it)) {
-    FildeshSxpbIT sub_it;
-    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.protagonist_alias, sxpb, it, "protagonist_alias");
-    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.confidant_alias, sxpb, it, "confidant_alias");
-    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.bos_token_alias, sxpb, it, "bos_token_alias");
-    lone_subfield_at_FildeshSxpb_to_cc_string(&opt.eos_token_alias, sxpb, it, "eos_token_alias");
-    sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "special_tokens");
-    if (!nullish_FildeshSxpbIT(sub_it)) {
-      for (sub_it = first_at_FildeshSxpb(sxpb, sub_it); !nullish_FildeshSxpbIT(sub_it);
-           sub_it = next_at_FildeshSxpb(sxpb, sub_it)) {
-        auto& special = opt.special_tokens.emplace_back();
-        lone_subfield_at_FildeshSxpb_to_cc_string(&special.alias, sxpb, sub_it, "alias");
-        assert(!special.alias.empty());
-        FildeshSxpbIT candidate_it = lookup_subfield_at_FildeshSxpb(sxpb, sub_it, "candidates");
-        if (nullish_FildeshSxpbIT(candidate_it)) {
-          special.candidates.push_back(special.alias);
-        }
-        else {
-          for (candidate_it = first_at_FildeshSxpb(sxpb, candidate_it);
-               !nullish_FildeshSxpbIT(candidate_it);
-               candidate_it = next_at_FildeshSxpb(sxpb, candidate_it)) {
-            special.candidates.push_back(str_value_at_FildeshSxpb(sxpb, candidate_it));
-          }
-        }
-      }
-    }
-  }
-
   it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "chat_prefixes");
   if (!nullish_FildeshSxpbIT(it)) {
     opt.message_opts.clear();
@@ -560,38 +544,6 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     }
   }
 
-
-  it = lookup_subfield_at_FildeshSxpb(sxpb, top_it, "language");
-  if (!nullish_FildeshSxpbIT(it)) {
-    it = lookup_subfield_at_FildeshSxpb(sxpb, it, "infer_via");
-    if (!nullish_FildeshSxpbIT(it)) {
-      const FildeshSxpbIT sampling_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "sampling");
-      rendezllama::inference::Sampling sampling;
-      if (!nullish_FildeshSxpbIT(sampling_it)) {
-        lone_subfield_at_FildeshSxpb_to_unsigned(&sampling.seed, sxpb, sampling_it, "seed");
-
-        FildeshSxpbIT pick_it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "pick_via");
-        if (!nullish_FildeshSxpbIT(pick_it)) {
-          rendezllama::inference::populate_PickVia(sampling.pick_via, sxpb, pick_it);
-        }
-        else {
-          rendezllama::inference::Probability probability;
-          sampling.pick_via = probability;
-        }
-
-        it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "adjust_thru");
-        for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
-             it = next_at_FildeshSxpb(sxpb, it)) {
-          rendezllama::inference::AdjustVia adjust_via;
-          if (rendezllama::inference::populate_AdjustVia(adjust_via, sxpb, it)) {
-            sampling.adjust_thru.push_back(adjust_via);
-          }
-        }
-        opt.infer_via = sampling;
-      }
-    }
-  }
-
   close_FildeshO(err_out);
   close_FildeshSxpb(sxpb);
 
@@ -605,7 +557,7 @@ rendezllama::slurp_sxpb_initialize_options_close_FildeshX(
     const std::string& filename)
 {
   bool all_good = slurp_sxpb_options_close_FildeshX(
-      in, opt, rendezllama::options_sxproto_schema(), filename);
+      in, opt, options_sxproto_schema(), filename);
   if (all_good) {
     initialize_options(opt);
   }

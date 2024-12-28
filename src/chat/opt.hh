@@ -6,7 +6,7 @@
 #include <set>
 #include <vector>
 
-#include "src/language/inference_schema.hh"
+#include "src/language/language_schema.hh"
 
 struct FildeshX;
 struct FildeshSxprotoField;
@@ -20,20 +20,11 @@ struct ChatMessageOpt {
   std::string given_suffix;
 };
 
-struct SpecialToken {
-  std::string alias;
-  std::vector<std::string> candidates;
-};
-
 struct ChatOptions {
 
   std::string protagonist;
   std::string confidant;
-  std::string protagonist_alias;
-  std::string confidant_alias;
-  std::string bos_token_alias;
-  std::string eos_token_alias;
-  std::vector<SpecialToken> special_tokens;
+  language::Substitution substitution;
   std::vector<ChatMessageOpt> message_opts;
   std::string model_filename;
   std::string lora_filename;

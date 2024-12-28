@@ -109,15 +109,16 @@ int main(int argc, char** argv)
   Vocabulary::Token_id first_priming_token_id = vocabulary.bos_token_id();
   std::vector<Vocabulary::Token_id> priming_tokens;
   if (exstatus == 0) {
-    if (!opt.bos_token_alias.empty()) {
+    const auto& substitution = opt.substitution;
+    if (!substitution.bos_token_alias.empty()) {
       vocabulary.assign_substitution(
-          opt.bos_token_alias, vocabulary.bos_token_id());
+          substitution.bos_token_alias, vocabulary.bos_token_id());
     }
-    if (!opt.eos_token_alias.empty()) {
+    if (!substitution.eos_token_alias.empty()) {
       vocabulary.assign_substitution(
-          opt.eos_token_alias, vocabulary.eos_token_id());
+          substitution.eos_token_alias, vocabulary.eos_token_id());
     }
-    for (const auto& special : opt.special_tokens) {
+    for (const auto& special : substitution.special_tokens) {
       Vocabulary::Token_id token_id = Vocabulary::null_token_id;
       for (const auto& name : special.candidates) {
         token_id = vocabulary.tokenize_special(name);

@@ -53,14 +53,16 @@ the_test(llama_model* model)
      (m (prefix \"C:\"))\n\
      (m (prefix \"D:\") (suffix \"</s>\\n\"))\n\
     )\n\
-    (substitution\n\
-     (eos_token_alias \"</s>\")\n\
+    (language\n\
+     (substitution\n\
+      (eos_token_alias \"</s>\")\n\
+     )\n\
     )\n\
     ");
   good = rendezllama::slurp_sxpb_initialize_options_close_FildeshX(in, opt, "");
   assert(good);
-  assert(opt.eos_token_alias == "</s>");
-  vocab.assign_substitution(opt.eos_token_alias, vocab.eos_token_id());
+  assert(opt.substitution.eos_token_alias == "</s>");
+  vocab.assign_substitution(opt.substitution.eos_token_alias, vocab.eos_token_id());
 
   guide.yield_turn();
   truncate_detokenize_rolling_to(oss, traj, vocab);

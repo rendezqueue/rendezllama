@@ -12,14 +12,6 @@
  )
 )
 
-(substitution
- (eos_token_alias "</s>")
- (special_tokens (())
-  (() (alias "[INST]"))
-  (() (alias "[/INST]"))
- )
-)
-
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/assistant_mistral.txt")
 
@@ -33,10 +25,17 @@
 ; Limit context to avoid blowing up RAM on large context models.
 (model_token_limit 8000)
 
-; Match recommendation for Mistral NeMo v1.
-; https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct
-(repeat_window 0)
 (language
+ (substitution
+  (eos_token_alias "</s>")
+  (special_tokens (())
+   (() (alias "[INST]"))
+   (() (alias "[/INST]"))
+  )
+ )
+
+ ; Match recommendation for Mistral NeMo v1.
+ ; https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct
  ((infer_via sampling)
   (adjust_thru (())
    (top_p 0.7)

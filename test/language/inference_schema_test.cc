@@ -9,6 +9,8 @@
 #include "src/chat/opt.hh"
 #include "src/chat/opt_schema.hh"
 
+using rendezllama::inference::AdjustViaKind;
+
 static
   void
 inference_parse_test()
@@ -86,12 +88,12 @@ penalize_with_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  assert(std::holds_alternative<rendezllama::inference::PenalizeWith>(sampling.adjust_thru[0]));
-  auto& penalize_with = std::get<rendezllama::inference::PenalizeWith>(sampling.adjust_thru[0]);
-  assert(penalize_with.window_length == 1000);
-  assert(penalize_with.repetition == 1.5);
-  assert(penalize_with.frequency == 0.5);
-  assert(penalize_with.presence == 0.25);
+  auto* penalize_with = std::get_if<AdjustViaKind::penalize_with>(&sampling.adjust_thru[0]);
+  assert(penalize_with);
+  assert(penalize_with->window_length == 1000);
+  assert(penalize_with->repetition == 1.5);
+  assert(penalize_with->frequency == 0.5);
+  assert(penalize_with->presence == 0.25);
 }
 
 static
@@ -109,12 +111,12 @@ dry_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  assert(std::holds_alternative<rendezllama::inference::Dry>(sampling.adjust_thru[0]));
-  auto& dry = std::get<rendezllama::inference::Dry>(sampling.adjust_thru[0]);
-  assert(dry.multiplier == 0.5);
-  assert(dry.base == 0.25);
-  assert(dry.allowed_length == 100);
-  assert(dry.window_length == 1000);
+  auto* dry = std::get_if<AdjustViaKind::dry>(&sampling.adjust_thru[0]);
+  assert(dry);
+  assert(dry->multiplier == 0.5);
+  assert(dry->base == 0.25);
+  assert(dry->allowed_length == 100);
+  assert(dry->window_length == 1000);
 }
 
 static
@@ -132,10 +134,10 @@ xtc_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  assert(std::holds_alternative<rendezllama::inference::Xtc>(sampling.adjust_thru[0]));
-  auto& xtc = std::get<rendezllama::inference::Xtc>(sampling.adjust_thru[0]);
-  assert(xtc.probability == 0.75);
-  assert(xtc.threshold == 0.25);
+  auto* xtc = std::get_if<AdjustViaKind::xtc>(&sampling.adjust_thru[0]);
+  assert(xtc);
+  assert(xtc->probability == 0.75);
+  assert(xtc->threshold == 0.25);
 }
 
 static
@@ -153,7 +155,7 @@ min_p_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  auto* min_p = std::get_if<rendezllama::inference::AdjustViaType_min_p>(&sampling.adjust_thru[0]);
+  auto* min_p = std::get_if<rendezllama::inference::AdjustViaKind::min_p>(&sampling.adjust_thru[0]);
   assert(min_p);
   assert(*min_p == 0.25);
 }
@@ -173,7 +175,7 @@ top_k_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  auto* top_k = std::get_if<rendezllama::inference::AdjustViaType_top_k>(&sampling.adjust_thru[0]);
+  auto* top_k = std::get_if<rendezllama::inference::AdjustViaKind::top_k>(&sampling.adjust_thru[0]);
   assert(top_k);
   assert(*top_k == 123);
 }
@@ -193,7 +195,7 @@ top_p_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  auto* top_p = std::get_if<rendezllama::inference::AdjustViaType_top_p>(&sampling.adjust_thru[0]);
+  auto* top_p = std::get_if<rendezllama::inference::AdjustViaKind::top_p>(&sampling.adjust_thru[0]);
   assert(top_p);
   assert(*top_p == 0.75);
 }
@@ -213,7 +215,7 @@ typical_p_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  auto* typical_p = std::get_if<rendezllama::inference::AdjustViaType_typical_p>(&sampling.adjust_thru[0]);
+  auto* typical_p = std::get_if<rendezllama::inference::AdjustViaKind::typical_p>(&sampling.adjust_thru[0]);
   assert(typical_p);
   assert(*typical_p == 0.5);
 }
@@ -233,7 +235,7 @@ temperature_parse_test()
   assert(std::holds_alternative<rendezllama::inference::Sampling>(opt.infer_via));
   auto& sampling = std::get<rendezllama::inference::Sampling>(opt.infer_via);
   assert(sampling.adjust_thru.size() == 1);
-  auto* temperature = std::get_if<rendezllama::inference::AdjustViaType_temperature>(&sampling.adjust_thru[0]);
+  auto* temperature = std::get_if<AdjustViaKind::temperature>(&sampling.adjust_thru[0]);
   assert(temperature);
   assert(*temperature == 0.75);
 }

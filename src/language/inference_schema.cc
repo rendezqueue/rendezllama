@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <string_view>
 
+using rendezllama::inference::AdjustViaKind;
+
 static FildeshSxprotoField penalize_with_fields[] = {
   {"window_length", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
   {"repetition", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
@@ -41,6 +43,7 @@ static FildeshSxprotoField mirostat_fields[] = {
 };
 
 static FildeshSxprotoField probability_fields[] = {
+  {"none", FILL_DEFAULT_FildeshSxprotoField_STRING},
 };
 
 static FildeshSxprotoField pick_via_oneof[] = {
@@ -58,12 +61,12 @@ static FildeshSxprotoField infer_via_oneof[] = {
   {"sampling", FILL_FildeshSxprotoField_MESSAGE(sampling_fields)},
 };
 
-const FildeshSxprotoField* rendezllama::language_sxproto_schema() {
-  static FildeshSxprotoField toplevel_fields[] = {
-    {"infer_via", FILL_FildeshSxprotoField_LONEOF(infer_via_oneof)},
-  };
-  DECLARE_TOPLEVEL_FildeshSxprotoField(schema, toplevel_fields);
-  lone_toplevel_initialization_FildeshSxprotoField(schema);
+const FildeshSxprotoField* rendezllama::inference_sxproto_schema() {
+  DECLARE_TOPLEVEL_FildeshSxprotoField(schema, infer_via_oneof);
+  if (!schema->name) {
+    lone_toplevel_initialization_FildeshSxprotoField(schema);
+    schema->kind = FildeshSxprotoFieldKind_LONEOF;
+  }
   return schema;
 }
 
@@ -75,30 +78,30 @@ rendezllama::inference::populate_AdjustVia(
 {
   const std::string_view name = name_at_FildeshSxpb(sxpb, it);
   if (name == "min_p") {
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_min_p>(
+    adjust_via.emplace<AdjustViaKind::min_p>(
         float_value_at_FildeshSxpb(sxpb, it));
   }
   else if (name == "top_k") {
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_top_k>(
+    adjust_via.emplace<AdjustViaKind::top_k>(
         unsigned_value_at_FildeshSxpb(sxpb, it));
   }
   else if (name == "top_p") {
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_top_p>(
+    adjust_via.emplace<AdjustViaKind::top_p>(
         float_value_at_FildeshSxpb(sxpb, it));
   }
   else if (name == "typical_p") {
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_typical_p>(
+    adjust_via.emplace<AdjustViaKind::typical_p>(
         float_value_at_FildeshSxpb(sxpb, it));
   }
   else if (name == "temperature") {
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_temperature>(
+    adjust_via.emplace<AdjustViaKind::temperature>(
         float_value_at_FildeshSxpb(sxpb, it));
   }
   else if (name == "xtc") {
     rendezllama::inference::Xtc xtc;
     lone_subfield_at_FildeshSxpb_to_float(&xtc.probability, sxpb, it, "probability");
     lone_subfield_at_FildeshSxpb_to_float(&xtc.threshold, sxpb, it, "threshold");
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_Xtc>(xtc);
+    adjust_via.emplace<AdjustViaKind::xtc>(xtc);
   }
   else if (name == "dry") {
     rendezllama::inference::Dry dry;
@@ -106,7 +109,7 @@ rendezllama::inference::populate_AdjustVia(
     lone_subfield_at_FildeshSxpb_to_float(&dry.base, sxpb, it, "base");
     lone_subfield_at_FildeshSxpb_to_unsigned(&dry.allowed_length, sxpb, it, "allowed_length");
     lone_subfield_at_FildeshSxpb_to_unsigned(&dry.window_length, sxpb, it, "window_length");
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_Dry>(dry);
+    adjust_via.emplace<AdjustViaKind::dry>(dry);
   }
   else if (name == "penalize_with") {
     rendezllama::inference::PenalizeWith penalize_with;
@@ -114,7 +117,7 @@ rendezllama::inference::populate_AdjustVia(
     lone_subfield_at_FildeshSxpb_to_float(&penalize_with.presence, sxpb, it, "presence");
     lone_subfield_at_FildeshSxpb_to_float(&penalize_with.repetition, sxpb, it, "repetition");
     lone_subfield_at_FildeshSxpb_to_unsigned(&penalize_with.window_length, sxpb, it, "window_length");
-    adjust_via.emplace<rendezllama::inference::AdjustViaType_PenalizeWith>(penalize_with);
+    adjust_via.emplace<AdjustViaKind::penalize_with>(penalize_with);
   }
   else {
     return false;
@@ -142,6 +145,46 @@ rendezllama::inference::populate_PickVia(
   else {
     rendezllama::inference::Probability probability;
     pick_via = probability;
+    return true;
+  }
+  return false;
+}
+
+  bool
+rendezllama::inference::populate_InferVia(
+    InferVia& infer_via,
+    FildeshSxpb* sxpb,
+    FildeshSxpbIT it)
+{
+  if (nullish_FildeshSxpbIT(it)) {
+    return false;
+  }
+  const FildeshSxpbIT sampling_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "sampling");
+  Sampling sampling;
+  if (!nullish_FildeshSxpbIT(sampling_it)) {
+    unsigned seed = 0;
+    if (lone_subfield_at_FildeshSxpb_to_unsigned(&seed, sxpb, sampling_it, "seed")) {
+      sampling.seed = static_cast<int>(INT_MAX & seed);
+    }
+
+    FildeshSxpbIT pick_it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "pick_via");
+    if (!nullish_FildeshSxpbIT(pick_it)) {
+      populate_PickVia(sampling.pick_via, sxpb, pick_it);
+    }
+    else {
+      Probability probability;
+      sampling.pick_via = probability;
+    }
+
+    it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "adjust_thru");
+    for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
+         it = next_at_FildeshSxpb(sxpb, it)) {
+      AdjustVia adjust_via;
+      if (populate_AdjustVia(adjust_via, sxpb, it)) {
+        sampling.adjust_thru.push_back(adjust_via);
+      }
+    }
+    infer_via = sampling;
     return true;
   }
   return false;

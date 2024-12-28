@@ -1,19 +1,21 @@
 (protagonist "L")
 (confidant "Kira")
-(substitution
- (protagonist_alias "{{user}}")
- (confidant_alias "{{char}}")
-)
 (x_priming "priming.txt")
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/roshambo_kira.txt")
 (sentence_limit 5)
 (sentence_token_limit 70)
-(repeat_window 20)
-(repeat_penalty 1.2)
 (language
+ (substitution
+  (protagonist_alias "{{user}}")
+  (confidant_alias "{{char}}")
+ )
  ((infer_via sampling)
   (adjust_thru (())
+   (penalize_with
+    (window_length 20)
+    (repetition 1.2)
+   )
    (top_k 1000)
    (top_p 0.95)
    (temperature 0.7)

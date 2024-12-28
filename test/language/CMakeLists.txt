@@ -1,18 +1,22 @@
 
 add_executable(language_inference_schema_test
   "inference_schema_test.cc"
-  "${PROJECT_SOURCE_DIR}/src/chat/opt.cc"
-  "${PROJECT_SOURCE_DIR}/src/chat/opt.hh"
-  "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.cc"
-  "${PROJECT_SOURCE_DIR}/src/chat/opt_schema.hh"
-  "${PROJECT_SOURCE_DIR}/src/language/inference_schema.cc"
-  "${PROJECT_SOURCE_DIR}/src/language/inference_schema.hh"
 )
-target_link_libraries(language_inference_schema_test PRIVATE
-  ${FildeshSxproto_LIBRARIES}
+target_link_libraries(language_inference_schema_test
+  chat_opt_cc
 )
 add_test(NAME language_inference_schema_test COMMAND
   language_inference_schema_test
+)
+
+add_executable(language_language_schema_test
+  "language_schema_test.cc"
+)
+target_link_libraries(language_language_schema_test
+  chat_opt_cc
+)
+add_test(NAME language_language_schema_test COMMAND
+  language_language_schema_test
 )
 
 add_executable(language_vocabulary_test

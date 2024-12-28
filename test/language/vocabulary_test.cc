@@ -5,6 +5,7 @@
 #include <fildesh/string.hh>
 
 #include "llama.h"
+#include "src/language/language_schema.hh"
 
 using rendezllama::Vocabulary;
 

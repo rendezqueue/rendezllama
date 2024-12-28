@@ -20,6 +20,7 @@ using rendezllama::ChatOptions;
 using rendezllama::ChatTrajectory;
 using rendezllama::Inference;
 using rendezllama::Vocabulary;
+using rendezllama::inference::AdjustViaKind;
 
 Inference::Inference(const Vocabulary& vocabulary)
   : vocabulary_(vocabulary)
@@ -149,6 +150,13 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 }
 
 static
+  int
+new_sampling_seed()
+{
+  return static_cast<int>(INT_MAX & time(NULL));
+}
+
+static
   void
 apply_sampler_chain(
     struct llama_sampler* smpl,
@@ -160,7 +168,7 @@ apply_sampler_chain(
 {
   const unsigned keep_one = 1;
 
-  if (const auto* penalize_with = std::get_if<rendezllama::inference::AdjustViaType_PenalizeWith>(&adjust_via)) {
+  if (const auto* penalize_with = std::get_if<AdjustViaKind::penalize_with>(&adjust_via)) {
     llama_sampler_init_penalties(
         vocabulary.cardinality(),
         vocabulary.eos_token_id(),
@@ -178,7 +186,7 @@ apply_sampler_chain(
       << "\n  presence: " << penalize_with->presence
       << "\n";
   }
-  if (const auto* dry = std::get_if<rendezllama::inference::AdjustViaType_Dry>(&adjust_via)) {
+  if (const auto* dry = std::get_if<AdjustViaKind::dry>(&adjust_via)) {
     static const char* seq_breakers[] = {
       "\n", ":",
     };
@@ -197,27 +205,27 @@ apply_sampler_chain(
       << "\n  window_length: " << dry->window_length
       << "\n";
   }
-  if (const auto* top_k = std::get_if<rendezllama::inference::AdjustViaType_top_k>(&adjust_via)) {
+  if (const auto* top_k = std::get_if<AdjustViaKind::top_k>(&adjust_via)) {
     llama_sampler_chain_add(smpl, llama_sampler_init_top_k(*top_k));
     eout << "top_k: " << *top_k << "\n";
   }
-  if (const auto* typical_p = std::get_if<rendezllama::inference::AdjustViaType_typical_p>(&adjust_via)) {
+  if (const auto* typical_p = std::get_if<AdjustViaKind::typical_p>(&adjust_via)) {
     llama_sampler_chain_add(smpl, llama_sampler_init_typical(*typical_p, keep_one));
     eout << "typical_p: " << *typical_p << "\n";
   }
-  if (const auto* top_p = std::get_if<rendezllama::inference::AdjustViaType_top_p>(&adjust_via)) {
+  if (const auto* top_p = std::get_if<AdjustViaKind::top_p>(&adjust_via)) {
     llama_sampler_chain_add(smpl, llama_sampler_init_top_p(*top_p, keep_one));
     eout << "top_p: " << *top_p << "\n";
   }
-  if (const auto* min_p = std::get_if<rendezllama::inference::AdjustViaType_min_p>(&adjust_via)) {
+  if (const auto* min_p = std::get_if<AdjustViaKind::min_p>(&adjust_via)) {
     llama_sampler_chain_add(smpl, llama_sampler_init_min_p(*min_p, keep_one));
     eout << "min_p: " << *min_p << "\n";
   }
-  if (const auto* temperature = std::get_if<rendezllama::inference::AdjustViaType_temperature>(&adjust_via)) {
+  if (const auto* temperature = std::get_if<AdjustViaKind::temperature>(&adjust_via)) {
     llama_sampler_chain_add(smpl, llama_sampler_init_temp(*temperature));
     eout << "temperature: " << *temperature << "\n";
   }
-  if (const auto* xtc = std::get_if<rendezllama::inference::AdjustViaType_Xtc>(&adjust_via)) {
+  if (const auto* xtc = std::get_if<AdjustViaKind::xtc>(&adjust_via)) {
     llama_sampler_chain_add(smpl, llama_sampler_init_xtc(xtc->probability, xtc->threshold, keep_one, seed));
     eout << "xtc: "
       << "\n  probability: " << xtc->probability
@@ -258,9 +266,12 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
   const auto* sampling = std::get_if<rendezllama::inference::Sampling>(&opt.infer_via);
   assert(sampling);
   auto seed = sampling->seed;
+  if (smpl_ || seed < 0) {
+    // We're retrying or just don't have a fixed seed, so we should reseed.
+    seed = new_sampling_seed();
+  }
   if (smpl_) {
     llama_sampler_free(smpl_);
-    seed = INT_MAX & time(NULL);
     eout.open("/dev/null");
   }
   token_count_ = 0;

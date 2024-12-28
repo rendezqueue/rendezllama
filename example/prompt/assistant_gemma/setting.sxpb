@@ -7,20 +7,12 @@
   (suffix "<end_of_turn>\n")
  )
 )
-(substitution
- (special_tokens (())
-  (() (alias "<start_of_turn>"))
-  (() (alias "<end_of_turn>"))
- )
-)
 
 (x_rolling "rolling.txt")
 (o_rolling "../../../bld/example/prompt/assistant_gemma.txt")
 
 ; No starting space.
 (startspace_on +false)
-; No token penalization.
-(repeat_window 0)
 
 ; 10 reasonably-long sentences at a time.
 (sentence_limit 10)
@@ -28,3 +20,16 @@
 
 ; Limit context to avoid blowing up RAM on large context models.
 (model_token_limit 8000)
+(language
+ (substitution
+  (special_tokens (())
+   (() (alias "<start_of_turn>"))
+   (() (alias "<end_of_turn>"))
+  )
+ )
+ ((infer_via sampling)
+  (adjust_thru (())
+   (temperature 0.7)
+  )
+ )
+)

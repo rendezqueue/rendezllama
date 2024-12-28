@@ -1,12 +1,11 @@
 (context_token_limit 8128)
 
-(substitution
- (protagonist_alias "{{user}}")
- (confidant_alias "{{char}}")
- (eos_token_alias "</s>")
-)
-
 (language
+ (substitution
+  (protagonist_alias "{{user}}")
+  (confidant_alias "{{char}}")
+  (eos_token_alias "</s>")
+ )
  ((infer_via sampling)
   (adjust_thru (())
    (penalize_with

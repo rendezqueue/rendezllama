@@ -19,27 +19,30 @@ struct Dry {
 
 struct PenalizeWith {
   unsigned window_length = 0;
-  float repetition = 1.0;
-  float frequency = 0.0;
-  float presence = 0.0;
+  float repetition = 1.0f;
+  float frequency = 0.0f;
+  float presence = 0.0f;
 };
 
 struct Xtc {
-  float probability = 0.0;
-  float threshold = 0.1;
+  float probability = 0.0f;
+  float threshold = 0.1f;
 };
 
-enum AdjustViaType {
-  AdjustViaType_NULL,
-  AdjustViaType_Dry,
-  AdjustViaType_PenalizeWith,
-  AdjustViaType_top_k,
-  AdjustViaType_tfs_z,
-  AdjustViaType_typical_p,
-  AdjustViaType_top_p,
-  AdjustViaType_min_p,
-  AdjustViaType_temperature,
-  AdjustViaType_Xtc,
+
+struct AdjustViaKind {
+  enum E : std::size_t {
+    none,
+    dry,
+    penalize_with,
+    top_k,
+    tfs_z,
+    typical_p,
+    top_p,
+    min_p,
+    temperature,
+    xtc,
+  };
 };
 
 
@@ -58,8 +61,8 @@ typedef std::variant<
 
 struct Mirostat {
   unsigned version = 1;
-  float tau = 5.0;
-  float eta = 0.1;
+  float tau = 5.0f;
+  float eta = 0.1f;
 };
 
 struct Probability {};
@@ -73,17 +76,13 @@ typedef std::variant<
 struct Sampling {
   std::vector<AdjustVia> adjust_thru;
   PickVia pick_via;
-  unsigned seed = 0;
+  int seed = -1;
 };
 
 typedef std::variant<
   std::monostate,
   Sampling
 > InferVia;
-
-struct Language {
-  InferVia infer_via;
-};
 
 bool
 populate_AdjustVia(
@@ -95,10 +94,15 @@ populate_PickVia(
     PickVia& pick_via,
     const FildeshSxpb* sxpb,
     FildeshSxpbIT it);
+bool
+populate_InferVia(
+    InferVia& infer_via,
+    FildeshSxpb* sxpb,
+    FildeshSxpbIT it);
 
 }  // namespace inference
 
-const FildeshSxprotoField* language_sxproto_schema();
+const FildeshSxprotoField* inference_sxproto_schema();
 
 }  // namespace rendezllama
 #endif
