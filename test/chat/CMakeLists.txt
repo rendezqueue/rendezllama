@@ -8,7 +8,7 @@ add_executable(chat_guide_test
   "${PROJECT_SOURCE_DIR}/src/language/vocabulary.cc"
   "${PROJECT_SOURCE_DIR}/src/language/vocabulary.hh"
 )
-target_link_libraries(chat_guide_test
+target_link_libraries(chat_guide_test PRIVATE
   chat_opt_cc
   ${LlamaCpp_LIBRARIES}
 )
@@ -19,7 +19,7 @@ add_test(NAME chat_guide_test COMMAND
 add_executable(chat_opt_test
   "opt_test.cc"
 )
-target_link_libraries(chat_opt_test
+target_link_libraries(chat_opt_test PRIVATE
   chat_opt_cc
 )
 add_test(NAME chat_opt_test COMMAND

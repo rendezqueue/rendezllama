@@ -35,28 +35,7 @@ const FildeshSxprotoField* rendezllama::language_sxproto_schema() {
   return schema;
 }
 
-bool
-rendezllama::language::populate_Language(
-    Language& language,
-    FildeshSxpb* sxpb,
-    FildeshSxpbIT it)
-{
-  if (nullish_FildeshSxpbIT(it)) {
-    return true;
-  }
-  FildeshSxpbIT sub_it;
-
-  sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "infer_via");
-  rendezllama::inference::populate_InferVia(language.infer_via, sxpb, sub_it);
-
-  sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "substitution");
-  if (!nullish_FildeshSxpbIT(sub_it)) {
-    populate_Substitution(language.substitution, sxpb, sub_it);
-  }
-  return true;
-}
-
-bool
+  bool
 rendezllama::language::populate_Substitution(
     Substitution& substitution,
     FildeshSxpb* sxpb,
@@ -99,6 +78,27 @@ rendezllama::language::populate_Substitution(
         }
       }
     }
+  }
+  return true;
+}
+
+  bool
+rendezllama::language::populate_Language(
+    Language& language,
+    FildeshSxpb* sxpb,
+    FildeshSxpbIT it)
+{
+  if (nullish_FildeshSxpbIT(it)) {
+    return true;
+  }
+  FildeshSxpbIT sub_it;
+
+  sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "infer_via");
+  rendezllama::inference::populate_InferVia(language.infer_via, sxpb, sub_it);
+
+  sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "substitution");
+  if (!nullish_FildeshSxpbIT(sub_it)) {
+    populate_Substitution(language.substitution, sxpb, sub_it);
   }
   return true;
 }

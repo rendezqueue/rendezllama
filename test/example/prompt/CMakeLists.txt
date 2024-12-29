@@ -1,7 +1,7 @@
 add_executable(example_prompt_parse_test
   "parse_test.cc"
 )
-target_link_libraries(example_prompt_parse_test
+target_link_libraries(example_prompt_parse_test PRIVATE
   chat_opt_cc
 )
 add_test(NAME example_prompt_assistant_alpaca_parse_test COMMAND example_prompt_parse_test

@@ -4,6 +4,6 @@ add_library(language_schema_cc
   "inference_schema.cc"
   "inference_schema.hh"
 )
-target_link_libraries(language_schema_cc PRIVATE
+target_link_libraries(language_schema_cc PUBLIC
   ${FildeshSxproto_LIBRARIES}
 )

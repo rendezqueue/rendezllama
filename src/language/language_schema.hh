@@ -1,10 +1,11 @@
 #ifndef RENDEZLLAMA_LANGUAGE_LANGUAGE_SCHEMA_HH_
 #define RENDEZLLAMA_LANGUAGE_LANGUAGE_SCHEMA_HH_
 
-#include <fildesh/sxproto.h>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <fildesh/sxproto.h>
 
 #include "src/language/inference_schema.hh"
 
@@ -31,13 +32,13 @@ struct Language {
 };
 
 bool
-populate_Language(
-    Language& language,
+populate_Substitution(
+    Substitution& substitution,
     FildeshSxpb* sxpb,
     FildeshSxpbIT it);
 bool
-populate_Substitution(
-    Substitution& substitution,
+populate_Language(
+    Language& language,
     FildeshSxpb* sxpb,
     FildeshSxpbIT it);
 
