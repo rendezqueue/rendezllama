@@ -219,7 +219,11 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
   int exstatus = 0;
   int argi;
 
-  opt.infer_via = rendezllama::inference::Sampling();
+  {
+    auto sampling = rendezllama::inference::Sampling();
+    sampling.pick_via = rendezllama::inference::Mirostat();
+    opt.infer_via = sampling;
+  }
 
   opt.antiprompts = opt.sentence_terminals;
   opt.antiprompts.insert("\n");
@@ -415,6 +419,9 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
     if (!nullish_FildeshSxpbIT(lookup_subfield_at_FildeshSxpb(sxpb, it, "substitution"))) {
       opt.substitution = language.substitution;
     }
+    if (language.infer_via.index() != 0) {
+      opt.infer_via = language.infer_via;
+    }
   }
 
   lone_subfield_at_FildeshSxpb_to_unsigned(
@@ -519,8 +526,6 @@ rendezllama::slurp_sxpb_options_close_FildeshX(
   lone_subfield_at_FildeshSxpb_to_bool(&opt.mmap_on, sxpb, top_it, "mmap_on");
 
   /** Command option??*/
-
-
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.thread_count, sxpb, top_it, "thread_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.batch_thread_count, sxpb, top_it, "batch_thread_count");
   lone_subfield_at_FildeshSxpb_to_unsigned(&opt.batch_count, sxpb, top_it, "batch_count");

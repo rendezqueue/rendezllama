@@ -27,8 +27,8 @@ struct Substitution {
 };
 
 struct Language {
-  rendezllama::inference::InferVia infer_via;
   Substitution substitution;
+  rendezllama::inference::InferVia infer_via;
 };
 
 bool

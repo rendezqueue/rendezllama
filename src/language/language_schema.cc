@@ -100,5 +100,9 @@ rendezllama::language::populate_Language(
   if (!nullish_FildeshSxpbIT(sub_it)) {
     populate_Substitution(language.substitution, sxpb, sub_it);
   }
+
+  sub_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "infer_via");
+  rendezllama::inference::populate_InferVia(language.infer_via, sxpb, sub_it);
+
   return true;
 }

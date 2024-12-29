@@ -52,9 +52,9 @@ static FildeshSxprotoField pick_via_oneof[] = {
 };
 
 static FildeshSxprotoField sampling_fields[] = {
+  {"seed", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
   {"adjust_thru", FILL_FildeshSxprotoField_MANYOF(adjust_thru_manyof)},
   {"pick_via", FILL_FildeshSxprotoField_LONEOF(pick_via_oneof)},
-  {"seed", FILL_FildeshSxprotoField_INT(0, INT_MAX)},
 };
 
 static FildeshSxprotoField infer_via_oneof[] = {
@@ -167,6 +167,15 @@ rendezllama::inference::populate_InferVia(
       sampling.seed = static_cast<int>(INT_MAX & seed);
     }
 
+    it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "adjust_thru");
+    for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
+         it = next_at_FildeshSxpb(sxpb, it)) {
+      AdjustVia adjust_via;
+      if (populate_AdjustVia(adjust_via, sxpb, it)) {
+        sampling.adjust_thru.push_back(adjust_via);
+      }
+    }
+
     FildeshSxpbIT pick_it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "pick_via");
     if (!nullish_FildeshSxpbIT(pick_it)) {
       populate_PickVia(sampling.pick_via, sxpb, pick_it);
@@ -176,14 +185,6 @@ rendezllama::inference::populate_InferVia(
       sampling.pick_via = probability;
     }
 
-    it = lookup_subfield_at_FildeshSxpb(sxpb, sampling_it, "adjust_thru");
-    for (it = first_at_FildeshSxpb(sxpb, it); !nullish_FildeshSxpbIT(it);
-         it = next_at_FildeshSxpb(sxpb, it)) {
-      AdjustVia adjust_via;
-      if (populate_AdjustVia(adjust_via, sxpb, it)) {
-        sampling.adjust_thru.push_back(adjust_via);
-      }
-    }
     infer_via = sampling;
     return true;
   }

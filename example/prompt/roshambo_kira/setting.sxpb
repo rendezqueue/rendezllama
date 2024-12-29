@@ -5,6 +5,8 @@
 (o_rolling "../../../bld/example/prompt/roshambo_kira.txt")
 (sentence_limit 5)
 (sentence_token_limit 70)
+
+(model_token_limit 2048)
 (language
  (substitution
   (protagonist_alias "{{user}}")
@@ -23,6 +25,3 @@
   ((pick_via probability))
  )
 )
-
-; Defaults.
-(model_token_limit 2048)

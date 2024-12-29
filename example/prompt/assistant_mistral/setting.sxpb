@@ -33,7 +33,6 @@
    (() (alias "[/INST]"))
   )
  )
-
  ; Match recommendation for Mistral NeMo v1.
  ; https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct
  ((infer_via sampling)

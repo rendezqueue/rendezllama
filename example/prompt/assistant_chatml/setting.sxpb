@@ -22,7 +22,6 @@
 ; Limit context to avoid blowing up RAM on large context models.
 (model_token_limit 4000)
 
-; Defaults.
 (language
  (substitution
   (bos_token_alias "<bos_token>")
@@ -31,16 +30,16 @@
    (()
     (alias "<|im_start|>")
     (candidates (())
-     "<|im_start|>"
+     "<|im_start|>"  ; For ChatML-tuned models.
      "<start_of_turn>"  ; For Gemma models.
-     "<bos_token>"
+     "<bos_token>"  ; For other models.
    ))
    (()
     (alias "<|im_end|>")
     (candidates (())
-     "<|im_end|>"
+     "<|im_end|>"  ; For ChatML-tuned models.
      "<end_of_turn>"  ; For Gemma models.
-     "<eos_token>"
+     "<eos_token>"  ; For other models.
    ))
   )
  )

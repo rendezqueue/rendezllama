@@ -1,7 +1,6 @@
 #ifndef RENDEZLLAMA_LANGUAGE_INFERENCE_SCHEMA_HH_
 #define RENDEZLLAMA_LANGUAGE_INFERENCE_SCHEMA_HH_
 
-#include <optional>
 #include <vector>
 #include <variant>
 
@@ -60,7 +59,7 @@ typedef std::variant<
 > AdjustVia;
 
 struct Mirostat {
-  unsigned version = 1;
+  unsigned version = 2;
   float tau = 5.0f;
   float eta = 0.1f;
 };
@@ -74,9 +73,9 @@ typedef std::variant<
 > PickVia;
 
 struct Sampling {
+  int seed = -1;
   std::vector<AdjustVia> adjust_thru;
   PickVia pick_via;
-  int seed = -1;
 };
 
 typedef std::variant<

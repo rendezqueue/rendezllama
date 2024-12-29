@@ -5,8 +5,8 @@ The defaults are okay for chatting.
 ## Repeat penalty
 
 ```lisp
-; Penalizes the most recent 20 tokens from being generated.
-(repeat_window 256)
+; Penalizes the most recent 20 tokens from being generated (default off, 0).
+(repeat_window 20)
 ; How much to penalize repeated tokens.
 (repeat_penalty 1.17647)
 ```

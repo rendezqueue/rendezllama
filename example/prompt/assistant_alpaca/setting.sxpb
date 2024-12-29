@@ -23,7 +23,4 @@
  (substitution
   (eos_token_alias "</s>")
  )
- ((infer_via sampling)
-  ((pick_via mirostat) (version 2))
- )
 )

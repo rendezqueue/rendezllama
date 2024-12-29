@@ -12,8 +12,6 @@ You can adjust this behavior in `setting.sxpb`:
 (sentence_token_limit 1000)  ; Long enough for any reasonable line of text.
 ```
 
-We don't penalize tokens because penalties are very ad-hoc and this format works okay without them.
-
 ## Prompt Format
 Alpaca-style models put the user's text and the chatbot's response in markdown subsections, so it's a bit sparse.
 ```text
@@ -39,7 +37,9 @@ Relevant lines of `setting.sxpb` are:
   (suffix "</s>\n\n")
  )
 )
-(substitution
- (eos_token_alias "</s>")
+(language
+ (substitution
+  (eos_token_alias "</s>")
+ )
 )
 ```
