@@ -1,5 +1,5 @@
+/.*
+!.gitignore
+
 /bld/
 /example/prompt/_*/
-/eg/_*/
-.aider*
-.env
