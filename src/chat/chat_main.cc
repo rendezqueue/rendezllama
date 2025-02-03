@@ -5,6 +5,7 @@
 
 #include "src/chat/display.hh"
 #include "src/chat/cmd.hh"
+#include "src/chat/control.hh"
 #include "src/chat/guide.hh"
 #include "src/chat/opt.hh"
 #include "src/chat/trajectory.hh"
@@ -72,7 +73,6 @@ noop_log_callback(enum ggml_log_level level, const char* text, void* user_data)
   (void) text;
   (void) user_data;
 }
-
 
 int main(int argc, char** argv)
 {
@@ -195,11 +195,7 @@ int main(int argc, char** argv)
     eout.flush();
   }
 
-  unsigned line_byte_limit = 0;
-  unsigned line_byte_count = 0;
-  unsigned sentence_count = 0;
-  unsigned sentence_token_count = 0;
-  bool preventing_newline = false;
+  rendezllama::ChatControl ctrl;
   // Skip straight to user input when in coprocess mode.
   bool token_generation_on = !opt.coprocess_mode_on;
   fildesh::ostringstream oss;
@@ -216,74 +212,38 @@ int main(int argc, char** argv)
       break;
     }
 
-    bool inputting = false;
+    ctrl.set_input_mode_on(false);
     std::string matched_antiprompt;
     if (!token_generation_on) {
       // Just skip the first token.
       token_generation_on = true;
-      inputting = true;
+      ctrl.set_input_mode_on(true);
     }
     else {
-      inference.sample_to_trajectory(chat_traj, ctx, preventing_newline);
-      preventing_newline = false;
+      inference.sample_to_trajectory(chat_traj, ctx, ctrl.has_single_line_mode_on());
+      ctrl.set_single_line_mode_on(false);
 
       chat_disp.show_new(chat_traj, vocabulary);
 
       oss.truncate();
       chat_disp.displaystring_to(oss.c_struct(), chat_traj.token(), vocabulary);
       const std::string_view s = oss.view();
-      line_byte_count += s.size();
+      ctrl.increment_textgen_byte_count(s.size());
       // Check if each of the reverse prompts appears at the end of the output.
       // We use single-character antiprompts, so they aren't split across tokens.
       // (If we used longer antiprompts, they could be split across iterations.)
       matched_antiprompt = rendezllama::antiprompt_suffix(s, opt.antiprompts);
     }
 
-    if (line_byte_limit > 0 && line_byte_count >= line_byte_limit) {
-      inputting = true;
-      chat_guide.end_turn();
-      if (matched_antiprompt != "\n") {
-        chat_disp.show_new(chat_traj, vocabulary);
-      }
-    }
-    else if (chat_guide.maybe_yield_turn()) {
-      if (matched_antiprompt != "\n") {
-        matched_antiprompt = "\n";
-      }
-      if (chat_traj.message_prefix_id_ == 0) {
-        inputting = true;
-      }
-      chat_disp.show_new(chat_traj, vocabulary);
-      sentence_count = 0;
-      sentence_token_count = 0;
-    }
-    else if (!matched_antiprompt.empty()) {
-      if (sentence_count + 1 == opt.sentence_limit) {
-        // Reached the limit on number of sentences.
-        inputting = true;
-      }
-      else {
-        sentence_count += 1;
-        sentence_token_count = 0;
-      }
-    }
-    else {
-      if (sentence_token_count + 1 == opt.sentence_token_limit) {
-        // Reached the limit on number of tokens in a sentence.
-        inputting = true;
-      }
-      else {
-        sentence_token_count += 1;
-      }
-    }
+    ctrl.accept_generated_token(
+        chat_guide,
+        chat_disp,
+        chat_traj,
+        matched_antiprompt,
+        opt,
+        vocabulary);
 
-    chat_disp.maybe_remove_answer_prompt(chat_traj, inputting);
-
-    if (inputting) {
-      line_byte_count = 0;
-      sentence_token_count = 0;
-      sentence_count = 0;
-
+    if (ctrl.has_input_mode_on()) {
       std::string buffer;
 
       FildeshX slice;
@@ -393,12 +353,12 @@ int main(int argc, char** argv)
                  (slice.off + 4 == slice.size &&
                   skipstr_FildeshX(&slice, "gets")))
         {
-          preventing_newline = true;
+          ctrl.set_single_line_mode_on(true);
           matched_antiprompt.clear();  // For clarity.
-          line_byte_limit = 0;
+          ctrl.reset_textgen_byte_limit(0);
           int tmp_n = 0;
           if (parse_int_FildeshX(&slice, &tmp_n) && tmp_n > 0) {
-            line_byte_limit = (unsigned)tmp_n;
+            ctrl.reset_textgen_byte_limit((unsigned)tmp_n);
           }
           skipchrs_FildeshX(&slice, " ");
           // Prefix with user text.
@@ -419,13 +379,13 @@ int main(int argc, char** argv)
           matched_antiprompt = '\n';
         }
         else if (rendezllama::maybe_do_regen_command(&slice, chat_traj, opt)) {
-          preventing_newline = true;
+          ctrl.set_single_line_mode_on(true);
           matched_antiprompt.clear();  // For clarity.
           break;
         }
         else if (rendezllama::maybe_do_regen_inline_command(
                 &slice, chat_traj, opt)) {
-          preventing_newline = true;
+          ctrl.set_single_line_mode_on(true);
           matched_antiprompt.clear();  // For clarity.
           break;
         }
@@ -442,13 +402,15 @@ int main(int argc, char** argv)
       if (exstatus != 0 || !slice.at) {break;}
 
       if (buffer.length() > 0) {
+        bool single_line_mode_on = ctrl.has_single_line_mode_on();
         rendezllama::augment_tokenize_chat_input(
             chat_guide,
             chat_traj,
-            preventing_newline,
+            single_line_mode_on,
             buffer,
             vocabulary,
             opt);
+        ctrl.set_single_line_mode_on(single_line_mode_on);
       }
     }
   }

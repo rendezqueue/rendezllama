@@ -13,6 +13,8 @@ add_executable(chat
   "chat_main.cc"
   "cmd.cc"
   "cmd.hh"
+  "control.cc"
+  "control.hh"
   "display.cc"
   "display.hh"
   "guide.cc"
