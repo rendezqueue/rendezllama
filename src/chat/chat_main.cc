@@ -362,6 +362,9 @@ int main(int argc, char** argv)
         else if (maybe_do_tail_command(&slice, eout, vocabulary, chat_traj, opt)) {
           // Nothing else.
         }
+        else if (maybe_do_print_tokens_command(&slice, eout, vocabulary, chat_traj, opt)) {
+          // Nothing else.
+        }
         else if (rendezllama::maybe_do_back_command(
                 chat_traj, &slice, eout, vocabulary, opt))
         {

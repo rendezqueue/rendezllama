@@ -39,6 +39,13 @@ maybe_do_head_command(
     const ChatTrajectory& chat_traj,
     const rendezllama::ChatOptions& opt);
 bool
+maybe_do_print_tokens_command(
+    FildeshX* in,
+    std::ostream& out,
+    const Vocabulary& vocabulary,
+    const ChatTrajectory& chat_traj,
+    const ChatOptions& opt);
+bool
 maybe_do_regen_command(
     FildeshX* in,
     ChatTrajectory& chat_traj,

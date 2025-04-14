@@ -174,6 +174,33 @@ rendezllama::maybe_do_head_command(
 }
 
   bool
+rendezllama::maybe_do_print_tokens_command(
+    FildeshX* in,
+    std::ostream& out,
+    const Vocabulary& vocabulary,
+    const ChatTrajectory& chat_traj,
+    const ChatOptions& opt)
+{
+  if (!skip_cmd_prefix(in, "pt", opt)) {
+    return false;
+  }
+  unsigned n = 10;
+  parse_unsigned_FildeshX(in, &n);
+  if (n == 0 || chat_traj.token_count() < n) {
+    n = chat_traj.token_count();
+  }
+  for (unsigned i = 0; i < n; ++i) {
+    const Vocabulary::Token_id token_id = chat_traj.token_at(
+        chat_traj.token_count() - n + i);
+    out << token_id << ' ';
+    vocabulary.detokenize_to(out, &token_id, 1);
+    out << '\n';
+  }
+  out.flush();
+  return true;
+}
+
+  bool
 rendezllama::maybe_do_regen_command(
     FildeshX* in,
     ChatTrajectory& chat_traj,
