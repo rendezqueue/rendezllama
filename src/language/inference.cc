@@ -319,7 +319,9 @@ Inference::commit_to_context(
   llama_set_n_threads(ctx, thread_count, batch_thread_count);
 
   // Clear KV cache past current position just in case the user deleted tokens.
-  llama_kv_cache_seq_rm(ctx, -1, chat_traj.context_token_count_, -1);
+  llama_memory_seq_rm(
+      llama_get_memory(ctx),
+      -1, chat_traj.context_token_count_, -1);
 
   while (chat_traj.context_token_count_ < chat_traj.token_count()) {
     const unsigned n = std::min(
