@@ -12,6 +12,7 @@ In order of interest:
   - [assistant_alpaca](assistant_alpaca/): Alpaca prompt format.
   - [assistant_chatml](assistant_chatml/): ChatML prompt format that typically requires special `<|im_start|>` and `<|im_end|>` tokens but is configured with fallbacks.
   - [assistant_gemma](assistant_gemma/): Gemma prompt format that requires special `<start_of_turn>` and `<end_of_turn>` tokens.
+  - [assistant_harmony](assistant_harmony/): Harmony prompt format that requires special `<|start|>`, `<|end|>`, `<|channel|>`, and `<|return|>` tokens.
   - [assistant_llama](assistant_llama/): Llama 3 prompt format that requires special `<|start_header_id|>`, `<|end_header_id|>`, and `<|eot_id|>` tokens.
   - [assistant_mistral](assistant_mistral/): Mistral propmt format that requires special `[INST]` and `[/INST]` tokens.
   - [assistant_vicuna](assistant_vicuna/): Vicuna prompt format.

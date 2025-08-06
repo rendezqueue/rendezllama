@@ -1,7 +1,7 @@
 FetchContent_Declare(
   LlamaCpp
   GIT_REPOSITORY "https://github.com/ggml-org/llama.cpp.git"
-  GIT_TAG "27208bf657cfe7262791df473927225e48efe482"
+  GIT_TAG "f44f7931729022c57319a0124931120a169e0da9"
 )
 
 set(GGML_OPENMP FALSE CACHE BOOL "OpenMP off for compatibility.")

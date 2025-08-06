@@ -1,0 +1,42 @@
+((chat_prefixes)
+ (m
+  (prefix "<|start|>user<|message|>")
+  (suffix "<|end|>"))
+ (m
+  (prefix "<|start|>assistant<|channel|>analysis<|message|>")
+  (suffix "<|end|>")
+ )
+ (m
+  (prefix "<|start|>assistant<|channel|>final<|message|>")
+  (suffix "<|return|>")
+ )
+)
+
+(x_priming "priming.txt")
+(x_rolling "rolling.txt")
+(o_rolling "../../../bld/example/prompt/assistant_harmony.txt")
+
+; No starting space.
+(startspace_on 0)
+
+; Limit context to avoid blowing up RAM on large context models.
+(model_token_limit 4000)
+
+(language
+ (substitution
+  (bos_token_alias "<bos_token>")
+  (eos_token_alias "<eos_token>")
+  (special_tokens (())
+   (() (alias "<|start|>"))
+   (() (alias "<|channel|>"))
+   (() (alias "<|message|>"))
+   (() (alias "<|end|>"))
+   (() (alias "<|return|>"))
+  )
+ )
+ ((infer_via sampling)
+  (adjust_thru (())
+   (temperature 0.7)
+  )
+ )
+)
