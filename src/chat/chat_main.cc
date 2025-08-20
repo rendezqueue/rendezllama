@@ -1,4 +1,5 @@
 #include <cassert>
+#include <csignal>
 
 #include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
@@ -13,6 +14,13 @@
 #include "src/language/vocabulary.hh"
 
 using rendezllama::Vocabulary;
+
+static volatile sig_atomic_t sigint_received_ = 0;
+
+static void sigint_handler(int sig) {
+  (void)sig;
+  sigint_received_ = 1;
+}
 
 static
   void
@@ -76,6 +84,7 @@ noop_log_callback(enum ggml_log_level level, const char* text, void* user_data)
 
 int main(int argc, char** argv)
 {
+  signal(SIGINT, sigint_handler);
   rendezllama::GlobalScope rendezllama_global_scope;
   fildesh::ofstream eout("/dev/stderr");
   FildeshX* in = NULL;
@@ -217,6 +226,11 @@ int main(int argc, char** argv)
     if (!token_generation_on) {
       // Just skip the first token.
       token_generation_on = true;
+      ctrl.set_input_mode_on(true);
+    }
+    else if (sigint_received_ != 0) {
+      eout << '\n';
+      eout.flush();
       ctrl.set_input_mode_on(true);
     }
     else {
@@ -412,6 +426,9 @@ int main(int argc, char** argv)
             opt);
         ctrl.set_single_line_mode_on(single_line_mode_on);
       }
+
+      // Clear SIGINT here to ignore any received while waiting for input.
+      sigint_received_ = 0;
     }
   }
 
