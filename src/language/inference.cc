@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 #include <thread>
+#include <vector>
 
 #include <fildesh/fildesh.h>
 #include <fildesh/ostream.hh>
@@ -122,6 +124,20 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
   if (opt.context_token_limit == 0) {
     opt.context_token_limit = opt.model_token_limit;
   }
+  float rope_freq_scale = llama_model_rope_freq_scale_train(model);
+  if (rope_freq_scale <= 0.0) {
+    rope_freq_scale = 1.0f;
+  }
+  while (
+      (unsigned)(opt.model_token_limit / rope_freq_scale)
+      <
+      opt.context_token_limit)
+  {
+    rope_freq_scale /= 2;
+  }
+  llama_model_free(model);
+  model = nullptr;
+
 
   model_params = llama_model_default_params();
   model_params.use_mlock = opt.mlock_on;
@@ -130,14 +146,33 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = opt.context_token_limit;
   ctx_params.n_batch = opt.batch_count;
-  ctx_params.rope_freq_scale = llama_model_rope_freq_scale_train(model);
-  assert(ctx_params.rope_freq_scale > 0.0);
-  while (
-      (unsigned)(opt.model_token_limit / ctx_params.rope_freq_scale)
-      <
-      opt.context_token_limit)
-  {
-    ctx_params.rope_freq_scale /= 2;
+  ctx_params.rope_freq_scale = rope_freq_scale;
+
+  std::vector<float> tensor_split(llama_max_devices());
+  std::vector<llama_model_tensor_buft_override> tensor_buft_overrides(llama_max_tensor_buft_overrides());
+  std::vector<size_t> margins(llama_max_devices(), 0);
+
+  // Auto-tune parameters if possible (and not manually overridden by user yet).
+  // This helps avoid OOM crashes on Vulkan/GPU by fitting layers to available memory.
+  auto status = llama_params_fit(
+      opt.model_filename.c_str(),
+      &model_params,
+      &ctx_params,
+      tensor_split.data(),
+      tensor_buft_overrides.data(),
+      margins.data(),
+      /*n_ctx_min=*/0,
+      GGML_LOG_LEVEL_ERROR);
+
+  if (status != 0) {
+    fildesh_log_warning("llama_params_fit failed");
+  }
+
+  model = llama_model_load_from_file(
+      opt.model_filename.c_str(), model_params);
+  if (!model) {
+    fildesh_log_error("Failed to open model.");
+    return std::make_tuple(nullptr, nullptr);
   }
 
   struct llama_context* ctx = llama_init_from_model(model, ctx_params);
@@ -367,14 +402,6 @@ Inference::commit_to_context(
         opt.batch_count,
         chat_traj.token_count() - chat_traj.context_token_count_);
 
-#if LLAMA_OPENBLAS_ON
-    if (n < 32) {
-      llama_set_n_threads(ctx, thread_count_, batch_thread_count_);
-    }
-    else {
-      llama_set_n_threads(ctx, thread_count_, 1);
-    }
-#endif
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary_);
 
     if (!batch_.token || (unsigned)batch_.n_tokens < n) {
@@ -445,4 +472,3 @@ Inference::sample_to_trajectory(
   llama_sampler_accept(smpl_, chat_traj.token());
   token_count_ += 1;
 }
-

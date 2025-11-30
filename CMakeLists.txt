@@ -9,7 +9,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
-option(LLAMA_OPENBLAS_ON "llama: use OpenBLAS" OFF)
 option(RENDEZLLAMA_COVERAGE_ON "Enable coverage instrumentation" OFF)
 
 
