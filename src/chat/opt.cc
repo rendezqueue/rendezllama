@@ -33,6 +33,26 @@ ChatOptions::ChatOptions()
   this->infer_via = sampling;
 }
 
+static constexpr
+  bool
+flag_eqstrlit(std::string_view expected, std::string_view arg)
+{
+  const size_t n = expected.size();
+  if (arg.size() != n) {return false;}
+  for (size_t i = 0; i < n; ++i) {
+    const char c = arg[i];
+    if (expected[i] == '_') {
+      if (c != '_' && c != '-') {
+        return false;
+      }
+    }
+    else if (expected[i] != c) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static
   void
 parse_rolling_prompt(FildeshX* in, rendezllama::ChatOptions& opt)
@@ -243,31 +263,32 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
     if (false) {
     }
     else if (argi + 1 == argc) {
+      fildesh_log_errorf("Option needs a value: %s", argv[argi]);
       exstatus = 64;
     }
-    else if (0 == strcmp("--protagonist", argv[argi])) {
+    else if (flag_eqstrlit("--protagonist", argv[argi])) {
       argi += 1;
       opt.protagonist = argv[argi];
     }
-    else if (0 == strcmp("--confidant", argv[argi])) {
+    else if (flag_eqstrlit("--confidant", argv[argi])) {
       argi += 1;
       opt.confidant = argv[argi];
     }
-    else if (0 == strcmp("--model", argv[argi])) {
+    else if (flag_eqstrlit("--model", argv[argi])) {
       argi += 1;
       opt.model_filename = argv[argi];
     }
-    else if (0 == strcmp("--lora", argv[argi])) {
+    else if (flag_eqstrlit("--lora", argv[argi])) {
       argi += 1;
       opt.lora_filename = argv[argi];
     }
-    else if (0 == strcmp("--x_setting", argv[argi])) {
+    else if (flag_eqstrlit("--x_setting", argv[argi])) {
       argi += 1;
       if (!parse_sxpb_file_options(opt, argv[argi])) {
         exstatus = 1;
       }
     }
-    else if (0 == strcmp("--x_priming", argv[argi])) {
+    else if (flag_eqstrlit("--x_priming", argv[argi])) {
       argi += 1;
       std::string content;
       if (fildesh::slurp_file_to_string(content, argv[argi])) {
@@ -278,18 +299,18 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         }
       }
     }
-    else if (0 == strcmp("--x_rolling", argv[argi])) {
+    else if (flag_eqstrlit("--x_rolling", argv[argi])) {
       argi += 1;
       FildeshX* rolling_in = open_FildeshXF(argv[argi]);
       parse_rolling_prompt(rolling_in, opt);
       close_FildeshX(rolling_in);
     }
-    else if (0 == strcmp("--o_rolling", argv[argi])) {
+    else if (flag_eqstrlit("--o_rolling", argv[argi])) {
       argi += 1;
       opt.transcript_sibling_filename.clear();
       opt.transcript_filename = argv[argi];
     }
-    else if (0 == strcmp("--x_answer", argv[argi])) {
+    else if (flag_eqstrlit("--x_answer", argv[argi])) {
       argi += 1;
       std::string content;
       if (fildesh::slurp_file_to_string(content, argv[argi])) {
@@ -300,11 +321,11 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         }
       }
     }
-    else if (0 == strcmp("--command_prefix_char", argv[argi])) {
+    else if (flag_eqstrlit("--command_prefix_char", argv[argi])) {
       argi += 1;
       opt.command_prefix_char = argv[argi][0];
     }
-    else if (0 == strcmp("--thread_count", argv[argi])) {
+    else if (flag_eqstrlit("--thread_count", argv[argi])) {
       int n = 0;
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
@@ -315,7 +336,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
-    else if (0 == strcmp("--batch_count", argv[argi])) {
+    else if (flag_eqstrlit("--batch_count", argv[argi])) {
       int n = 0;
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
@@ -326,10 +347,10 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
-    else if (0 == strcmp("--coprocess_mode_on", argv[argi])) {
+    else if (flag_eqstrlit("--coprocess_mode_on", argv[argi])) {
       int n = 0;
       argi += 1;
-      if (fildesh_parse_int(&n, argv[argi])) {
+      if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
         opt.coprocess_mode_on = (n != 0);
       }
       else {
@@ -337,7 +358,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
-    else if (0 == strcmp("--mlock_on", argv[argi])) {
+    else if (flag_eqstrlit("--mlock_on", argv[argi])) {
       int n = 0;
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi])) {
@@ -348,7 +369,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
-    else if (0 == strcmp("--mmap_on", argv[argi])) {
+    else if (flag_eqstrlit("--mmap_on", argv[argi])) {
       int n = 0;
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi])) {
@@ -359,7 +380,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
         exstatus = 64;
       }
     }
-    else if (0 == strcmp("--model_token_limit", argv[argi])) {
+    else if (flag_eqstrlit("--model_token_limit", argv[argi])) {
       int n = 0;
       argi += 1;
       if (fildesh_parse_int(&n, argv[argi]) && n > 0) {
@@ -371,6 +392,7 @@ rendezllama::parse_options(rendezllama::ChatOptions& opt, int argc, char** argv)
       }
     }
     else {
+      fildesh_log_errorf("Unknown option: %s", argv[argi]);
       exstatus = 64;
     }
   }
