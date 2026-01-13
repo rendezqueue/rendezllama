@@ -302,15 +302,13 @@ int main(int argc, char** argv)
           unsigned n = 10;
           {
             int tmp_n = 0;
-            if (skipchrs_FildeshX(&slice, opt.command_delim_chars) &&
-                parse_int_FildeshX(&slice, &tmp_n) &&
-                tmp_n > 0)
-            {
-              n = tmp_n;
-            }
-            else {
-              eout << "Ignoring /forget command without line count.\n"; eout.flush();
-              continue;
+            if (parse_int_FildeshX(in, &tmp_n)) {
+              if (tmp_n >= 0) {
+                n = tmp_n;
+              }
+              else {
+                n = chat_traj.priming_token_count_;
+              }
             }
           }
           for (unsigned i = chat_traj.priming_token_count_;

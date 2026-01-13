@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include <fildesh/fildesh.h>
+#include <fildesh/string.hh>
 
 using rendezllama::ChatDisplay;
 using rendezllama::ChatTrajectory;
@@ -19,7 +19,12 @@ ChatDisplay::displaystring_to(
     const Vocabulary& vocabulary) const
 {
   if (token_id == vocabulary.eos_token_id()) {
-    putc_FildeshO(out, '\n');
+    *out << "\n";
+  }
+  else if (token_id == vocabulary.newline_token_id()) {
+    // TODO(#30): remove hack.
+    *out << " / ";
+    //putc_FildeshO(out, '\n');
   }
   else {
     vocabulary.detokenize_to(out, token_id);
