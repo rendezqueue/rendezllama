@@ -3,3 +3,4 @@ set(LlamaCpp_spm_vocab_FILE "${LlamaCpp_SOURCE_DIR}/models/ggml-vocab-llama-spm.
 add_subdirectory(chat)
 add_subdirectory(example)
 add_subdirectory(language)
+add_subdirectory(localserv)
