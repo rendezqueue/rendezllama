@@ -1,0 +1,25 @@
+(context_token_limit 8128)
+
+(language
+ (substitution
+  (protagonist_alias "{{user}}")
+  (confidant_alias "{{char}}")
+  (eos_token_alias "</s>")
+ )
+ ((infer_via sampling)
+  (adjust_thru (())
+   (penalize_with
+    (window_length 1200)
+    (repetition 1.05)
+   )
+   (top_k 1000)
+   (top_p 0.95)
+   (min_p 0.25)
+   (temperature 1.5)
+  )
+  ((pick_via probability))
+ )
+)
+
+(sentence_token_limit 50)
+(sentence_limit 5)
