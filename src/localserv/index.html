@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AI Assistant Chat</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f0f0f0;
+      }
+      #chat-container {
+        height: 60vh;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        background-color: white;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+      }
+      .message {
+        margin-bottom: 10px;
+        padding: 10px 15px;
+        border-radius: 20px;
+        max-width: 70%;
+        line-height: 1.4;
+      }
+      .user-message {
+        align-self: flex-end;
+        background-color: #007bff;
+        color: white;
+        border-bottom-right-radius: 5px;
+      }
+      .assistant-message {
+        align-self: flex-start;
+        background-color: #e9ecef;
+        color: black;
+        border-bottom-left-radius: 5px;
+      }
+      #message-form {
+        display: flex;
+        gap: 10px;
+      }
+      #message-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AI Assistant</h1>
+    <div id="chat-container"></div>
+    <form id="message-form">
+      <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    <script src="index.js"></script>
+  </body>
+</html>
