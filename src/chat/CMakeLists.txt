@@ -27,6 +27,20 @@ target_link_libraries(chat_guide_cc PUBLIC
   chat_opt_cc
   chat_trajectory_cc
 )
+
+add_library(rendezllama_chat
+  "chat_main.cc"
+  "cmd.cc"
+  "cmd.hh"
+  "control.cc"
+  "control.hh"
+  "display.cc"
+  "display.hh"
+)
+target_link_libraries(rendezllama_chat PUBLIC
+  language_inference_cc
+)
+
 add_executable(chat
   "chat_main.cc"
   "cmd.cc"
@@ -37,5 +51,5 @@ add_executable(chat
   "display.hh"
 )
 target_link_libraries(chat PRIVATE
-  language_inference_cc
+  rendezllama_chat
 )
