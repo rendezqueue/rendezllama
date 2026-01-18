@@ -17,6 +17,9 @@ Vocabulary::Vocabulary(const llama_model* model)
 {
   if (!model) {return;}
   vocab_ = llama_model_get_vocab(model);
+  if (const char* tmpl = llama_model_chat_template(model, nullptr)) {
+    chat_template_ = tmpl;
+  }
   this->initialize_boundary_prefix();
 }
 
@@ -245,6 +248,35 @@ Vocabulary::tokenize_to(
   }
   tokenize_append(tokens, text.substr(beg), vocab_,
                   boundary_prefix_, boundary_prefix_tokens_, tmp_s);
+}
+
+  int
+Vocabulary::chat_apply_template(
+    const std::vector<ChatMessage>& messages,
+    std::vector<char>& buf,
+    bool add_assistant_start) const
+{
+  if (chat_template_.empty()) {return -1;}
+  std::vector<llama_chat_message> c_messages;
+  c_messages.reserve(messages.size());
+  for (const auto& msg : messages) {
+    c_messages.push_back({msg.role.c_str(), msg.content.c_str()});
+  }
+
+  int new_len = llama_chat_apply_template(
+      chat_template_.c_str(),
+      c_messages.data(), c_messages.size(),
+      add_assistant_start,
+      buf.data(), buf.size());
+  if (new_len > (int)buf.size()) {
+    buf.resize(new_len);
+    new_len = llama_chat_apply_template(
+        chat_template_.c_str(),
+        c_messages.data(), c_messages.size(),
+        add_assistant_start,
+        buf.data(), buf.size());
+  }
+  return new_len;
 }
 
   void

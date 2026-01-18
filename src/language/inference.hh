@@ -46,6 +46,7 @@ class Inference {
   unsigned thread_count_ = 0;
   unsigned batch_thread_count_ = 0;
   llama_sampler* smpl_ = nullptr;
+  llama_batch batch_ = {0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
   size_t token_count_ = 0;
   const Vocabulary& vocabulary_;
 };

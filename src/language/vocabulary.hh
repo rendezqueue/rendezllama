@@ -15,6 +15,11 @@ class Vocabulary {
   typedef int Token_id;
   static const Token_id null_token_id = -1;
 
+  struct ChatMessage {
+    std::string role;
+    std::string content;
+  };
+
  public:
   explicit Vocabulary(const llama_model* model);
 
@@ -43,6 +48,11 @@ class Vocabulary {
   Token_id tokenize_special(std::string_view s) const;
   void tokenize_to(std::vector<Token_id>& tokens, std::string_view text) const;
 
+  int chat_apply_template(
+      const std::vector<ChatMessage>& messages,
+      std::vector<char>& buf,
+      bool add_assistant_start) const;
+
   void assign_substitution(std::string_view alias, Token_id token_id);
   std::string_view bos_token_alias() const {
     return bos_token_alias_;
@@ -54,6 +64,7 @@ class Vocabulary {
  private:
   const llama_vocab* vocab_ = nullptr;
   Token_id newline_token_id_;
+  std::string chat_template_;
 
   std::string bos_token_alias_;
   std::string eos_token_alias_;

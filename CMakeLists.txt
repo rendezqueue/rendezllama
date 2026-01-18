@@ -45,6 +45,7 @@ if(RENDEZLLAMA_COVERAGE_ON)
 endif()
 
 add_subdirectory(src)
+add_subdirectory(eg)
 add_subdirectory(example)
 
 if(NOT PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)

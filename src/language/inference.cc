@@ -27,6 +27,7 @@ Inference::Inference(const Vocabulary& vocabulary)
 {}
 Inference::~Inference() {
   if (smpl_) {llama_sampler_free(smpl_);}
+  llama_batch_free(batch_);
 }
 
   const std::string&
@@ -344,7 +345,7 @@ Inference::commit_to_context(
 {
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
-  if (chat_traj.erased_since_eval_) {
+  if (chat_traj.erased_since_eval_ || !smpl_) {
     this->reinitialize(opt, model);
   }
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {
@@ -376,10 +377,23 @@ Inference::commit_to_context(
 #endif
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary_);
 
-    llama_batch batch = llama_batch_get_one(
-        const_cast<int*>(&chat_traj.tokens()[chat_traj.context_token_count_]),
-        n);
-    const int istat = llama_decode(ctx, batch);
+    if (!batch_.token || (unsigned)batch_.n_tokens < n) {
+      llama_batch_free(batch_);
+      unsigned n_alloc = n;
+      if (n_alloc < opt.batch_count) {n_alloc = opt.batch_count;}
+      batch_ = llama_batch_init(n_alloc, /*embd=*/0, /*n_seq_max=*/1);
+    }
+    batch_.n_tokens = n;
+    for (unsigned i = 0; i < n; ++i) {
+      batch_.token[i] = chat_traj.tokens()[chat_traj.context_token_count_ + i];
+      batch_.pos[i] = chat_traj.context_token_count_ + i;
+      batch_.n_seq_id[i] = 1;
+      batch_.seq_id[i][0] = 0;
+      batch_.logits[i] = (i == n - 1);
+    }
+
+    const int istat = llama_decode(ctx, batch_);
+
     if (istat != 0) {
       fildesh_log_error("Failed to eval.");
       chat_traj.context_token_count_ = 0;

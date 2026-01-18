@@ -138,7 +138,7 @@ ChatTrajectory::maybe_rollforget_within_limit(
 
   // If a good rollforget point wasn't found by looking before the ideal point,
   // then choose to roll past next newline.
-  if (end == priming_token_count_) {
+  if (end <= priming_token_count_) {
     end = this->find_token_at(
         ideal_rollforget_end - 1,
         vocabulary.newline_token_id());
