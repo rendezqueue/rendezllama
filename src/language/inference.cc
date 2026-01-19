@@ -277,14 +277,20 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
     apply_sampler_chain(smpl_, adjust_via, model, seed, eout);
   }
 
-  if (const auto* mirostat = std::get_if<rendezllama::inference::Mirostat>(&sampling->pick_via)) {
+  if (std::get_if<rendezllama::inference::Probability>(&sampling->pick_via)) {
+    llama_sampler_chain_add(smpl_, llama_sampler_init_dist(seed));
+  }
+  else if (std::get_if<rendezllama::inference::Determinism>(&sampling->pick_via)) {
+    llama_sampler_chain_add(smpl_, llama_sampler_init_greedy());
+  }
+  else if (const auto* mirostat = std::get_if<rendezllama::inference::Mirostat>(&sampling->pick_via)) {
     mirostat_sample(smpl_, *mirostat, seed, vocabulary_);
     eout << "mirostat:"
       << "\n  version: " << mirostat->version
       << "\n";
   }
   else {
-    llama_sampler_chain_add(smpl_, llama_sampler_init_dist(seed));
+    fildesh_log_error("Missing pick method?");
   }
 }
 

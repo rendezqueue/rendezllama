@@ -41,13 +41,15 @@ static FildeshSxprotoField mirostat_fields[] = {
   {"eta", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
 };
 
-static FildeshSxprotoField probability_fields[] = {
+static FildeshSxprotoField void_message_fields[] = {
   {"none", FILL_DEFAULT_FildeshSxprotoField_STRING},
 };
 
 static FildeshSxprotoField pick_via_oneof[] = {
+  {"determinism", FILL_FildeshSxprotoField_MESSAGE(void_message_fields)},
+  {"greedy", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
   {"mirostat", FILL_FildeshSxprotoField_MESSAGE(mirostat_fields)},
-  {"probability", FILL_FildeshSxprotoField_MESSAGE(probability_fields)},
+  {"probability", FILL_FildeshSxprotoField_MESSAGE(void_message_fields)},
 };
 
 static FildeshSxprotoField sampling_fields[] = {
@@ -130,6 +132,16 @@ rendezllama::inference::populate_PickVia(
     const FildeshSxpb* sxpb,
     FildeshSxpbIT it)
 {
+  if (!nullish_FildeshSxpbIT(lookup_subfield_at_FildeshSxpb(sxpb, it, "probability"))) {
+    rendezllama::inference::Probability probability;
+    pick_via = probability;
+    return true;
+  }
+  if (!nullish_FildeshSxpbIT(lookup_subfield_at_FildeshSxpb(sxpb, it, "determinism"))) {
+    rendezllama::inference::Determinism determinism;
+    pick_via = determinism;
+    return true;
+  }
   const FildeshSxpbIT mirostat_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "mirostat");
   if (!nullish_FildeshSxpbIT(mirostat_it)) {
     rendezllama::inference::Mirostat mirostat;
@@ -139,11 +151,6 @@ rendezllama::inference::populate_PickVia(
     lone_subfield_at_FildeshSxpb_to_float(&mirostat.tau, sxpb, mirostat_it, "tau");
     lone_subfield_at_FildeshSxpb_to_float(&mirostat.eta, sxpb, mirostat_it, "eta");
     pick_via = mirostat;
-    return true;
-  }
-  else {
-    rendezllama::inference::Probability probability;
-    pick_via = probability;
     return true;
   }
   return false;

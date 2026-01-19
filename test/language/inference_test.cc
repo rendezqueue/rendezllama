@@ -108,6 +108,12 @@ static void inference_test(const std::string& model_filename) {
     s.adjust_thru.emplace_back(std::in_place_index<AdjustViaKind::typical_p>, 0.9f);
     samplings.push_back(s);
   }
+  // Greedy
+  {
+    Sampling s;
+    s.pick_via = rendezllama::inference::Determinism{};
+    samplings.push_back(s);
+  }
   // Mirostat V2
   {
     Sampling s;
@@ -145,14 +151,17 @@ static void inference_test(const std::string& model_filename) {
   }
 
   // Iterate through different sampling options.
+  bool all_good = true;
   for (const auto& sampling : samplings) {
     opt.infer_via = sampling;
     if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
+      all_good = false;
       break;
     }
     inference.sample_to_trajectory(chat_traj, ctx, false);
     chat_disp.show_new(chat_traj, vocabulary);
   }
+  assert(all_good);
 
   llama_free(ctx);
   llama_model_free(model);

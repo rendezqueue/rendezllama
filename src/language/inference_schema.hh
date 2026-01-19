@@ -54,6 +54,8 @@ typedef std::variant<
   Xtc
 > AdjustVia;
 
+struct Determinism {};
+
 struct Mirostat {
   unsigned version = 2;
   float tau = 5.0f;
@@ -64,6 +66,7 @@ struct Probability {};
 
 typedef std::variant<
   std::monostate,
+  Determinism,
   Mirostat,
   Probability
 > PickVia;
