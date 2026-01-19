@@ -231,6 +231,21 @@ apply_sampler_chain(
 
 static
   void
+adaptive_p_sample(
+    struct llama_sampler* smpl,
+    const rendezllama::inference::AdaptiveP& adaptive_p,
+    unsigned seed)
+{
+  llama_sampler_chain_add(
+      smpl,
+      llama_sampler_init_adaptive_p(
+          adaptive_p.target,
+          adaptive_p.decay,
+          seed));
+}
+
+static
+  void
 mirostat_sample(
     struct llama_sampler* smpl,
     const rendezllama::inference::Mirostat& mirostat,
@@ -282,6 +297,9 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
   }
   else if (std::get_if<rendezllama::inference::Determinism>(&sampling->pick_via)) {
     llama_sampler_chain_add(smpl_, llama_sampler_init_greedy());
+  }
+  else if (const auto* adaptive_p = std::get_if<rendezllama::inference::AdaptiveP>(&sampling->pick_via)) {
+    adaptive_p_sample(smpl_, *adaptive_p, seed);
   }
   else if (const auto* mirostat = std::get_if<rendezllama::inference::Mirostat>(&sampling->pick_via)) {
     mirostat_sample(smpl_, *mirostat, seed, vocabulary_);

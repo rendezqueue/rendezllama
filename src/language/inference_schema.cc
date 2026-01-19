@@ -35,6 +35,11 @@ static FildeshSxprotoField adjust_thru_manyof[] = {
   {"xtc", FILL_FildeshSxprotoField_MESSAGE(xtc_fields)},
 };
 
+static FildeshSxprotoField adaptive_p_fields[] = {
+  {"target", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+  {"decay", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
+};
+
 static FildeshSxprotoField mirostat_fields[] = {
   {"version", FILL_FildeshSxprotoField_INT(1, 2)},
   {"tau", FILL_DEFAULT_FildeshSxprotoField_FLOAT},
@@ -46,6 +51,7 @@ static FildeshSxprotoField void_message_fields[] = {
 };
 
 static FildeshSxprotoField pick_via_oneof[] = {
+  {"adaptive_p", FILL_FildeshSxprotoField_MESSAGE(adaptive_p_fields)},
   {"determinism", FILL_FildeshSxprotoField_MESSAGE(void_message_fields)},
   {"greedy", FILL_DEFAULT_FildeshSxprotoField_ALIAS},
   {"mirostat", FILL_FildeshSxprotoField_MESSAGE(mirostat_fields)},
@@ -140,6 +146,14 @@ rendezllama::inference::populate_PickVia(
   if (!nullish_FildeshSxpbIT(lookup_subfield_at_FildeshSxpb(sxpb, it, "determinism"))) {
     rendezllama::inference::Determinism determinism;
     pick_via = determinism;
+    return true;
+  }
+  const FildeshSxpbIT adaptive_p_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "adaptive_p");
+  if (!nullish_FildeshSxpbIT(adaptive_p_it)) {
+    rendezllama::inference::AdaptiveP adaptive_p;
+    lone_subfield_at_FildeshSxpb_to_float(&adaptive_p.target, sxpb, adaptive_p_it, "target");
+    lone_subfield_at_FildeshSxpb_to_float(&adaptive_p.decay, sxpb, adaptive_p_it, "decay");
+    pick_via = adaptive_p;
     return true;
   }
   const FildeshSxpbIT mirostat_it = lookup_subfield_at_FildeshSxpb(sxpb, it, "mirostat");

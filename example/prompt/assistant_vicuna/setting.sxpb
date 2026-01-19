@@ -29,6 +29,6 @@
    (penalize_with (window_length 256) (repetition 1.17647))
    (temperature 0.7)
   )
-  ((pick_via mirostat) (version 2))
+  ((pick_via adaptive_p) (target 0.55))
  )
 )

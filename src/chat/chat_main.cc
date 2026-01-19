@@ -108,7 +108,6 @@ int main(int argc, char** argv)
       int istat = llama_set_adapter_lora(ctx, lora, scale);
       if (istat != 0) {
         exstatus = 1;
-        llama_adapter_lora_free(lora);
       }
     }
   }

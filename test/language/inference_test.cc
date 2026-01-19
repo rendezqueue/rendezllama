@@ -114,6 +114,12 @@ static void inference_test(const std::string& model_filename) {
     s.pick_via = rendezllama::inference::Determinism{};
     samplings.push_back(s);
   }
+  // Adaptive P
+  {
+    Sampling s;
+    s.pick_via = rendezllama::inference::AdaptiveP{0.55f, 0.9f};
+    samplings.push_back(s);
+  }
   // Mirostat V2
   {
     Sampling s;

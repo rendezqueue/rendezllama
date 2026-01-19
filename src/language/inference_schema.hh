@@ -54,6 +54,11 @@ typedef std::variant<
   Xtc
 > AdjustVia;
 
+struct AdaptiveP {
+  float target = -1.0f;
+  float decay = 0.9f;
+};
+
 struct Determinism {};
 
 struct Mirostat {
@@ -66,6 +71,7 @@ struct Probability {};
 
 typedef std::variant<
   std::monostate,
+  AdaptiveP,
   Determinism,
   Mirostat,
   Probability
