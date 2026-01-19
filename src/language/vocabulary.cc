@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 #include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
@@ -16,11 +17,60 @@ Vocabulary::Vocabulary(const llama_model* model)
 {
   if (!model) {return;}
   vocab_ = llama_model_get_vocab(model);
+  this->initialize_boundary_prefix();
+}
 
+void Vocabulary::initialize_boundary_prefix() {
   boundary_prefix_ = "☺";
   std::string text = boundary_prefix_ + '\n';
   std::vector<Token_id> tokens(text.size()+1);
-  int n = llama_tokenize(
+  int n = 0;
+  try {
+    n = llama_tokenize(
+        vocab_,
+        text.data(), text.size(),
+        tokens.data(), tokens.size(),
+        /*add_bos=*/false,
+        /*special=*/false);
+  } catch (...) {
+    n = 0;
+  }
+  if (n < 2) {
+    std::vector<bool> candidate_set(256, false);
+    std::vector<bool> forbidden_set(256, false);
+
+    fildesh::ostringstream oss;
+    const auto cardinality = this->cardinality();
+    for (unsigned i = 0; i < cardinality; ++i) {
+      if (llama_vocab_is_control(vocab_, i)) {
+        continue;
+      }
+      oss.truncate();
+      this->detokenize_to(oss.c_struct(), i);
+      std::string_view s = oss.view();
+
+      if (s.size() == 1) {
+        candidate_set[(unsigned char)s[0]] = true;
+      }
+      else if (s.size() > 1) {
+        for (size_t j = 0; j < s.size(); ++j) {
+          forbidden_set[(unsigned char)s[j]] = true;
+        }
+      }
+    }
+
+    for (unsigned i = 1; i < 256; ++i) {
+      if (candidate_set[i] && !forbidden_set[i]) {
+        char s[2] = {(char)i, 0};
+        boundary_prefix_ = s;
+        break;
+      }
+    }
+  }
+
+  text = boundary_prefix_ + '\n';
+  tokens.resize(text.size()+1);
+  n = llama_tokenize(
       vocab_,
       text.data(), text.size(),
       tokens.data(), tokens.size(),
@@ -83,7 +133,7 @@ Vocabulary::detokenize_to(FildeshO* out, Token_id token_id) const
     n = -n;
     out->size -= attempt_size;
     s = grow_FildeshO(out, n);
-    n = llama_token_to_piece(
+    llama_token_to_piece(
         vocab_,
         token_id,
         s, n,

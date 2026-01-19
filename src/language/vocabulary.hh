@@ -18,6 +18,10 @@ class Vocabulary {
  public:
   explicit Vocabulary(const llama_model* model);
 
+ private:
+  void initialize_boundary_prefix();
+
+ public:
   Token_id bos_token_id() const;
   Token_id eos_token_id() const;
   Token_id newline_token_id() const;

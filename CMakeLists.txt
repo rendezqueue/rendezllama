@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 option(LLAMA_OPENBLAS_ON "llama: use OpenBLAS" OFF)
+option(RENDEZLLAMA_COVERAGE_ON "Enable coverage instrumentation" OFF)
 
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -38,16 +39,20 @@ include_directories(
   ${Fildesh_INCLUDE_DIRS}
 )
 
+if(RENDEZLLAMA_COVERAGE_ON)
+  add_compile_options(--coverage -Og)
+  add_link_options(--coverage -Og)
+endif()
+
 add_subdirectory(src)
 add_subdirectory(example)
 
-if (NOT PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+if(NOT PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   # Try to keep dependent project namespace clean.
   # No need for tests or anything else.
   return()
 endif()
 
-if (BUILD_TESTING)
+if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
-

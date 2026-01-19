@@ -33,3 +33,6 @@ target_link_libraries(language_vocabulary_test PRIVATE
 add_test(NAME language_vocabulary_test COMMAND
   language_vocabulary_test "${LlamaCpp_VOCAB_MODEL}"
 )
+add_test(NAME language_vocabulary_tinystories_test COMMAND
+  language_vocabulary_test "${TinyStoriesGGUF_FILE}"
+)
