@@ -303,12 +303,10 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
   }
   else if (const auto* mirostat = std::get_if<rendezllama::inference::Mirostat>(&sampling->pick_via)) {
     mirostat_sample(smpl_, *mirostat, seed, vocabulary_);
-    eout << "mirostat:"
-      << "\n  version: " << mirostat->version
-      << "\n";
   }
   else {
-    fildesh_log_error("Missing pick method?");
+    fildesh_log_error("Missing pick method? Using greedy.");
+    llama_sampler_chain_add(smpl_, llama_sampler_init_greedy());
   }
 }
 
@@ -322,7 +320,7 @@ Inference::commit_to_context(
 {
   assert(!chat_traj.erased_since_eval_ ||
          chat_traj.context_token_count_ < chat_traj.token_count());
-  if (chat_traj.context_token_count_ < chat_traj.token_count()) {
+  if (chat_traj.erased_since_eval_) {
     this->reinitialize(opt, model);
   }
   if (chat_traj.context_token_count_ == chat_traj.token_count()) {
