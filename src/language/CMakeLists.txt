@@ -22,6 +22,8 @@ add_library(language_inference_cc
   "inference.hh"
 )
 target_link_libraries(language_inference_cc PUBLIC
-  language_vocabulary_cc
-  ${LlamaCpp_LIBRARIES}
+  chat_guide_cc
 )
+if (LLAMA_OPENBLAS_ON)
+  target_compile_definitions(language_inference_cc PRIVATE "LLAMA_OPENBLAS_ON=1")
+endif()

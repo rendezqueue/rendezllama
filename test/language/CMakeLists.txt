@@ -23,14 +23,11 @@ add_executable(language_inference_test
   "${PROJECT_SOURCE_DIR}/src/chat/cmd.cc"
   "${PROJECT_SOURCE_DIR}/src/chat/control.cc"
   "${PROJECT_SOURCE_DIR}/src/chat/display.cc"
-  "${PROJECT_SOURCE_DIR}/src/chat/guide.cc"
 )
 target_include_directories(language_inference_test PRIVATE
   ${LlamaCpp_INCLUDE_DIRS}
 )
 target_link_libraries(language_inference_test PRIVATE
-  chat_opt_cc
-  chat_trajectory_cc
   language_inference_cc
 )
 add_test(NAME language_inference_test COMMAND
