@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cctype>
 #include <cerrno>
 #include <csignal>
@@ -136,6 +137,29 @@ exit_signal_fn(int sig)
   fildesh_compat_socket_t sockfd = listening_socket_fd;
   listening_socket_fd = -1;
   fildesh_compat_socket_close(sockfd);
+}
+
+static struct llama_context* create_context(struct llama_model* model, const ChatOptions& opt) {
+  llama_context_params ctx_params = llama_context_default_params();
+  ctx_params.n_ctx = opt.context_token_limit;
+  ctx_params.n_threads = opt.thread_count;
+  ctx_params.n_batch = opt.batch_count;
+  ctx_params.rope_freq_scale = llama_model_rope_freq_scale_train(model);
+
+  unsigned model_token_limit = opt.model_token_limit;
+  if (model_token_limit == 0) {
+    model_token_limit = llama_model_n_ctx_train(model);
+  }
+
+  while (
+      (unsigned)(model_token_limit / ctx_params.rope_freq_scale)
+      <
+      opt.context_token_limit)
+  {
+    ctx_params.rope_freq_scale /= 2;
+  }
+
+  return llama_init_from_model(model, ctx_params);
 }
 
 static void print_usage(const char* argv0) {
@@ -338,18 +362,31 @@ int main(int argc, char** argv) {
       std::cerr << "Request method: " << method << " path: " << path << std::endl;
 
       if (method == "GET") {
-        const char* filename = NULL;
-        const char* content_type = "text/plain";
-        if (path == "/" || path == "/index.html") {
-          filename = "index.html";
-          content_type = "text/html";
-        } else if (path == "/index.js") {
-          filename = "index.js";
-          content_type = "application/javascript";
-        }
+        if (path == "/settings") {
+          std::ostringstream json_ss;
+          json_ss << "{\"context_length\": " << opt.context_token_limit << "}";
+          std::string json_resp = json_ss.str();
+          std::ostringstream header_ss;
+          header_ss << "HTTP/1.1 200 OK\r\n";
+          header_ss << "Content-Type: application/json\r\n";
+          header_ss << "Content-Length: " << json_resp.length() << "\r\n";
+          header_ss << "\r\n";
+          send(fd, header_ss.str().c_str(), header_ss.str().length(), 0);
+          send(fd, json_resp.c_str(), json_resp.length(), 0);
+          handled = true;
+        } else {
+          const char* filename = NULL;
+          const char* content_type = "text/plain";
+          if (path == "/" || path == "/index.html") {
+            filename = "index.html";
+            content_type = "text/html";
+          } else if (path == "/index.js") {
+            filename = "index.js";
+            content_type = "application/javascript";
+          }
 
-        if (filename) {
-          std::string open_filename = filename;
+          if (filename) {
+            std::string open_filename = filename;
           std::ifstream f(open_filename.c_str(), std::ios::binary);
           if (!f) {
             open_filename = "src/localserv/";
@@ -377,17 +414,55 @@ int main(int argc, char** argv) {
             handled = true;
           }
         }
-      } else if (method == "POST" && path == "/chat") {
+        }
+      } else if (method == "POST") {
         // Find body start
         size_t body_pos = request_str.find("\r\n\r\n");
         if (body_pos != std::string::npos) {
           std::string body = request_str.substr(body_pos + 4);
-          std::string user_msg = extract_json_string(body, "message");
 
-          if (!user_msg.empty()) {
-            std::cerr << "User: " << user_msg << std::endl;
+          if (path == "/reset") {
+            messages.clear();
+            chat_traj.erase_all_at(1);
+            prev_len = 0;
+            std::string resp = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+            send(fd, resp.c_str(), resp.length(), 0);
+            handled = true;
+          } else if (path == "/settings") {
+            std::string key = "\"context_length\":";
+            size_t pos = body.find(key);
+            if (pos != std::string::npos) {
+              pos += key.length();
+              while (pos < body.length() && isspace(body[pos])) pos++;
+              size_t end = pos;
+              while (end < body.length() && isdigit(body[end])) end++;
+              if (end > pos) {
+                int new_ctx = std::stoi(body.substr(pos, end - pos));
+                if (new_ctx != (int)opt.context_token_limit && new_ctx > 0) {
+                  opt.context_token_limit = new_ctx;
+                  llama_free(ctx);
+                  ctx = create_context(model, opt);
+                  if (ctx) {
+                    formatted.resize(llama_n_ctx(ctx));
+                    messages.clear();
+                    chat_traj.erase_all_at(1);
+                    prev_len = 0;
+                  } else {
+                    std::cerr << "Failed to create context with new length" << std::endl;
+                  }
+                }
+              }
+            }
+            std::string resp = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+            send(fd, resp.c_str(), resp.length(), 0);
+            handled = true;
+          } else if (path == "/chat") {
+            std::string user_msg = extract_json_string(body, "message");
 
-            messages.push_back({"user", user_msg});
+            if (!user_msg.empty()) {
+              std::cerr << "User: " << user_msg << std::endl;
+
+              messages.push_back({"user", user_msg});
 
             int new_len = vocabulary.chat_apply_template(messages, formatted, true);
             if (new_len < 0) {
@@ -422,11 +497,9 @@ int main(int argc, char** argv) {
 
             if (inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
               // Generation loop
-              int tokens_generated = 0;
-              while (tokens_generated < 512) {
+              while (true) {
                 inference.sample_to_trajectory(chat_traj, ctx, false);
                 Vocabulary::Token_id new_token_id = chat_traj.token();
-                tokens_generated++;
 
                 if (new_token_id == vocabulary.eos_token_id()) {
                   break;
@@ -484,6 +557,7 @@ int main(int argc, char** argv) {
               std::cerr << "commit_to_context failed" << std::endl;
             }
           }
+        }
         }
       }
     }

@@ -129,6 +129,57 @@ def main():
                 print(f"FAIL: Expected 404, got {e.code}")
                 sys.exit(1)
 
+        # Test 5: GET /settings
+        print("\nTest 5: GET /settings")
+        with urllib.request.urlopen(f'http://localhost:{port}/settings') as response:
+            data = json.loads(response.read().decode('utf-8'))
+            print(f"Received settings: {data}")
+            if 'context_length' in data and isinstance(data['context_length'], int):
+                 print("PASS: Settings received")
+            else:
+                 print("FAIL: Invalid settings response")
+                 sys.exit(1)
+
+        # Test 6: POST /reset
+        print("\nTest 6: POST /reset")
+        req = urllib.request.Request(
+            f'http://localhost:{port}/reset',
+            data=b"",
+            method='POST'
+        )
+        with urllib.request.urlopen(req) as response:
+            if response.status == 200:
+                print("PASS: Reset successful")
+            else:
+                print(f"FAIL: Reset failed with {response.status}")
+                sys.exit(1)
+
+        # Test 7: POST /settings (change context length)
+        print("\nTest 7: POST /settings (change context length)")
+        # Pick a value different from default (2048 or whatever)
+        new_ctx = 1024
+        req = urllib.request.Request(
+            f'http://localhost:{port}/settings',
+            data=json.dumps({'context_length': new_ctx}).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req) as response:
+            if response.status == 200:
+                print("PASS: Settings update successful")
+            else:
+                 print(f"FAIL: Settings update failed with {response.status}")
+                 sys.exit(1)
+
+        # Verify change
+        with urllib.request.urlopen(f'http://localhost:{port}/settings') as response:
+            data = json.loads(response.read().decode('utf-8'))
+            if data.get('context_length') == new_ctx:
+                 print("PASS: Context length updated")
+            else:
+                 print(f"FAIL: Context length not updated. Expected {new_ctx}, got {data.get('context_length')}")
+                 sys.exit(1)
+
     except Exception as e:
         print(f"Test failed with exception: {e}")
         import traceback
