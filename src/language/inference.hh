@@ -43,6 +43,8 @@ class Inference {
       bool preventing_newline);
 
  private:
+  unsigned thread_count_ = 0;
+  unsigned batch_thread_count_ = 0;
   llama_sampler* smpl_ = nullptr;
   size_t token_count_ = 0;
   const Vocabulary& vocabulary_;

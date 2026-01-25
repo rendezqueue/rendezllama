@@ -44,7 +44,7 @@ struct ChatOptions {
   char command_prefix_char = '/';
   const char command_delim_chars[5] = ":=! ";
 
-  unsigned thread_count = 1;
+  unsigned thread_count = 0;
   unsigned batch_thread_count = 0;
   unsigned sentence_limit = 0;
   unsigned sentence_token_limit = 0;

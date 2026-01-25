@@ -128,7 +128,6 @@ rendezllama::make_llama_context(rendezllama::ChatOptions& opt)
 
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = opt.context_token_limit;
-  ctx_params.n_threads = opt.thread_count;
   ctx_params.n_batch = opt.batch_count;
   ctx_params.rope_freq_scale = llama_model_rope_freq_scale_train(model);
   assert(ctx_params.rope_freq_scale > 0.0);
@@ -268,6 +267,30 @@ mirostat_sample(
   }
 }
 
+static
+  std::tuple<unsigned, unsigned>
+infer_thread_counts(const rendezllama::ChatOptions& opt)
+{
+  unsigned thread_count = opt.thread_count;
+  unsigned batch_thread_count = opt.batch_thread_count;
+  const unsigned n = std::thread::hardware_concurrency();
+  if (thread_count == 0) {
+    thread_count = n / 2;
+    if (thread_count == 0) {
+      thread_count = 1;
+    }
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+    if (2 <= n && n <= 4) {
+      thread_count = n;
+    }
+#endif
+  }
+  if (batch_thread_count == 0) {
+    batch_thread_count = n;
+  }
+  return std::make_tuple(thread_count, batch_thread_count);
+}
+
   void
 Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
 {
@@ -280,6 +303,7 @@ Inference::reinitialize(const ChatOptions& opt, const struct llama_model* model)
     // We're retrying or just don't have a fixed seed, so we should reseed.
     seed = new_sampling_seed();
   }
+  std::tie(thread_count_, batch_thread_count_) = infer_thread_counts(opt);
   if (smpl_) {
     llama_sampler_free(smpl_);
     eout.open("/dev/null");
@@ -330,15 +354,7 @@ Inference::commit_to_context(
   chat_traj.maybe_rollforget_within_limit(opt.context_token_limit, vocabulary_);
 
   // Reset thread count just in case the user reconfigured it.
-  const unsigned thread_count = opt.thread_count;
-  unsigned batch_thread_count = opt.batch_thread_count;
-  if (batch_thread_count == 0) {
-    batch_thread_count = std::thread::hardware_concurrency();
-  }
-  if (batch_thread_count == 0) {
-    batch_thread_count = thread_count;
-  }
-  llama_set_n_threads(ctx, thread_count, batch_thread_count);
+  llama_set_n_threads(ctx, thread_count_, batch_thread_count_);
 
   // Clear KV cache past current position just in case the user deleted tokens.
   llama_memory_seq_rm(
@@ -352,10 +368,10 @@ Inference::commit_to_context(
 
 #if LLAMA_OPENBLAS_ON
     if (n < 32) {
-      llama_set_n_threads(ctx, thread_count, batch_thread_count);
+      llama_set_n_threads(ctx, thread_count_, batch_thread_count_);
     }
     else {
-      llama_set_n_threads(ctx, thread_count, 1);
+      llama_set_n_threads(ctx, thread_count_, 1);
     }
 #endif
     chat_disp.show_new(chat_traj.context_token_count_ + n, chat_traj, vocabulary_);
