@@ -169,6 +169,15 @@ static void inference_test(const std::string& model_filename) {
   }
   assert(all_good);
 
+  // Test generate_next_tokens
+  {
+    unsigned initial_count = chat_traj.token_count();
+    bool status = inference.generate_next_tokens(ctx, chat_disp, chat_traj, opt, model, 5);
+    assert(status);
+    assert(chat_traj.token_count() == initial_count + 5 ||
+           (chat_traj.token_count() > initial_count && chat_traj.token() == vocabulary.eos_token_id()));
+  }
+
   llama_free(ctx);
   llama_model_free(model);
 }

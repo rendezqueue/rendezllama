@@ -97,8 +97,17 @@ int main(int argc, char** argv) {
     // Apply template to get user message + assistant prefix
     int new_len = vocabulary.chat_apply_template(messages, formatted, true);
     if (new_len < 0) {
-      fprintf(stderr, "Failed to apply chat template\n");
-      break;
+      // Fallback for models without a chat template (like TinyStories)
+      std::string fallback;
+      for (const auto& msg : messages) {
+        fallback += msg.content + "\n";
+      }
+      if (formatted.size() < fallback.size() + 1) {
+        formatted.resize(fallback.size() + 1);
+      }
+      std::copy(fallback.begin(), fallback.end(), formatted.begin());
+      formatted[fallback.size()] = '\0';
+      new_len = fallback.size();
     }
 
     // Append new parts to trajectory
@@ -131,34 +140,43 @@ int main(int argc, char** argv) {
       break;
     }
 
-    // Generate response
-    std::string response_text;
-    while (true) {
-      inference.sample_to_trajectory(chat_traj, ctx, false);
-      Vocabulary::Token_id token = chat_traj.token();
+    // Capture start of response
+    size_t response_start_idx = chat_traj.token_count();
 
-      if (token == vocabulary.eos_token_id()) {
+    // Generate response
+    while (true) {
+      // Generate multiple tokens at a time to reduce overhead
+      if (!inference.generate_next_tokens(ctx, chat_disp, chat_traj, opt, model, 10)) {
         break;
       }
 
-      chat_disp.show_new(chat_traj, vocabulary);
-
-      fildesh::ostringstream oss;
-      vocabulary.detokenize_to(oss, token);
-      response_text += oss.view();
-
-      if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
+      // Check if we hit EOS in the last batch
+      Vocabulary::Token_id token = chat_traj.token();
+      if (token == vocabulary.eos_token_id()) {
         break;
       }
     }
     putc_FildeshO(chat_disp.out_, '\n');
     flush_FildeshO(chat_disp.out_);
 
+    // Reconstruct response text from trajectory
+    std::string response_text;
+    fildesh::ostringstream oss;
+    for (size_t i = response_start_idx; i < chat_traj.token_count(); ++i) {
+        vocabulary.detokenize_to(oss, chat_traj.token_at(i));
+        response_text += oss.view();
+        oss.truncate();
+    }
+
     messages.push_back({"assistant", response_text});
 
     // Update old_len to include the assistant message we just generated
     new_len = vocabulary.chat_apply_template(messages, formatted, false);
-    if (new_len >= 0) {
+    if (new_len < 0) {
+       // Fallback logic
+       old_len += response_text.size() + 1; // +1 for newline
+    }
+    else {
       old_len = new_len;
     }
   }

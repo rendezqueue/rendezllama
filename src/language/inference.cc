@@ -472,3 +472,192 @@ Inference::sample_to_trajectory(
   llama_sampler_accept(smpl_, chat_traj.token());
   token_count_ += 1;
 }
+
+  void
+Inference::sample_to_trajectory(
+    ChatTrajectory& chat_traj,
+    struct llama_context* ctx,
+    int batch_idx)
+{
+  float* logits = llama_get_logits_ith(ctx, batch_idx);
+  // Note: We don't support preventing_newline here yet, but usually not needed for speculation verification.
+
+  std::vector<llama_token_data> candidates;
+  candidates.resize(vocabulary_.cardinality());
+  for (llama_token i = 0; i < (llama_token)candidates.size(); ++i) {
+    candidates[i] = llama_token_data{
+      i, logits[i], 0.0f,
+    };
+  }
+  logits = NULL;
+  llama_token_data_array candidates_data[1] = {{
+    candidates.data(),
+    candidates.size(),
+    /*selected=*/0,
+    /*sorted=*/false,
+  }};
+  llama_sampler_apply(smpl_, candidates_data);
+  chat_traj.push_back(candidates[candidates_data->selected].id);
+  llama_sampler_accept(smpl_, chat_traj.token());
+  token_count_ += 1;
+}
+
+static
+  void
+find_ngram_candidates(
+    std::vector<llama_token>& candidates,
+    const std::vector<llama_token>& tokens,
+    unsigned n_gram_len,
+    unsigned candidate_limit)
+{
+  candidates.clear();
+  if (tokens.size() < n_gram_len) { return; }
+
+  // Simple backward search
+  size_t n = tokens.size();
+  for (size_t i = n - 1 - n_gram_len; i > 0; --i) { // i is the index of the last token of the match candidate
+      // We want tokens[i - n_gram_len + 1 ... i] == tokens[n - n_gram_len ... n - 1]
+      bool match = true;
+      for (size_t j = 0; j < n_gram_len; ++j) {
+          if (tokens[i - j] != tokens[n - 1 - j]) {
+              match = false;
+              break;
+          }
+      }
+      if (match) {
+          // Found match ending at i.
+          // Candidate tokens start at i + 1.
+          for (size_t k = 0; k < candidate_limit; ++k) {
+              if (i + 1 + k < n) { // Ensure we don't go past current end (though finding self is weird if we search backwards enough)
+                 // Actually we can grab from history.
+                 if (i + 1 + k < tokens.size()) {
+                     candidates.push_back(tokens[i + 1 + k]);
+                 }
+              }
+          }
+          if (!candidates.empty()) return;
+      }
+  }
+}
+
+  bool
+Inference::generate_next_tokens(
+    struct llama_context* ctx,
+    ChatDisplay& chat_disp,
+    ChatTrajectory& chat_traj,
+    const ChatOptions& opt,
+    const llama_model* model,
+    unsigned n_tokens)
+{
+  if (!this->commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
+    return false;
+  }
+
+  std::vector<llama_token> draft_candidates;
+
+  for (unsigned i = 0; i < n_tokens; ++i) {
+    // 1. We start with a token that has been sampled/accepted but not decoded.
+    // The previous loop iteration or commit_to_context left us in this state.
+    // chat_traj.token() is the last token (T).
+
+    // Draft candidates
+    draft_candidates.clear();
+    const unsigned kDraftMax = 5;
+    // Only draft if we have enough context and batch space
+    if (chat_traj.context_token_count_ + kDraftMax + 1 < opt.context_token_limit &&
+        opt.batch_count >= kDraftMax + 1)
+    {
+       find_ngram_candidates(draft_candidates, chat_traj.tokens(), 2, kDraftMax);
+    }
+
+    // Ensure batch size
+    unsigned required_batch = 1 + draft_candidates.size();
+    // We assume batch_ has capacity of at least opt.batch_count (set by commit_to_context or previous init).
+    // Reallocate only if we exceed that or if batch_ is null.
+    if (!batch_.token || opt.batch_count < required_batch) {
+      if (batch_.token) llama_batch_free(batch_);
+      unsigned n_alloc = std::max(opt.batch_count, required_batch);
+      batch_ = llama_batch_init(n_alloc, /*embd=*/0, /*n_seq_max=*/1);
+    }
+
+    // Prepare batch: [T, C1, C2, ...]
+    batch_.n_tokens = required_batch;
+    batch_.token[0] = chat_traj.token();
+    batch_.pos[0] = chat_traj.context_token_count_;
+    batch_.n_seq_id[0] = 1;
+    batch_.seq_id[0][0] = 0;
+    batch_.logits[0] = true;
+
+    for (size_t k = 0; k < draft_candidates.size(); ++k) {
+        batch_.token[k+1] = draft_candidates[k];
+        batch_.pos[k+1] = chat_traj.context_token_count_ + 1 + k;
+        batch_.n_seq_id[k+1] = 1;
+        batch_.seq_id[k+1][0] = 0;
+        batch_.logits[k+1] = true;
+    }
+
+    if (llama_decode(ctx, batch_) != 0) {
+      fildesh_log_error("Failed to eval.");
+      return false;
+    }
+
+    // T is definitely decoded.
+    chat_traj.context_token_count_ += 1;
+
+    // Verify
+    bool divergence_found = false;
+    for (size_t k = 0; k < draft_candidates.size(); ++k) {
+        // Sample R from logits of batch[k] (which was input T or C(k-1))
+        // Expect R == C(k).
+        this->sample_to_trajectory(chat_traj, ctx, (int)k);
+        // sample_to_trajectory pushed R to chat_traj.
+
+        if (chat_traj.token() == draft_candidates[k]) {
+            // Match!
+            chat_traj.context_token_count_ += 1; // C(k) is confirmed decoded
+            i += 1; // We advanced one extra step in the main generation request
+            if (chat_traj.token() == vocabulary_.eos_token_id()) {
+                chat_disp.show_new(chat_traj, vocabulary_);
+                return true;
+            }
+        } else {
+            // Divergence!
+            // R != C(k). We accepted R.
+            // But we need to remove C(k)... from KV cache.
+            // C(k) was at batch_.pos[k+1].
+            llama_memory_seq_rm(llama_get_memory(ctx), 0, batch_.pos[k+1], -1);
+            divergence_found = true;
+            break;
+        }
+    }
+
+    if (!divergence_found) {
+        // All candidates matched.
+        // We still have the output from the last candidate (batch index `draft_candidates.size()`).
+        // Use it to generate the *next* token (start of next iteration).
+        this->sample_to_trajectory(chat_traj, ctx, (int)draft_candidates.size());
+        // This new token is NOT decoded yet.
+    }
+    else {
+         // Divergence found. We accepted R (the divergence).
+         // R is NOT decoded.
+         // We removed invalid KV.
+         // We are ready for next iter.
+    }
+
+    if (chat_traj.token() == vocabulary_.eos_token_id()) {
+      chat_disp.show_new(chat_traj, vocabulary_);
+      return true;
+    }
+
+    chat_disp.show_new(chat_traj, vocabulary_);
+
+    if (chat_traj.context_token_count_ >= opt.context_token_limit) {
+       // Sync if full
+       if (!this->commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
+         return false;
+       }
+    }
+  }
+  return true;
+}

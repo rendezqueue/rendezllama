@@ -41,6 +41,17 @@ class Inference {
       ChatTrajectory& chat_traj,
       struct llama_context* ctx,
       bool preventing_newline);
+  void sample_to_trajectory(
+      ChatTrajectory& chat_traj,
+      struct llama_context* ctx,
+      int batch_idx);
+  bool generate_next_tokens(
+      struct llama_context* ctx,
+      ChatDisplay& chat_disp,
+      ChatTrajectory& chat_traj,
+      const ChatOptions& opt,
+      const llama_model* model,
+      unsigned n_tokens);
 
  private:
   unsigned thread_count_ = 0;
