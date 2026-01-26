@@ -1,5 +1,6 @@
 add_executable(localserv
   "localserv_main.cc"
+  "fildesh_compat_socket.c"
 )
 target_link_libraries(localserv
   rendezllama_chat

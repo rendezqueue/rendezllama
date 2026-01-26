@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 import os
+import tempfile
 import urllib.request
 import urllib.error
 
@@ -23,51 +24,68 @@ def main():
         print(f"Error: Could not find src directory: {src_dir}")
         sys.exit(1)
 
-    # Create pipe for port communication
-    r_fd, w_fd = os.pipe()
-    port_arg = f"/dev/fd/{w_fd}"
+    # Create a temporary file for port communication
+    # We use a named temporary file but close it so the subprocess can open it
+    # On Windows, we can't open it if it's already open, so we close it first.
+    port_file_fd, port_file_path = tempfile.mkstemp()
+    os.close(port_file_fd)
+    # Ensure it's empty
+    with open(port_file_path, 'w') as f:
+        pass
 
-    # Start the server
-    cmd = [executable_path] + extra_args + ["--o_http_port", port_arg]
-    print(f"Starting server: {cmd} in {src_dir}")
-    process = subprocess.Popen(
-        cmd,
-        cwd=src_dir,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-        pass_fds=(w_fd,),
-    )
-
-    # Close write end in parent
-    os.close(w_fd)
-
-    # Read port from pipe
+    process = None
     try:
-        with os.fdopen(r_fd, 'r') as f:
-            port_str = f.readline().strip()
-            if not port_str:
-                raise ValueError("Failed to read port from pipe")
-            port = int(port_str)
-            print(f"Server listening on port {port}")
-    except Exception as e:
-        print(f"Failed to read port: {e}")
-        process.terminate()
-        sys.exit(1)
+        # Start the server
+        cmd = [executable_path] + extra_args + ["--o_http_port", port_file_path]
+        print(f"Starting server: {cmd} in {src_dir}")
 
-    # Wait for server to start up (connect to the dynamic port)
-    start_time = time.time()
-    while time.time() - start_time < 20:
-        try:
-            with socket.create_connection(('localhost', port), timeout=1):
-                break
-        except (ConnectionRefusedError, socket.timeout, OSError):
-            time.sleep(0.5)
-    else:
-        print("Failed to connect to server")
-        process.terminate()
-        sys.exit(1)
+        # We don't need pass_fds anymore
+        process = subprocess.Popen(
+            cmd,
+            cwd=src_dir,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
 
-    try:
+        # Wait for port to be written
+        port = 0
+        start_time = time.time()
+        while time.time() - start_time < 20:
+            if process.poll() is not None:
+                print("Server process exited prematurely")
+                sys.exit(1)
+
+            try:
+                with open(port_file_path, 'r') as f:
+                    content = f.read().strip()
+                    if content:
+                        port = int(content)
+                        break
+            except ValueError:
+                pass
+            except Exception as e:
+                # File might not be ready or readable yet
+                pass
+            time.sleep(0.1)
+
+        if port == 0:
+            print("Failed to read port from file")
+            sys.exit(1)
+
+        print(f"Server listening on port {port}")
+
+        # Wait for server to start up (connect to the dynamic port)
+        start_time = time.time()
+        while time.time() - start_time < 20:
+            try:
+                with socket.create_connection(('localhost', port), timeout=1):
+                    break
+            except (ConnectionRefusedError, socket.timeout, OSError):
+                time.sleep(0.5)
+        else:
+            print("Failed to connect to server")
+            sys.exit(1)
+
         # Test 1: Serve index.html
         print("\nTest 1: Serve index.html")
         expected_html = b""
@@ -110,7 +128,7 @@ def main():
             print(f"Received response: {data}")
 
             expected_reply = "Hello! How can I assist you today?"
-            if 'reply' in data and data['reply'] == expected_reply:
+            if 'reply' in data and data['reply'].strip() == expected_reply:
                 print("PASS: Chat response received")
             else:
                 print(f"FAIL: Invalid chat response. Expected '{expected_reply}', got '{data.get('reply')}'")
@@ -184,13 +202,21 @@ def main():
         print(f"Test failed with exception: {e}")
         import traceback
         traceback.print_exc()
-        process.terminate()
+        if process:
+            process.terminate()
         sys.exit(1)
     finally:
         # Clean up
-        print("Terminating server...")
-        process.terminate()
-        process.wait()
+        if process:
+            print("Terminating server...")
+            process.terminate()
+            process.wait()
+
+        if os.path.exists(port_file_path):
+            try:
+                os.remove(port_file_path)
+            except OSError:
+                pass
 
 if __name__ == "__main__":
     main()
