@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <unistd.h>
+
 #include <fildesh/fildesh.h>
 #include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
@@ -92,6 +94,92 @@ static std::string extract_json_string(const std::string& json, const std::strin
   return json.substr(start, end - start);
 }
 
+static std::string json_escape(const std::string& s) {
+  std::ostringstream o;
+  for (char c : s) {
+    if (c == '"') o << "\\\"";
+    else if (c == '\\') o << "\\\\";
+    else if (c == '\b') o << "\\b";
+    else if (c == '\f') o << "\\f";
+    else if (c == '\n') o << "\\n";
+    else if (c == '\r') o << "\\r";
+    else if (c == '\t') o << "\\t";
+    else if ((unsigned char)c < 32) {
+      char buf[7];
+      snprintf(buf, sizeof(buf), "\\u%04x", c);
+      o << buf;
+    }
+    else o << c;
+  }
+  return o.str();
+}
+
+static std::string json_unescape(const std::string& s) {
+  std::string out;
+  out.reserve(s.size());
+  for (size_t i = 0; i < s.size(); ++i) {
+    if (s[i] == '\\' && i + 1 < s.size()) {
+      char c = s[++i];
+      if (c == '"') out += '"';
+      else if (c == '\\') out += '\\';
+      else if (c == '/') out += '/';
+      else if (c == 'b') out += '\b';
+      else if (c == 'f') out += '\f';
+      else if (c == 'n') out += '\n';
+      else if (c == 'r') out += '\r';
+      else if (c == 't') out += '\t';
+      else if (c == 'u' && i + 4 < s.size()) {
+        // Basic unicode support (skip for now or implement if needed)
+        // Just keeping raw sequence if complex
+        out += "\\u";
+        out += s.substr(i+1, 4);
+        i += 4;
+      } else {
+        out += c;
+      }
+    } else {
+      out += s[i];
+    }
+  }
+  return out;
+}
+
+static std::string extract_openai_content(const std::string& json) {
+  // Look for "choices" -> "message" -> "content"
+  // This is a naive parser.
+  // We search for "content": and then the string value.
+  // Warning: "content" might appear in other places, but usually it's unique enough in the response structure
+  // or it appears after "message".
+  size_t message_pos = json.find("\"message\"");
+  if (message_pos == std::string::npos) return "";
+
+  size_t content_key_pos = json.find("\"content\"", message_pos);
+  if (content_key_pos == std::string::npos) return "";
+
+  size_t start = content_key_pos + 9; // length of "content"
+  while (start < json.length() && (isspace(json[start]) || json[start] == ':')) start++;
+
+  if (start >= json.length() || json[start] != '"') return "";
+  start++; // skip opening quote
+
+  size_t end = start;
+  bool escaped = false;
+  while (end < json.length()) {
+    if (escaped) {
+      escaped = false;
+    } else {
+      if (json[end] == '\\') escaped = true;
+      else if (json[end] == '"') break;
+    }
+    end++;
+  }
+
+  if (end >= json.length()) return "";
+
+  return json_unescape(json.substr(start, end - start));
+}
+
+
 int main(int argc, char** argv) {
   if (0 != fildesh_compat_socket_init()) {
     return 1;
@@ -99,6 +187,12 @@ int main(int argc, char** argv) {
 
   GlobalScope global_scope;
   ChatOptions opt;
+  struct LocalservOptions {
+    std::string openai_api_url;
+    std::string openai_api_key;
+    std::string openai_model;
+  } localserv_opt;
+
   std::string o_http_port_filepath;
 
   int argi = 1;
@@ -262,7 +356,17 @@ int main(int argc, char** argv) {
       if (method == "GET") {
         if (path == "/settings") {
           std::ostringstream json_ss;
-          json_ss << "{\"context_length\": " << opt.context_token_limit << "}";
+          json_ss << "{\"context_length\": " << opt.context_token_limit;
+          if (!localserv_opt.openai_api_url.empty()) {
+            json_ss << ", \"openai_api_url\": \"" << json_escape(localserv_opt.openai_api_url) << "\"";
+          }
+          if (!localserv_opt.openai_api_key.empty()) {
+            json_ss << ", \"openai_api_key\": \"" << json_escape(localserv_opt.openai_api_key) << "\"";
+          }
+          if (!localserv_opt.openai_model.empty()) {
+            json_ss << ", \"openai_model\": \"" << json_escape(localserv_opt.openai_model) << "\"";
+          }
+          json_ss << "}";
           std::string json_resp = json_ss.str();
           std::ostringstream header_ss;
           header_ss << "HTTP/1.1 200 OK\r\n";
@@ -351,6 +455,16 @@ int main(int argc, char** argv) {
                 }
               }
             }
+
+            std::string val = extract_json_string(body, "openai_api_url");
+            if (!val.empty()) localserv_opt.openai_api_url = val;
+
+            val = extract_json_string(body, "openai_api_key");
+            if (!val.empty()) localserv_opt.openai_api_key = val;
+
+            val = extract_json_string(body, "openai_model");
+            if (!val.empty()) localserv_opt.openai_model = val;
+
             std::string resp = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
             fildesh_compat_socket_send(fd, resp.c_str(), resp.length());
             handled = true;
@@ -391,55 +505,158 @@ int main(int argc, char** argv) {
               chat_traj.display_token_count_ = chat_traj.token_count();
             }
 
-            const size_t response_start_idx = chat_traj.token_count();
+            std::string response;
+            bool success = false;
 
-            if (inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
-              // Generation loop
-              while (true) {
-                inference.sample_to_trajectory(chat_traj, ctx, false);
-                Vocabulary::Token_id new_token_id = chat_traj.token();
+            if (!localserv_opt.openai_api_url.empty()) {
+              // OpenAI API Logic
+              std::ostringstream json_body;
+              json_body << "{";
+              if (!localserv_opt.openai_model.empty()) {
+                json_body << "\"model\": \"" << json_escape(localserv_opt.openai_model) << "\",";
+              } else {
+                 json_body << "\"model\": \"gpt-3.5-turbo\",";
+              }
+              json_body << "\"messages\": [";
+              for (size_t i = 0; i < messages.size(); ++i) {
+                if (i > 0) json_body << ",";
+                json_body << "{\"role\": \"" << messages[i].role << "\", \"content\": \"" << json_escape(messages[i].content) << "\"}";
+              }
+              json_body << "]}";
 
-                if (new_token_id == vocabulary.eos_token_id()) {
-                  break;
+              std::string request_body = json_body.str();
+
+              char body_filename[] = "/tmp/localserv_body_XXXXXX";
+              int body_fd = mkstemp(body_filename);
+              if (body_fd != -1) {
+                int ret = write(body_fd, request_body.c_str(), request_body.length());
+                (void)ret;
+                close(body_fd);
+
+                // Create curl config file to avoid shell injection and secret exposure
+                char config_filename[] = "/tmp/localserv_config_XXXXXX";
+                int config_fd = mkstemp(config_filename);
+                if (config_fd != -1) {
+                  std::ostringstream config_ss;
+                  // Escape quotes/backslashes for curl config syntax
+                  auto curl_esc = [](const std::string& s) {
+                    std::string out;
+                    for (char c : s) {
+                      if (c == '"') out += "\\\"";
+                      else if (c == '\\') out += "\\\\";
+                      else out += c;
+                    }
+                    return out;
+                  };
+
+                  config_ss << "url = \"" << curl_esc(localserv_opt.openai_api_url) << "\"\n";
+                  config_ss << "header = \"Content-Type: application/json\"\n";
+                  if (!localserv_opt.openai_api_key.empty()) {
+                    config_ss << "header = \"Authorization: Bearer " << curl_esc(localserv_opt.openai_api_key) << "\"\n";
+                  }
+                  config_ss << "data = \"@" << body_filename << "\"\n";
+                  config_ss << "silent\n";
+
+                  std::string config_content = config_ss.str();
+                  ret = write(config_fd, config_content.c_str(), config_content.length());
+                  (void)ret;
+                  close(config_fd);
+
+                  std::string cmd = "curl -K ";
+                  cmd += config_filename;
+
+                  FILE* pipe = popen(cmd.c_str(), "r");
+                  if (pipe) {
+                    char buffer[128];
+                    std::string result = "";
+                    while (!feof(pipe)) {
+                      if (fgets(buffer, 128, pipe) != NULL)
+                        result += buffer;
+                    }
+                    pclose(pipe);
+                    response = extract_openai_content(result);
+                  }
+                  unlink(config_filename);
                 }
-
-                if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
-                  break;
-                }
+                unlink(body_filename);
               }
 
-              // Extract response
-              fildesh::ostringstream response_ss;
-              for (size_t i = response_start_idx; i < chat_traj.token_count(); ++i) {
-                if (chat_traj.token_at(i) != vocabulary.eos_token_id()) {
-                  vocabulary.detokenize_to(response_ss.c_struct(), chat_traj.token_at(i));
+              if (!response.empty()) {
+                success = true;
+                std::cerr << "Assistant (OpenAI): " << response << std::endl;
+
+                // Sync local context with OpenAI response
+                messages.push_back({"assistant", response});
+                int temp_len = vocabulary.chat_apply_template(messages, formatted, false);
+                if (temp_len >= 0) {
+                  std::string delta(formatted.begin() + prev_len, formatted.begin() + temp_len);
+                  prev_len = temp_len;
+
+                  std::vector<llama_token> tokens(delta.size() + 1);
+                  int n_tokens = llama_tokenize(llama_model_get_vocab(model), delta.c_str(), delta.size(), tokens.data(), tokens.size(), false, true);
+                  if (n_tokens < 0) {
+                    tokens.resize(-n_tokens);
+                    n_tokens = llama_tokenize(llama_model_get_vocab(model), delta.c_str(), delta.size(), tokens.data(), tokens.size(), false, true);
+                  }
+                  tokens.resize(n_tokens);
+
+                  std::vector<Vocabulary::Token_id> trajectory_tokens;
+                  trajectory_tokens.reserve(tokens.size());
+                  for (auto t : tokens) {
+                    trajectory_tokens.push_back(t);
+                  }
+                  chat_traj.insert_all_at(chat_traj.token_count(), trajectory_tokens);
+                  chat_traj.display_token_count_ = chat_traj.token_count();
                 }
+              } else if (body_fd != -1) { // Only log failure if we actually tried
+                  std::cerr << "Failed to extract content from OpenAI response" << std::endl;
               }
-              std::string_view response_view = response_ss.view();
-              std::string response(response_view);
+            } else {
+              // Local Inference Logic
+              const size_t response_start_idx = chat_traj.token_count();
 
-              std::cerr << "Assistant: " << response << std::endl;
+              if (inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
+                // Generation loop
+                while (true) {
+                  inference.sample_to_trajectory(chat_traj, ctx, false);
+                  Vocabulary::Token_id new_token_id = chat_traj.token();
 
-              messages.push_back({"assistant", response});
-              int temp_len = vocabulary.chat_apply_template(messages, formatted, false);
-              if (temp_len >= 0) {
-                prev_len = temp_len;
+                  if (new_token_id == vocabulary.eos_token_id()) {
+                    break;
+                  }
+
+                  if (!inference.commit_to_context(ctx, chat_disp, chat_traj, opt, model)) {
+                    break;
+                  }
+                }
+
+                // Extract response
+                fildesh::ostringstream response_ss;
+                for (size_t i = response_start_idx; i < chat_traj.token_count(); ++i) {
+                  if (chat_traj.token_at(i) != vocabulary.eos_token_id()) {
+                    vocabulary.detokenize_to(response_ss.c_struct(), chat_traj.token_at(i));
+                  }
+                }
+                std::string_view response_view = response_ss.view();
+                response = std::string(response_view);
+                success = true;
+
+                std::cerr << "Assistant: " << response << std::endl;
+
+                messages.push_back({"assistant", response});
+                int temp_len = vocabulary.chat_apply_template(messages, formatted, false);
+                if (temp_len >= 0) {
+                  prev_len = temp_len;
+                }
+              } else {
+                std::cerr << "commit_to_context failed" << std::endl;
               }
+            }
 
+            if (success) {
               // Send response
               std::ostringstream json_ss;
-              // Basic JSON escaping
-              json_ss << "{\"reply\": \"";
-              for (char c : response) {
-                if (c == '"') json_ss << "\\\"";
-                else if (c == '\\') json_ss << "\\\\";
-                else if (c == '\n') json_ss << "\\n";
-                else if (c == '\r') json_ss << "\\r";
-                else if (c == '\t') json_ss << "\\t";
-                else if ((unsigned char)c < 32) {} // Ignore other control chars
-                else json_ss << c;
-              }
-              json_ss << "\"}";
+              json_ss << "{\"reply\": \"" << json_escape(response) << "\"}";
 
               std::string json_resp = json_ss.str();
               std::ostringstream header_ss;
@@ -451,8 +668,6 @@ int main(int argc, char** argv) {
               fildesh_compat_socket_send(fd, header_ss.str().c_str(), header_ss.str().length());
               fildesh_compat_socket_send(fd, json_resp.c_str(), json_resp.length());
               handled = true;
-            } else {
-              std::cerr << "commit_to_context failed" << std::endl;
             }
           }
         }

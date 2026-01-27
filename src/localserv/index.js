@@ -2,6 +2,9 @@ const messageForm = document.getElementById('message-form');
 const messageInput = document.getElementById('message-input');
 const chatContainer = document.getElementById('chat-container');
 const contextLengthInput = document.getElementById('context-length-input');
+const openaiApiUrlInput = document.getElementById('openai-api-url-input');
+const openaiApiKeyInput = document.getElementById('openai-api-key-input');
+const openaiModelInput = document.getElementById('openai-model-input');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const resetBtn = document.getElementById('reset-btn');
 
@@ -88,10 +91,17 @@ saveSettingsBtn.addEventListener('click', async () => {
     return;
   }
 
+  const settings = {
+    context_length: contextLength,
+    openai_api_url: openaiApiUrlInput.value.trim(),
+    openai_api_key: openaiApiKeyInput.value.trim(),
+    openai_model: openaiModelInput.value.trim()
+  };
+
   try {
     const response = await fetch('/settings', {
       method: 'POST',
-      body: JSON.stringify({ context_length: contextLength }),
+      body: JSON.stringify(settings),
       headers: { 'Content-Type': 'application/json' }
     });
 
@@ -114,6 +124,15 @@ async function loadSettings() {
       const data = await response.json();
       if (data.context_length) {
         contextLengthInput.value = data.context_length;
+      }
+      if (data.openai_api_url) {
+        openaiApiUrlInput.value = data.openai_api_url;
+      }
+      if (data.openai_api_key) {
+        openaiApiKeyInput.value = data.openai_api_key;
+      }
+      if (data.openai_model) {
+        openaiModelInput.value = data.openai_model;
       }
     }
   } catch (error) {
