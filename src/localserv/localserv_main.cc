@@ -8,8 +8,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <unistd.h>
+#include <filesystem>
+#include <random>
+#include <cstdio>
 
 #include <fildesh/fildesh.h>
 #include <fildesh/ostream.hh>
@@ -179,6 +180,29 @@ static std::string extract_openai_content(const std::string& json) {
   return json_unescape(json.substr(start, end - start));
 }
 
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
+
+static std::string generate_temp_filename() {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, 15);
+  const char* hex = "0123456789abcdef";
+
+  std::string name = "localserv_";
+  for (int i = 0; i < 16; ++i) {
+    name += hex[dis(gen)];
+  }
+
+  try {
+    std::filesystem::path temp_dir = std::filesystem::temp_directory_path();
+    return (temp_dir / name).string();
+  } catch (...) {
+    return name; // Fallback to current directory
+  }
+}
 
 int main(int argc, char** argv) {
   if (0 != fildesh_compat_socket_init()) {
@@ -526,60 +550,67 @@ int main(int argc, char** argv) {
 
               std::string request_body = json_body.str();
 
-              char body_filename[] = "/tmp/localserv_body_XXXXXX";
-              int body_fd = mkstemp(body_filename);
-              if (body_fd != -1) {
-                int ret = write(body_fd, request_body.c_str(), request_body.length());
-                (void)ret;
-                close(body_fd);
-
-                // Create curl config file to avoid shell injection and secret exposure
-                char config_filename[] = "/tmp/localserv_config_XXXXXX";
-                int config_fd = mkstemp(config_filename);
-                if (config_fd != -1) {
-                  std::ostringstream config_ss;
-                  // Escape quotes/backslashes for curl config syntax
-                  auto curl_esc = [](const std::string& s) {
-                    std::string out;
-                    for (char c : s) {
-                      if (c == '"') out += "\\\"";
-                      else if (c == '\\') out += "\\\\";
-                      else out += c;
-                    }
-                    return out;
-                  };
-
-                  config_ss << "url = \"" << curl_esc(localserv_opt.openai_api_url) << "\"\n";
-                  config_ss << "header = \"Content-Type: application/json\"\n";
-                  if (!localserv_opt.openai_api_key.empty()) {
-                    config_ss << "header = \"Authorization: Bearer " << curl_esc(localserv_opt.openai_api_key) << "\"\n";
-                  }
-                  config_ss << "data = \"@" << body_filename << "\"\n";
-                  config_ss << "silent\n";
-
-                  std::string config_content = config_ss.str();
-                  ret = write(config_fd, config_content.c_str(), config_content.length());
-                  (void)ret;
-                  close(config_fd);
-
-                  std::string cmd = "curl -K ";
-                  cmd += config_filename;
-
-                  FILE* pipe = popen(cmd.c_str(), "r");
-                  if (pipe) {
-                    char buffer[128];
-                    std::string result = "";
-                    while (!feof(pipe)) {
-                      if (fgets(buffer, 128, pipe) != NULL)
-                        result += buffer;
-                    }
-                    pclose(pipe);
-                    response = extract_openai_content(result);
-                  }
-                  unlink(config_filename);
-                }
-                unlink(body_filename);
+              std::string body_filename = generate_temp_filename();
+              {
+                std::ofstream ofs(body_filename, std::ios::binary);
+                ofs << request_body;
               }
+
+              // Create curl config file to avoid shell injection and secret exposure
+              std::string config_filename = generate_temp_filename();
+              {
+                std::ofstream ofs(config_filename);
+                // Escape quotes/backslashes for curl config syntax
+                auto curl_esc = [](const std::string& s) {
+                  std::string out;
+                  for (char c : s) {
+                    if (c == '"') out += "\\\"";
+                    else if (c == '\\') out += "\\\\";
+                    else out += c;
+                  }
+                  return out;
+                };
+
+                ofs << "url = \"" << curl_esc(localserv_opt.openai_api_url) << "\"\n";
+                ofs << "header = \"Content-Type: application/json\"\n";
+                if (!localserv_opt.openai_api_key.empty()) {
+                  ofs << "header = \"Authorization: Bearer " << curl_esc(localserv_opt.openai_api_key) << "\"\n";
+                }
+
+                // On Windows, paths might need escaping if they contain backslashes?
+                // Curl expects file paths. standard paths should be fine or forward slash.
+                // std::filesystem::path string() usually returns native format.
+                // Curl on Windows handles standard Windows paths.
+                // However, backslashes inside a double-quoted string in curl config might be treated as escape.
+                // Safe bet: replace backslash with forward slash for config file syntax or escape them.
+                std::string safe_body_filename = body_filename;
+                #ifdef _WIN32
+                for (auto& c : safe_body_filename) { if (c == '\\') c = '/'; }
+                #endif
+
+                ofs << "data = \"@" << safe_body_filename << "\"\n";
+                ofs << "silent\n";
+              }
+
+              std::string cmd = "curl -K \"";
+              cmd += config_filename;
+              cmd += "\"";
+
+              FILE* pipe = popen(cmd.c_str(), "r");
+              if (pipe) {
+                char buffer[128];
+                std::string result = "";
+                while (!feof(pipe)) {
+                  if (fgets(buffer, 128, pipe) != NULL)
+                    result += buffer;
+                }
+                pclose(pipe);
+                response = extract_openai_content(result);
+              }
+
+              std::error_code ec;
+              std::filesystem::remove(config_filename, ec);
+              std::filesystem::remove(body_filename, ec);
 
               if (!response.empty()) {
                 success = true;
@@ -608,7 +639,7 @@ int main(int argc, char** argv) {
                   chat_traj.insert_all_at(chat_traj.token_count(), trajectory_tokens);
                   chat_traj.display_token_count_ = chat_traj.token_count();
                 }
-              } else if (body_fd != -1) { // Only log failure if we actually tried
+              } else {
                   std::cerr << "Failed to extract content from OpenAI response" << std::endl;
               }
             } else {
