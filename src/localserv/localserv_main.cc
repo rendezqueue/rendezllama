@@ -571,7 +571,14 @@ int main(int argc, char** argv) {
                   return out;
                 };
 
-                ofs << "url = \"" << curl_esc(localserv_opt.openai_api_url) << "\"\n";
+                std::string url = localserv_opt.openai_api_url;
+                if (url.length() > 3 && url.substr(url.length() - 3) == "/v1") {
+                  url += "/chat/completions";
+                } else if (url.length() > 4 && url.substr(url.length() - 4) == "/v1/") {
+                  url += "chat/completions";
+                }
+
+                ofs << "url = \"" << curl_esc(url) << "\"\n";
                 ofs << "header = \"Content-Type: application/json\"\n";
                 if (!localserv_opt.openai_api_key.empty()) {
                   ofs << "header = \"Authorization: Bearer " << curl_esc(localserv_opt.openai_api_key) << "\"\n";
