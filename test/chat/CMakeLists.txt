@@ -66,3 +66,11 @@ target_link_libraries(chat_trajectory_test PRIVATE
 add_test(NAME chat_trajectory_test COMMAND
   chat_trajectory_test "${LlamaCpp_spm_vocab_FILE}"
 )
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME regeneration_test
+  COMMAND Python3::Interpreter
+  "${CMAKE_CURRENT_SOURCE_DIR}/regeneration_test.py"
+  "$<TARGET_FILE:assistant_cli>"
+  "${LiteMistralGGUF_SOURCE_DIR}/lite-mistral-150m-v2-instruct-q4_k_m.gguf"
+)

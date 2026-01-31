@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <stdexcept>
 #include <thread>
@@ -188,7 +189,8 @@ static
   int
 new_sampling_seed()
 {
-  return static_cast<int>(INT_MAX & time(NULL));
+  typedef std::chrono::high_resolution_clock Clock;
+  return static_cast<int>(INT_MAX & Clock::now().time_since_epoch().count());
 }
 
 static
