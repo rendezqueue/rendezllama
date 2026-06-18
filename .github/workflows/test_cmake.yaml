@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Configure CMake
       run: >
@@ -40,7 +40,7 @@ jobs:
         -C ${{matrix.cmake_build_type}}
 
     - name: Upload Test Results
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: failure-${{ matrix.platform }}
@@ -57,7 +57,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Configure CMake
       run: >
